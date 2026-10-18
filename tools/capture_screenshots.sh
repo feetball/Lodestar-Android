@@ -28,7 +28,7 @@ shoot() {
     adb shell am force-stop $package
     # adb shell joins its arguments into one remote command line: quote the extra for the device's shell.
     adb shell "am start -W -n $activity --es lodestarScreenshot '$common $*'" >/dev/null
-    sleep 14
+    sleep 20
     adb exec-out screencap -p > "$out/$name.png"
     echo "captured $name"
 }
@@ -37,10 +37,12 @@ shoot() {
 adb shell "am start -W -n $activity --es lodestarScreenshot '$common tab=tonight'" >/dev/null
 sleep 30
 
-shoot 1-aim-guidance tab=aim target=special.galacticCenter pointing=172,18
-shoot 2-tonight tab=tonight
+# Order of capture (the file names give the store order): the screens sharing the sky snapshot code run after
+# the Sky chart has warmed it up, which matters on a software-rendered CI emulator.
 shoot 3-sky-chart tab=sky target=special.galacticCenter
+shoot 2-tonight tab=tonight
 shoot 4-objects tab=objects target=special.galacticCenter
+shoot 1-aim-guidance tab=aim target=special.galacticCenter pointing=172,18
 shoot 5-night-mode tab=aim target=dso.M8 pointing=178,22 night=1
 shoot 6-settings tab=settings
 

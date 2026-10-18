@@ -109,6 +109,13 @@ The meteor shower table (peak solar longitudes, activity periods, ZHR, radiant p
 hand-entered from the **IMO Meteor Shower Calendar 2026** (© International Meteor Organization), whose source is cited
 in the code. Radiant drift rates are least-squares fits to the calendar's radiant tables.
 
+### Satellite data and SGP4
+
+Satellite orbital elements are downloaded at run time from **CelesTrak** (Dr. T. S. Kelso, https://celestrak.org),
+free to use with credit. The SGP4/SDP4 propagator is a port of the reference implementation by D. A. Vallado,
+P. Crawford, R. Hujsak and T. S. Kelso ("Revisiting Spacetrack Report #3", AIAA 2006-6753), distributed by CelesTrak.
+Intrinsic magnitudes of the ISS, Tiangong and Hubble are from Heavens-Above.
+
 ### d3-celestial — `constellations.json` and `milkyway.json`
 
 - **Title:** d3-celestial

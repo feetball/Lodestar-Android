@@ -1,0 +1,3232 @@
+{
+ "generator": "Tools/make_satellite_fixtures.py passes",
+ "skyfield": "1.55",
+ "ephemeris": "DE421",
+ "elements": "satellite_omm_sample.json (CelesTrak GP snapshot of 2026-10-18)",
+ "sites": {
+  "boulder": {
+   "latitude": 40.015,
+   "longitude": -105.2705,
+   "elevation": 1655.0
+  },
+  "sydney": {
+   "latitude": -33.8688,
+   "longitude": 151.2093,
+   "elevation": 20.0
+  },
+  "tromso": {
+   "latitude": 69.6492,
+   "longitude": 18.9553,
+   "elevation": 10.0
+  }
+ },
+ "satellites": [
+  "iss",
+  "css",
+  "hst",
+  "starlink",
+  "gps",
+  "molniya",
+  "geo",
+  "polar"
+ ],
+ "cases": [
+  {
+   "satellite": "iss",
+   "site": "boulder",
+   "start": 1792296000.0,
+   "end": 1792555200.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -88.13374779302409,
+    75.42561045937829
+   ],
+   "passes": [
+    {
+     "rise": 1792316977.6717858,
+     "culmination": 1792317053.6393728,
+     "set": 1792317129.8084922,
+     "riseAzimuth": 150.50287082733445,
+     "culminationAltitude": 11.683911319389612,
+     "culminationAzimuth": 128.24245552955352,
+     "culminationRange": 1398.8435299557955,
+     "setAzimuth": 106.01392863065401,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -39.13850577290221
+    },
+    {
+     "rise": 1792322633.9817014,
+     "culmination": 1792322835.9958982,
+     "set": 1792323039.6619132,
+     "riseAzimuth": 237.45773496092275,
+     "culminationAltitude": 74.95027472676978,
+     "culminationAzimuth": 323.6812596520372,
+     "culminationRange": 439.29558691239043,
+     "setAzimuth": 49.95673322815272,
+     "visible": [
+      [
+       1792322865.1208615,
+       1792323039.6619132
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -21.320380793462
+    },
+    {
+     "rise": 1792328532.7483468,
+     "culmination": 1792328673.1937513,
+     "set": 1792328814.0456498,
+     "riseAzimuth": 298.33692807439985,
+     "culminationAltitude": 17.171713432527927,
+     "culminationAzimuth": 342.0943525323482,
+     "culminationRange": 1147.3489473459292,
+     "setAzimuth": 25.8443408591067,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -2.783294599608973
+    },
+    {
+     "rise": 1792334467.990405,
+     "culmination": 1792334547.3803697,
+     "set": 1792334626.7684712,
+     "riseAzimuth": 339.65492295317205,
+     "culminationAltitude": 11.74034055775023,
+     "culminationAzimuth": 2.64701606624661,
+     "culminationRange": 1410.6069439295893,
+     "setAzimuth": 25.638256938185286,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 14.921875664914225
+    },
+    {
+     "rise": 1792340251.3704271,
+     "culmination": 1792340415.5316525,
+     "set": 1792340579.128698,
+     "riseAzimuth": 329.25048475803146,
+     "culminationAltitude": 21.974383728227718,
+     "culminationAzimuth": 22.832089391749264,
+     "culminationRange": 979.914045518005,
+     "setAzimuth": 76.4138801268391,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 29.829783250594346
+    },
+    {
+     "rise": 1792346037.8637254,
+     "culmination": 1792346239.4709163,
+     "set": 1792346439.5616298,
+     "riseAzimuth": 301.5000600540596,
+     "culminationAltitude": 62.18524372658326,
+     "culminationAzimuth": 220.49039085304108,
+     "culminationRange": 476.86930899194937,
+     "setAzimuth": 139.39322779127198,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 38.898905949480174
+    },
+    {
+     "rise": 1792406194.8173242,
+     "culmination": 1792406394.4699156,
+     "set": 1792406595.859066,
+     "riseAzimuth": 220.85301110548693,
+     "culminationAltitude": 62.70393255208607,
+     "culminationAzimuth": 139.5655416795395,
+     "culminationRange": 473.5169934942967,
+     "setAzimuth": 58.369562596705364,
+     "visible": [
+      [
+       1792406556.4984765,
+       1792406595.859066
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -30.45527239833022
+    },
+    {
+     "rise": 1792412055.6925294,
+     "culmination": 1792412218.5524325,
+     "set": 1792412382.124523,
+     "riseAzimuth": 283.88713781502867,
+     "culminationAltitude": 21.845277458126994,
+     "culminationAzimuth": 337.26724870373044,
+     "culminationRange": 982.3173711537297,
+     "setAzimuth": 30.63886238432124,
+     "visible": [
+      [
+       1792412135.690088,
+       1792412382.124523
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -12.011148912422321
+    },
+    {
+     "rise": 1792418007.6986997,
+     "culmination": 1792418086.7866683,
+     "set": 1792418165.9096732,
+     "riseAzimuth": 334.5559869305869,
+     "culminationAltitude": 11.727697846070395,
+     "culminationAzimuth": 357.47004386599286,
+     "culminationRange": 1410.8763736163228,
+     "setAzimuth": 20.382075884477274,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 6.30381052517788
+    },
+    {
+     "rise": 1792423819.4376366,
+     "culmination": 1792423960.8112586,
+     "set": 1792424101.8894627,
+     "riseAzimuth": 334.0759811770059,
+     "culminationAltitude": 17.245867383714824,
+     "culminationAzimuth": 18.01212521665335,
+     "culminationRange": 1145.2741561018256,
+     "setAzimuth": 61.94851109896089,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 22.826093512407517
+    },
+    {
+     "rise": 1792429593.7996628,
+     "culmination": 1792429797.7186475,
+     "set": 1792430000.2298608,
+     "riseAzimuth": 309.92145594542126,
+     "culminationAltitude": 75.58776222421466,
+     "culminationAzimuth": 36.38662284700073,
+     "culminationRange": 438.9986273214718,
+     "setAzimuth": 122.79778372864698,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 35.10827875761523
+    },
+    {
+     "rise": 1792435504.855234,
+     "culmination": 1792435579.9407573,
+     "set": 1792435654.8529618,
+     "riseAzimuth": 253.63372290135942,
+     "culminationAltitude": 11.626175050672286,
+     "culminationAzimuth": 231.78409923634547,
+     "culminationRange": 1405.1473051702324,
+     "setAzimuth": 209.9056462604022,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 39.79568194200998
+    },
+    {
+     "rise": 1792489769.9939387,
+     "culmination": 1792489955.6047974,
+     "set": 1792490142.733604,
+     "riseAzimuth": 202.7928050566723,
+     "culminationAltitude": 34.70859902441806,
+     "culminationAzimuth": 135.6326644018475,
+     "culminationRange": 700.5381697733806,
+     "setAzimuth": 68.59205298243079,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -39.27802513742446
+    },
+    {
+     "rise": 1792495584.3615723,
+     "culmination": 1792495765.9194403,
+     "set": 1792495948.5668838,
+     "riseAzimuth": 268.99615246679616,
+     "culminationAltitude": 29.704971211135046,
+     "culminationAzimuth": 332.60072616397395,
+     "culminationRange": 789.7944702567667,
+     "setAzimuth": 36.20303920037037,
+     "visible": [
+      [
+       1792495820.5388184,
+       1792495948.5668838
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -21.293054225284973
+    },
+    {
+     "rise": 1792501532.4330347,
+     "culmination": 1792501625.7104442,
+     "set": 1792501719.0887978,
+     "riseAzimuth": 324.95981189933025,
+     "culminationAltitude": 12.508628928811572,
+     "culminationAzimuth": 352.3128588463671,
+     "culminationRange": 1366.6708014653527,
+     "setAzimuth": 19.661874819383673,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -2.702224389771974
+    },
+    {
+     "rise": 1792507385.7973626,
+     "culmination": 1792507502.778884,
+     "set": 1792507619.6407325,
+     "riseAzimuth": 337.9536242331437,
+     "culminationAltitude": 14.314176669102034,
+     "culminationAzimuth": 13.044998159060146,
+     "culminationRange": 1274.8718719755516,
+     "setAzimuth": 48.13518396455092,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 14.902099564491937
+    },
+    {
+     "rise": 1792513154.331883,
+     "culmination": 1792513351.611886,
+     "set": 1792513547.7700555,
+     "riseAzimuth": 317.1614461627293,
+     "culminationAltitude": 45.30021545702985,
+     "culminationAzimuth": 32.097207863690954,
+     "culminationRange": 582.8390156301083,
+     "setAzimuth": 107.00700154420014,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 29.551280209677405
+    },
+    {
+     "rise": 1792518994.06193,
+     "culmination": 1792519147.5366,
+     "set": 1792519300.2153857,
+     "riseAzimuth": 277.3570563146098,
+     "culminationAltitude": 19.97351346168212,
+     "culminationAzimuth": 228.234971766162,
+     "culminationRange": 1037.1260558544304,
+     "setAzimuth": 179.01487357439248,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 38.302055657733185
+    }
+   ]
+  },
+  {
+   "satellite": "css",
+   "site": "boulder",
+   "start": 1792296000.0,
+   "end": 1792555200.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -89.71294506053601,
+    58.73333662906077
+   ],
+   "passes": [
+    {
+     "rise": 1792298626.5696619,
+     "culmination": 1792298810.7704458,
+     "set": 1792298995.4546385,
+     "riseAzimuth": 234.89706172048417,
+     "culminationAltitude": 49.581762750280575,
+     "culminationAzimuth": 158.55877422462262,
+     "culminationRange": 496.1655804935091,
+     "setAzimuth": 82.26284151742003,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -49.66404713569354
+    },
+    {
+     "rise": 1792304431.8246634,
+     "culmination": 1792304620.8268437,
+     "set": 1792304809.8436942,
+     "riseAzimuth": 271.3111049819572,
+     "culminationAltitude": 66.80274966283471,
+     "culminationAzimuth": 355.13199501023814,
+     "culminationRange": 417.7126495162193,
+     "setAzimuth": 78.9597723603411,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -59.21245393383237
+    },
+    {
+     "rise": 1792310248.443539,
+     "culmination": 1792310438.6128151,
+     "set": 1792310628.2508318,
+     "riseAzimuth": 282.8086835291766,
+     "culminationAltitude": 85.97377172710897,
+     "culminationAzimuth": 12.231638262020024,
+     "culminationRange": 386.30361801639293,
+     "setAzimuth": 101.63166177676867,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -55.44255678782093
+    },
+    {
+     "rise": 1792316075.026057,
+     "culmination": 1792316237.7320118,
+     "set": 1792316399.8068757,
+     "riseAzimuth": 267.29800011391256,
+     "culminationAltitude": 26.149758227235715,
+     "culminationAzimuth": 208.09674322966384,
+     "culminationRange": 787.2418879680534,
+     "setAzimuth": 148.8305609057489,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -41.49359445522477
+    },
+    {
+     "rise": 1792381473.9035776,
+     "culmination": 1792381644.0579946,
+     "set": 1792381814.7112904,
+     "riseAzimuth": 217.58949348022458,
+     "culminationAltitude": 30.64160048847986,
+     "culminationAzimuth": 153.5019965140502,
+     "culminationRange": 702.36178425435,
+     "setAzimuth": 89.46943312159489,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -40.3631393459779
+    },
+    {
+     "rise": 1792387256.2472217,
+     "culmination": 1792387446.076552,
+     "set": 1792387636.1035247,
+     "riseAzimuth": 261.9371475415556,
+     "culminationAltitude": 79.50744112941136,
+     "culminationAzimuth": 349.54604609736054,
+     "culminationRange": 392.0397031912069,
+     "setAzimuth": 77.17078061648004,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -54.887116265115125
+    },
+    {
+     "rise": 1792393074.804623,
+     "culmination": 1792393264.2029486,
+     "set": 1792393453.2428362,
+     "riseAzimuth": 281.92296467988797,
+     "culminationAltitude": 69.72892251783784,
+     "culminationAzimuth": 6.672579965400111,
+     "culminationRange": 409.56668323772504,
+     "setAzimuth": 91.41398063972912,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -59.81328660422602
+    },
+    {
+     "rise": 1792398890.4794798,
+     "culmination": 1792399071.7136579,
+     "set": 1792399252.2093492,
+     "riseAzimuth": 275.79185255711866,
+     "culminationAltitude": 42.47113734960213,
+     "culminationAzimuth": 203.11031657813555,
+     "culminationRange": 551.2980043649543,
+     "setAzimuth": 130.37420436109204,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -51.103487594270135
+    },
+    {
+     "rise": 1792464339.837801,
+     "culmination": 1792464478.5092196,
+     "set": 1792464617.5371432,
+     "riseAzimuth": 196.00892186402154,
+     "culminationAltitude": 18.763415890226835,
+     "culminationAzimuth": 148.69082868963676,
+     "culminationRange": 991.8596190200519,
+     "setAzimuth": 101.42461017946616,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -29.841690305338883
+    },
+    {
+     "rise": 1792470081.3686047,
+     "culmination": 1792470270.7017756,
+     "set": 1792470460.408982,
+     "riseAzimuth": 250.0002737621016,
+     "culminationAltitude": 77.10118548355891,
+     "culminationAzimuth": 164.0774859468135,
+     "culminationRange": 395.0476328203435,
+     "setAzimuth": 78.18007383441271,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -46.87297705127268
+    },
+    {
+     "rise": 1792475897.4355938,
+     "culmination": 1792476086.1092672,
+     "set": 1792476274.6099782,
+     "riseAzimuth": 278.2058961017262,
+     "culminationAltitude": 63.75450754461886,
+     "culminationAzimuth": 1.029121262414406,
+     "culminationRange": 427.2667656605065,
+     "setAzimuth": 83.85333452245594,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -58.74266060723662
+    },
+    {
+     "rise": 1792481711.2222087,
+     "culmination": 1792481899.818784,
+     "set": 1792482087.7250068,
+     "riseAzimuth": 280.750090527721,
+     "culminationAltitude": 67.0319169409248,
+     "culminationAzimuth": 197.8840029003754,
+     "culminationRange": 415.98052899621007,
+     "setAzimuth": 114.98273292307013,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -58.16632212546749
+    },
+    {
+     "rise": 1792487569.381443,
+     "culmination": 1792487688.0051231,
+     "set": 1792487806.2937152,
+     "riseAzimuth": 251.9890074739224,
+     "culminationAltitude": 15.507812923241238,
+     "culminationAzimuth": 213.02507767678145,
+     "culminationRange": 1113.3532647926713,
+     "setAzimuth": 174.0133858901461,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -45.72077925651512
+    },
+    {
+     "rise": 1792547260.2926247,
+     "culmination": 1792547314.2584553,
+     "set": 1792547368.2766683,
+     "riseAzimuth": 160.83020558646226,
+     "culminationAltitude": 10.8991534721818,
+     "culminationAzimuth": 144.1497300912104,
+     "culminationRange": 1343.7578724295104,
+     "setAzimuth": 127.47939039861109,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -18.81495574693593
+    },
+    {
+     "rise": 1792552910.9978528,
+     "culmination": 1792553095.5108047,
+     "set": 1792553280.5289896,
+     "riseAzimuth": 235.55996394661406,
+     "culminationAltitude": 50.56951887045862,
+     "culminationAzimuth": 158.77664364778087,
+     "culminationRange": 489.615081068572,
+     "setAzimuth": 82.03554368524019,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -36.925042087709485
+    }
+   ]
+  },
+  {
+   "satellite": "hst",
+   "site": "boulder",
+   "start": 1792296000.0,
+   "end": 1792555200.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -83.83381713254282,
+    12.338821909331092
+   ],
+   "passes": [
+    {
+     "rise": 1792309818.4509907,
+     "culmination": 1792309928.8849096,
+     "set": 1792310039.3379443,
+     "riseAzimuth": 205.6557332280866,
+     "culminationAltitude": 13.280699691623923,
+     "culminationAzimuth": 175.59710138440366,
+     "culminationRange": 1415.323621414796,
+     "setAzimuth": 145.54286320123268,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -56.30150785579284
+    },
+    {
+     "rise": 1792315774.8519037,
+     "culmination": 1792315863.312685,
+     "set": 1792315951.7516432,
+     "riseAzimuth": 212.20145447965317,
+     "culminationAltitude": 11.974873274233255,
+     "culminationAzimuth": 188.5315397084362,
+     "culminationRange": 1487.4341764175008,
+     "setAzimuth": 164.85628877996007,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -42.552945585096424
+    },
+    {
+     "rise": 1792394236.9116313,
+     "culmination": 1792394346.3396509,
+     "set": 1792394455.7793949,
+     "riseAzimuth": 205.046918759028,
+     "culminationAltitude": 13.209940377329358,
+     "culminationAzimuth": 175.29076125783516,
+     "culminationRange": 1419.1327308264865,
+     "setAzimuth": 145.53830136613573,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -59.11835126314488
+    },
+    {
+     "rise": 1792400189.9257956,
+     "culmination": 1792400280.7590218,
+     "set": 1792400371.563803,
+     "riseAzimuth": 212.57470767868972,
+     "culminationAltitude": 12.094803810287667,
+     "culminationAzimuth": 188.22998889557476,
+     "culminationRange": 1480.4019755796298,
+     "setAzimuth": 163.8793462574067,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -48.13482666186194
+    },
+    {
+     "rise": 1792478654.6913753,
+     "culmination": 1792478763.061284,
+     "set": 1792478871.4360628,
+     "riseAzimuth": 204.4189576804893,
+     "culminationAltitude": 13.13619484052764,
+     "culminationAzimuth": 174.98272526702516,
+     "culminationRange": 1423.2455338352931,
+     "setAzimuth": 145.5496857808188,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -60.35295694810329
+    },
+    {
+     "rise": 1792484604.3655033,
+     "culmination": 1792484697.4694133,
+     "set": 1792484790.537541,
+     "riseAzimuth": 212.91773538914126,
+     "culminationAltitude": 12.213639223237237,
+     "culminationAzimuth": 187.92640404669217,
+     "culminationRange": 1473.6186720484468,
+     "setAzimuth": 162.92858622024738,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -53.13353328929377
+    }
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "site": "boulder",
+   "start": 1792296000.0,
+   "end": 1792555200.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -89.22961162293146,
+    33.45410092389695
+   ],
+   "passes": [
+    {
+     "rise": 1792296170.7199054,
+     "culmination": 1792296330.917747,
+     "set": 1792296490.2051194,
+     "riseAzimuth": 289.5397384976208,
+     "culminationAltitude": 28.791234553515498,
+     "culminationAzimuth": 227.11235869547565,
+     "culminationRange": 701.2959608950589,
+     "setAzimuth": 164.59260546193914,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -43.164588007188705
+    },
+    {
+     "rise": 1792349990.740302,
+     "culmination": 1792350055.0696588,
+     "set": 1792350119.492378,
+     "riseAzimuth": 148.17804850465225,
+     "culminationAltitude": 11.422486537285087,
+     "culminationAzimuth": 127.18825217931429,
+     "culminationRange": 1268.8808319015068,
+     "setAzimuth": 106.21743696721295,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 40.03615868226216
+    },
+    {
+     "rise": 1792355584.9589396,
+     "culmination": 1792355763.2493086,
+     "set": 1792355942.3395183,
+     "riseAzimuth": 242.3654823552006,
+     "culminationAltitude": 56.36436692922781,
+     "culminationAzimuth": 322.5868405349043,
+     "culminationRange": 437.0563626830258,
+     "setAzimuth": 42.84429413850709,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 34.01642541974295
+    },
+    {
+     "rise": 1792361456.16074,
+     "culmination": 1792361526.719802,
+     "set": 1792361597.328417,
+     "riseAzimuth": 318.0574531304953,
+     "culminationAltitude": 11.661960030316566,
+     "culminationAzimuth": 341.03375651166687,
+     "culminationRange": 1262.3951707602926,
+     "setAzimuth": 4.011345482839756,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 21.06857410261091
+    },
+    {
+     "rise": 1792373024.3965547,
+     "culmination": 1792373127.4410691,
+     "set": 1792373230.2500494,
+     "riseAzimuth": 347.6219472317723,
+     "culminationAltitude": 14.039367917659728,
+     "culminationAzimuth": 22.368224169956413,
+     "culminationRange": 1141.1631490924349,
+     "setAzimuth": 57.11989742837639,
+     "visible": [
+      [
+       1792373024.3965547,
+       1792373148.0386446
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -13.867838229169868
+    },
+    {
+     "rise": 1792378700.3258104,
+     "culmination": 1792378881.5324383,
+     "set": 1792379061.5326052,
+     "riseAzimuth": 310.2363595392041,
+     "culminationAltitude": 88.45358297802122,
+     "culminationAzimuth": 40.330053693869125,
+     "culminationRange": 366.46170159622267,
+     "setAzimuth": 130.37368947936423,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -32.064899828289654
+    },
+    {
+     "rise": 1792438131.685217,
+     "culmination": 1792438305.6501455,
+     "set": 1792438480.4617536,
+     "riseAzimuth": 210.14810893005063,
+     "culminationAltitude": 45.52165539606854,
+     "culminationAzimuth": 135.59336506732072,
+     "culminationRange": 502.1335188309408,
+     "setAzimuth": 61.11484529660706,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 38.67657403061004
+    },
+    {
+     "rise": 1792443907.6473348,
+     "culmination": 1792444045.319808,
+     "set": 1792444183.3071697,
+     "riseAzimuth": 283.1557836988256,
+     "culminationAltitude": 19.3813530451084,
+     "culminationAzimuth": 332.71849759071506,
+     "culminationRange": 936.3453385761151,
+     "setAzimuth": 22.287235184838547,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 30.03621013602567
+    },
+    {
+     "rise": 1792461250.2192693,
+     "culmination": 1792461416.2097542,
+     "set": 1792461581.3118916,
+     "riseAzimuth": 326.5678573282827,
+     "culminationAltitude": 31.965504065778447,
+     "culminationAzimuth": 32.96819873227661,
+     "culminationRange": 650.4119962944709,
+     "setAzimuth": 99.36332604895563,
+     "visible": [
+      [
+       1792461250.2192693,
+       1792461353.7471013
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -20.1592496797317
+    },
+    {
+     "rise": 1792466997.3750956,
+     "culmination": 1792467137.961433,
+     "set": 1792467277.8615856,
+     "riseAzimuth": 280.4866871733036,
+     "culminationAltitude": 20.661700752157913,
+     "culminationAzimuth": 229.1945435392905,
+     "culminationRange": 888.6592963611282,
+     "setAzimuth": 177.81750055266912,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -37.97813070828713
+    },
+    {
+     "rise": 1792520736.8413806,
+     "culmination": 1792520853.0671835,
+     "set": 1792520969.6290283,
+     "riseAzimuth": 169.43955578929354,
+     "culminationAltitude": 15.860061686178367,
+     "culminationAzimuth": 129.14093983801547,
+     "culminationRange": 1058.9221480617791,
+     "setAzimuth": 88.89849645986862,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 39.26469147135005
+    },
+    {
+     "rise": 1792526395.4588454,
+     "culmination": 1792526568.137209,
+     "set": 1792526741.508506,
+     "riseAzimuth": 252.22469722858378,
+     "culminationAltitude": 40.64555474796884,
+     "culminationAzimuth": 324.9496378741812,
+     "culminationRange": 545.5446450310417,
+     "setAzimuth": 37.69898196479182,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 36.36339034192747
+    },
+    {
+     "rise": 1792532311.716102,
+     "culmination": 1792532337.8623512,
+     "set": 1792532364.0135477,
+     "riseAzimuth": 335.4741671263359,
+     "culminationAltitude": 10.21002500243237,
+     "culminationAzimuth": 343.80077653844023,
+     "culminationRange": 1343.9493470187626,
+     "setAzimuth": 352.1275525515817,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 25.45563886044069
+    },
+    {
+     "rise": 1792543812.231436,
+     "culmination": 1792543935.129929,
+     "set": 1792544057.6455433,
+     "riseAzimuth": 342.1789760862315,
+     "culminationAltitude": 16.535609813324466,
+     "culminationAzimuth": 25.016044680523283,
+     "culminationRange": 1034.1134676797324,
+     "setAzimuth": 67.86051825253774,
+     "visible": [
+      [
+       1792543812.231436,
+       1792544046.8559477
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -8.04479161597011
+    },
+    {
+     "rise": 1792549501.8405225,
+     "culmination": 1792549680.8818455,
+     "set": 1792549858.6924584,
+     "riseAzimuth": 304.3332793892602,
+     "culminationAltitude": 63.407753931802816,
+     "culminationAzimuth": 222.5633702723973,
+     "culminationRange": 406.0412036539019,
+     "setAzimuth": 140.72117845211298,
+     "visible": [
+      [
+       1792549501.8405225,
+       1792549559.7746046
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -26.34057949466878
+    }
+   ]
+  },
+  {
+   "satellite": "gps",
+   "site": "boulder",
+   "start": 1792296000.0,
+   "end": 1792555200.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -60.985197667659406,
+    71.4747244666218
+   ],
+   "passes": [
+    {
+     "rise": 1792362094.1016603,
+     "culmination": 1792375112.7293096,
+     "set": 1792387054.205273,
+     "riseAzimuth": 238.4858512478413,
+     "culminationAltitude": 71.47364794070329,
+     "culminationAzimuth": 16.394635054847626,
+     "culminationRange": 20724.559491267944,
+     "setAzimuth": 137.92401136441882,
+     "visible": [
+      [
+       1792370654.7301893,
+       1792381676.8862467
+      ],
+      [
+       1792385028.0386343,
+       1792387054.205273
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -20.20534075659292
+    },
+    {
+     "rise": 1792448251.258331,
+     "culmination": 1792461270.375279,
+     "set": 1792473211.046323,
+     "riseAzimuth": 238.49560500884238,
+     "culminationAltitude": 71.47490902039809,
+     "culminationAzimuth": 16.41247072574206,
+     "culminationRange": 20724.474761952537,
+     "setAzimuth": 137.93251131297407,
+     "visible": [
+      [
+       1792456971.1573846,
+       1792467875.4012873
+      ],
+      [
+       1792471206.874992,
+       1792473211.046323
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -19.694172733286138
+    }
+   ]
+  },
+  {
+   "satellite": "iss",
+   "site": "sydney",
+   "start": 1792310400.0,
+   "end": 1792569600.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -88.89191658333222,
+    51.45480820918585
+   ],
+   "passes": [
+    {
+     "rise": 1792326547.3165753,
+     "culmination": 1792326729.2223625,
+     "set": 1792326909.7288945,
+     "riseAzimuth": 206.042231480633,
+     "culminationAltitude": 28.8739047653893,
+     "culminationAzimuth": 143.39543013696365,
+     "culminationRange": 809.9441397710084,
+     "setAzimuth": 80.74772109176745,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -43.491526779274
+    },
+    {
+     "rise": 1792332369.0504446,
+     "culmination": 1792332530.726067,
+     "set": 1792332691.2127457,
+     "riseAzimuth": 256.25842318315637,
+     "culminationAltitude": 21.920009851834145,
+     "culminationAzimuth": 308.88463002007154,
+     "culminationRange": 976.1472938520957,
+     "setAzimuth": 1.6393161960879705,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -45.85241830349784
+    },
+    {
+     "rise": 1792386556.1042323,
+     "culmination": 1792386758.9597864,
+     "set": 1792386963.7081876,
+     "riseAzimuth": 317.83205489170075,
+     "culminationAltitude": 79.95037377980384,
+     "culminationAzimuth": 44.56253522167415,
+     "culminationRange": 433.88967455224713,
+     "setAzimuth": 131.20428952107991,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 35.97318009354845
+    },
+    {
+     "rise": 1792392489.3236275,
+     "culmination": 1792392590.7656054,
+     "set": 1792392692.4856024,
+     "riseAzimuth": 238.15007238033567,
+     "culminationAltitude": 13.041240623374284,
+     "culminationAzimuth": 208.29404979900244,
+     "culminationRange": 1344.3971998788606,
+     "setAzimuth": 178.44187722579818,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 15.958462004023662
+    },
+    {
+     "rise": 1792410128.4984426,
+     "culmination": 1792410278.426184,
+     "set": 1792410427.50759,
+     "riseAzimuth": 194.73395735960483,
+     "culminationAltitude": 18.647953562862448,
+     "culminationAzimuth": 147.57389596948352,
+     "culminationRange": 1093.188630514874,
+     "setAzimuth": 100.40085947124285,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -38.19437140121687
+    },
+    {
+     "rise": 1792415901.5753777,
+     "culmination": 1792416095.2353935,
+     "set": 1792416287.015323,
+     "riseAzimuth": 240.65887390327285,
+     "culminationAltitude": 41.08526911977845,
+     "culminationAzimuth": 312.14514756247246,
+     "culminationRange": 622.7689039446459,
+     "setAzimuth": 23.764336942375152,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -45.806537968300674
+    },
+    {
+     "rise": 1792470128.0903234,
+     "culmination": 1792470319.5347052,
+     "set": 1792470512.6358988,
+     "riseAzimuth": 337.3059216229204,
+     "culminationAltitude": 39.68445114413003,
+     "culminationAzimuth": 48.0290249760978,
+     "culminationRange": 640.8910522297293,
+     "setAzimuth": 118.62439765096718,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 45.5072951021278
+    },
+    {
+     "rise": 1792475983.5550914,
+     "culmination": 1792476135.4785652,
+     "set": 1792476288.141391,
+     "riseAzimuth": 260.8776878196392,
+     "culminationAltitude": 19.12742105745144,
+     "culminationAzimuth": 212.69631281427405,
+     "culminationRange": 1078.3947351384688,
+     "setAzimuth": 164.5190114195774,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 25.978596414077117
+    },
+    {
+     "rise": 1792493725.5790582,
+     "culmination": 1792493822.7271385,
+     "set": 1792493919.5663755,
+     "riseAzimuth": 180.4386039601041,
+     "culminationAltitude": 12.738505514106627,
+     "culminationAzimuth": 151.99917442211972,
+     "culminationRange": 1357.8841567416337,
+     "setAzimuth": 123.55141285049115,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -31.195427881178738
+    },
+    {
+     "rise": 1792499450.927454,
+     "culmination": 1792499655.3738437,
+     "set": 1792499857.6634896,
+     "riseAzimuth": 228.15274354267444,
+     "culminationAltitude": 82.88156425515221,
+     "culminationAzimuth": 315.6344870148511,
+     "culminationRange": 429.199361886376,
+     "setAzimuth": 43.20620179434198,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -43.00987098313267
+    },
+    {
+     "rise": 1792553724.0526037,
+     "culmination": 1792553882.7258308,
+     "set": 1792554042.4401832,
+     "riseAzimuth": 359.6205963417188,
+     "culminationAltitude": 21.286501660019745,
+     "culminationAzimuth": 51.27407559999725,
+     "culminationRange": 999.0895303764299,
+     "setAzimuth": 102.80739286996354,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 54.39549900165565
+    },
+    {
+     "rise": 1792559500.8195195,
+     "culmination": 1792559683.3436565,
+     "set": 1792559867.1017056,
+     "riseAzimuth": 280.40122313877697,
+     "culminationAltitude": 29.759912385416012,
+     "culminationAzimuth": 216.8550522458221,
+     "culminationRange": 794.7220675525546,
+     "setAzimuth": 153.29982422191256,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 35.889553713702504
+    }
+   ]
+  },
+  {
+   "satellite": "molniya",
+   "site": "sydney",
+   "start": 1792310400.0,
+   "end": 1792569600.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -76.99609918526397,
+    74.48160580556569
+   ],
+   "passes": [
+    {
+     "rise": 1792375594.4132628,
+     "culmination": 1792380425.449942,
+     "set": 1792381145.8185108,
+     "riseAzimuth": 335.792585619455,
+     "culminationAltitude": 67.6147590512528,
+     "culminationAzimuth": 242.47353392465754,
+     "culminationRange": 4224.333162283905,
+     "setAzimuth": 156.51531611602985,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 55.77305923655614
+    },
+    {
+     "rise": 1792460852.8437133,
+     "culmination": 1792465913.9359891,
+     "set": 1792466643.251351,
+     "riseAzimuth": 338.85765022804515,
+     "culminationAltitude": 72.28415733701077,
+     "culminationAzimuth": 242.96685205504352,
+     "culminationRange": 4224.258635203066,
+     "setAzimuth": 155.38359462692577,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 58.418595900526576
+    },
+    {
+     "rise": 1792511029.889698,
+     "culmination": 1792511198.9066198,
+     "set": 1792511397.3494608,
+     "riseAzimuth": 286.02682876420005,
+     "culminationAltitude": 10.320517546549278,
+     "culminationAzimuth": 293.81522745679615,
+     "culminationRange": 8186.441205989527,
+     "setAzimuth": 301.3489033078289,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -36.3863005439354
+    },
+    {
+     "rise": 1792546140.613837,
+     "culmination": 1792551402.557312,
+     "set": 1792552141.1077292,
+     "riseAzimuth": 341.78146352969253,
+     "culminationAltitude": 77.03644476209952,
+     "culminationAzimuth": 243.39039239490393,
+     "culminationRange": 4243.227716824013,
+     "setAzimuth": 154.22523327264028,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 60.887113150338024
+    }
+   ]
+  },
+  {
+   "satellite": "geo",
+   "site": "sydney",
+   "start": 1792310400.0,
+   "end": 1792569600.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    5.614900310887928,
+    22.393280582663206
+   ],
+   "passes": [
+    {
+     "rise": 1792371586.6972437,
+     "culmination": 1792403940.5009665,
+     "set": 1792429635.9059033,
+     "riseAzimuth": 293.31055699477474,
+     "culminationAltitude": 22.374119293937515,
+     "culminationAzimuth": 274.399726796111,
+     "culminationRange": 39359.698887225655,
+     "setAzimuth": 290.82174347164846,
+     "visible": [
+      [
+       1792399035.5965228,
+       1792429635.9059033
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -21.611933660992065
+    },
+    {
+     "rise": 1792457706.4586873,
+     "culmination": 1792490096.644526,
+     "set": 1792515822.3845942,
+     "riseAzimuth": 293.34957299911497,
+     "culminationAltitude": 22.39328083372193,
+     "culminationAzimuth": 274.41406972378866,
+     "culminationRange": 39357.90313837714,
+     "setAzimuth": 290.85589744386164,
+     "visible": [
+      [
+       1792485488.6785908,
+       1792515822.3845942
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -20.66563811355894
+    }
+   ]
+  },
+  {
+   "satellite": "polar",
+   "site": "tromso",
+   "start": 1792324800.0,
+   "end": 1792584000.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -89.47257161899793,
+    71.6097932324688
+   ],
+   "passes": [
+    {
+     "rise": 1792326763.4157338,
+     "culmination": 1792327054.0362406,
+     "set": 1792327346.2837014,
+     "riseAzimuth": 188.9870085816826,
+     "culminationAltitude": 43.501910102458474,
+     "culminationAzimuth": 261.24941133656955,
+     "culminationRange": 1061.6170115755342,
+     "setAzimuth": 333.5729582688194,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 7.581334636356933
+    },
+    {
+     "rise": 1792332880.4983573,
+     "culmination": 1792333069.5721674,
+     "set": 1792333259.3203063,
+     "riseAzimuth": 246.3334563897925,
+     "culminationAltitude": 16.27366391249532,
+     "culminationAzimuth": 284.9713452063657,
+     "culminationRange": 1907.5775298767703,
+     "setAzimuth": 323.6235498944583,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 1.5509463657643159
+    },
+    {
+     "rise": 1792369535.7095706,
+     "culmination": 1792369796.7604017,
+     "set": 1792370056.5029995,
+     "riseAzimuth": 29.322806856236188,
+     "culminationAltitude": 27.541742440843958,
+     "culminationAzimuth": 87.96403116579803,
+     "culminationRange": 1426.8532059243817,
+     "setAzimuth": 146.5676851508111,
+     "visible": [
+      [
+       1792369535.7095706,
+       1792369920.4512699
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -27.23168988096693
+    },
+    {
+     "rise": 1792375473.2553096,
+     "culmination": 1792375779.882163,
+     "set": 1792376084.9041998,
+     "riseAzimuth": 24.896558255993643,
+     "culminationAltitude": 75.05444781430234,
+     "culminationAzimuth": 111.21724338914238,
+     "culminationRange": 796.5052840665387,
+     "setAzimuth": 197.45075086861104,
+     "visible": [
+      [
+       1792375473.2553096,
+       1792375927.2372432
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -20.964491651402586
+    },
+    {
+     "rise": 1792381418.7642932,
+     "culmination": 1792381709.9405987,
+     "set": 1792382000.1741216,
+     "riseAzimuth": 26.001467294911656,
+     "culminationAltitude": 46.389974493236195,
+     "culminationAzimuth": 314.3378411486182,
+     "culminationRange": 1019.9630155039276,
+     "setAzimuth": 242.58796885532448,
+     "visible": [
+      [
+       1792381418.7642932,
+       1792381934.0235705
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -12.872469307343529
+    },
+    {
+     "rise": 1792387347.6458309,
+     "culmination": 1792387599.3824801,
+     "set": 1792387850.8175054,
+     "riseAzimuth": 33.39087432247681,
+     "culminationAltitude": 26.691173030910914,
+     "culminationAzimuth": 337.89749827706675,
+     "culminationRange": 1457.1572014539213,
+     "setAzimuth": 282.3648299670782,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -4.455455780399816
+    },
+    {
+     "rise": 1792393234.2403183,
+     "culmination": 1792393466.7706265,
+     "set": 1792393699.3305635,
+     "riseAzimuth": 51.612240769349704,
+     "culminationAltitude": 22.53311189064891,
+     "culminationAzimuth": 1.8865747296232822,
+     "culminationRange": 1611.8032674328153,
+     "setAzimuth": 312.1645069657934,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 2.9587049479237235
+    },
+    {
+     "rise": 1792399078.731947,
+     "culmination": 1792399336.118001,
+     "set": 1792399593.903365,
+     "riseAzimuth": 83.37364666480617,
+     "culminationAltitude": 28.3926968563008,
+     "culminationAzimuth": 25.832604458848458,
+     "culminationRange": 1402.0976885568382,
+     "setAzimuth": 328.33964210870295,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 8.187954753280227
+    },
+    {
+     "rise": 1792404935.8015752,
+     "culmination": 1792405230.8785348,
+     "set": 1792405527.0535219,
+     "riseAzimuth": 124.19490479464217,
+     "culminationAltitude": 52.366571875984164,
+     "culminationAzimuth": 49.3092186394612,
+     "culminationRange": 946.5614360475398,
+     "setAzimuth": 334.51523503447464,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 10.273256587744813
+    },
+    {
+     "rise": 1792410865.7454247,
+     "culmination": 1792411168.562228,
+     "set": 1792411473.053418,
+     "riseAzimuth": 170.0596609407706,
+     "culminationAltitude": 64.34859621328742,
+     "culminationAzimuth": 252.40160480428509,
+     "culminationRange": 846.423666036657,
+     "setAzimuth": 334.8239356643776,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 8.737806005923755
+    },
+    {
+     "rise": 1792416916.91683,
+     "culmination": 1792417160.875714,
+     "set": 1792417406.0016527,
+     "riseAzimuth": 222.3611784201141,
+     "culminationAltitude": 23.659275419416407,
+     "culminationAzimuth": 275.7594153577716,
+     "culminationRange": 1564.037039091803,
+     "setAzimuth": 329.1871807360196,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 3.8092820858604584
+    },
+    {
+     "rise": 1792453675.9396682,
+     "culmination": 1792453891.8980107,
+     "set": 1792454106.9804983,
+     "riseAzimuth": 33.65585506884854,
+     "culminationAltitude": 19.009557882973805,
+     "culminationAzimuth": 78.8391147563188,
+     "culminationRange": 1765.9920831899117,
+     "setAzimuth": 124.00141866060838,
+     "visible": [
+      [
+       1792453675.9396682,
+       1792454015.4469924
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -29.16806032716196
+    },
+    {
+     "rise": 1792459599.173224,
+     "culmination": 1792459897.755765,
+     "set": 1792460194.7011676,
+     "riseAzimuth": 25.808664885996,
+     "culminationAltitude": 51.09241713226077,
+     "culminationAzimuth": 102.39006398853269,
+     "culminationRange": 959.9389550885224,
+     "setAzimuth": 178.90139867052613,
+     "visible": [
+      [
+       1792459599.173224,
+       1792460022.232306
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -23.99830238315251
+    },
+    {
+     "rise": 1792465544.8949773,
+     "culmination": 1792465846.8835588,
+     "set": 1792466147.6369052,
+     "riseAzimuth": 24.978487376381253,
+     "culminationAltitude": 63.20413562001812,
+     "culminationAzimuth": 305.4662151170002,
+     "culminationRange": 854.2516568698433,
+     "setAzimuth": 225.85924933758352,
+     "visible": [
+      [
+       1792465544.8949773,
+       1792466029.017536
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -16.407540757915157
+    },
+    {
+     "rise": 1792471483.0390475,
+     "culmination": 1792471750.0371456,
+     "set": 1792472016.5370193,
+     "riseAzimuth": 29.593200522753357,
+     "culminationAltitude": 31.53495627571499,
+     "culminationAzimuth": 328.82536617727317,
+     "culminationRange": 1311.3630377782408,
+     "setAzimuth": 267.99916866813044,
+     "visible": [
+      [
+       1792471483.0390475,
+       1792472016.5370193
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -7.94742663191467
+    },
+    {
+     "rise": 1792477388.4808273,
+     "culmination": 1792477623.2308044,
+     "set": 1792477857.908085,
+     "riseAzimuth": 43.03014977919324,
+     "culminationAltitude": 22.93322058873982,
+     "culminationAzimuth": 352.688788090976,
+     "culminationRange": 1595.5721487021842,
+     "setAzimuth": 302.33600946556345,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -0.010185133106362753
+    },
+    {
+     "rise": 1792483245.0773287,
+     "culmination": 1792483488.8622026,
+     "set": 1792483732.878974,
+     "riseAzimuth": 69.81960512932427,
+     "culminationAltitude": 24.822288570009253,
+     "culminationAzimuth": 16.71760847644797,
+     "culminationRange": 1522.8627755820762,
+     "setAzimuth": 323.6453514924373,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 6.171162753911211
+    },
+    {
+     "rise": 1792489089.3139002,
+     "culmination": 1792489371.4600036,
+     "set": 1792489654.410585,
+     "riseAzimuth": 107.87738722355934,
+     "culminationAltitude": 39.61381706662771,
+     "culminationAzimuth": 40.39740237157714,
+     "culminationRange": 1129.5431452947546,
+     "setAzimuth": 332.99597937866037,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 9.536140090534195
+    },
+    {
+     "rise": 1792494985.4851677,
+     "culmination": 1792495291.0895343,
+     "set": 1792495598.2409708,
+     "riseAzimuth": 151.97966230409287,
+     "culminationAltitude": 88.58409729924787,
+     "culminationAzimuth": 63.584813988508735,
+     "culminationRange": 772.7576115645453,
+     "setAzimuth": 335.28942986043023,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 9.393124151618679
+    },
+    {
+     "rise": 1792500984.028718,
+     "culmination": 1792501261.3937898,
+     "set": 1792501540.278849,
+     "riseAzimuth": 201.20114591187377,
+     "culminationAltitude": 34.342116525502405,
+     "culminationAzimuth": 266.7384270569933,
+     "culminationRange": 1238.8240424836486,
+     "setAzimuth": 332.3238455157586,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 5.692019327822642
+    },
+    {
+     "rise": 1792507156.8448977,
+     "culmination": 1792507291.7762861,
+     "set": 1792507427.0417092,
+     "riseAzimuth": 264.2358441916578,
+     "culminationAltitude": 12.770178699703905,
+     "culminationAzimuth": 290.76965781834093,
+     "culminationRange": 2118.4799672100753,
+     "setAzimuth": 317.3098078311037,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -0.9268694441906346
+    },
+    {
+     "rise": 1792537839.3477316,
+     "culmination": 1792537977.569329,
+     "set": 1792538115.450566,
+     "riseAzimuth": 42.32304675498697,
+     "culminationAltitude": 12.90883293383823,
+     "culminationAzimuth": 69.48318423658182,
+     "culminationRange": 2109.683805256277,
+     "setAzimuth": 96.63612106637218,
+     "visible": [
+      [
+       1792537839.3477316,
+       1792538110.4312277
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -30.544699204925895
+    },
+    {
+     "rise": 1792543727.723706,
+     "culmination": 1792544007.2984083,
+     "set": 1792544285.3911204,
+     "riseAzimuth": 27.61367568617267,
+     "culminationAltitude": 34.687496241059954,
+     "culminationAzimuth": 93.4978544096042,
+     "culminationRange": 1230.9379212238339,
+     "setAzimuth": 159.33219744224786,
+     "visible": [
+      [
+       1792543727.723706,
+       1792544117.2154052
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -26.68635109699972
+    },
+    {
+     "rise": 1792549669.9201639,
+     "culmination": 1792549977.037757,
+     "set": 1792550282.672022,
+     "riseAzimuth": 24.70807336170535,
+     "culminationAltitude": 87.86410693446453,
+     "culminationAzimuth": 296.6395088013304,
+     "culminationRange": 773.1469365612471,
+     "setAzimuth": 208.48258739866736,
+     "visible": [
+      [
+       1792549669.9201639,
+       1792550123.9997537
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -19.82088674563862
+    },
+    {
+     "rise": 1792555613.6551309,
+     "culmination": 1792555896.2229104,
+     "set": 1792556178.0420623,
+     "riseAzimuth": 27.05563810052049,
+     "culminationAltitude": 39.358985494803036,
+     "culminationAzimuth": 319.8335852189495,
+     "culminationRange": 1134.4509040127884,
+     "setAzimuth": 252.53487334484058,
+     "visible": [
+      [
+       1792555613.6551309,
+       1792556130.7835488
+      ]
+     ],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -11.513361010546097
+    },
+    {
+     "rise": 1792561534.8380585,
+     "culmination": 1792561778.5451274,
+     "set": 1792562022.0586042,
+     "riseAzimuth": 36.498062490939716,
+     "culminationAltitude": 24.755143932406103,
+     "culminationAzimuth": 343.51727255613895,
+     "culminationRange": 1525.407684672629,
+     "setAzimuth": 290.5087355532611,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": -3.2273501468645147
+    },
+    {
+     "rise": 1792567409.3178198,
+     "culmination": 1792567644.1281734,
+     "set": 1792567879.0448616,
+     "riseAzimuth": 57.9447079769563,
+     "culminationAltitude": 22.961776343664653,
+     "culminationAzimuth": 7.546942567009732,
+     "culminationRange": 1594.4109025855576,
+     "setAzimuth": 317.1626817435716,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 3.7509332633949386
+    },
+    {
+     "rise": 1792573250.6453888,
+     "culmination": 1792573517.5138497,
+     "set": 1792573784.9284997,
+     "riseAzimuth": 92.38804499175272,
+     "culminationAltitude": 31.693704415136935,
+     "culminationAzimuth": 31.407034390506233,
+     "culminationRange": 1307.0317393758694,
+     "setAzimuth": 330.48666739853894,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 8.288366616018
+    },
+    {
+     "rise": 1792579120.1489801,
+     "culmination": 1792579421.05142,
+     "set": 1792579723.2543979,
+     "riseAzimuth": 134.58463379205085,
+     "culminationAltitude": 63.74790650830961,
+     "culminationAzimuth": 54.76319052717143,
+     "culminationRange": 850.6318093281399,
+     "setAzimuth": 335.03766288240035,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 9.524261170542779
+    }
+   ]
+  },
+  {
+   "satellite": "polar",
+   "site": "sydney",
+   "start": 1792310400.0,
+   "end": 1792569600.0,
+   "minimumAltitude": 10.0,
+   "darknessSunAltitude": -6.0,
+   "windowAltitudeRange": [
+    -86.8631385084278,
+    61.04505231934816
+   ],
+   "passes": [
+    {
+     "rise": 1792335258.003254,
+     "culmination": 1792335521.4597468,
+     "set": 1792335787.3073866,
+     "riseAzimuth": 50.188662798067284,
+     "culminationAltitude": 30.19493356288165,
+     "culminationAzimuth": 110.17222325277429,
+     "culminationRange": 1352.02923171527,
+     "setAzimuth": 169.89309539311037,
+     "visible": [
+      [
+       1792335729.8416328,
+       1792335787.3073866
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -42.55779285040803
+    },
+    {
+     "rise": 1792341200.4232414,
+     "culmination": 1792341451.4602222,
+     "set": 1792341705.6576016,
+     "riseAzimuth": 331.8696778817076,
+     "culminationAltitude": 25.731649623125172,
+     "culminationAzimuth": 276.01181088178794,
+     "culminationRange": 1490.415591289078,
+     "setAzimuth": 220.09187699096213,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -29.38844198423073
+    },
+    {
+     "rise": 1792379287.8181288,
+     "culmination": 1792379431.3606863,
+     "set": 1792379573.9017832,
+     "riseAzimuth": 116.0007454018572,
+     "culminationAltitude": 13.217212253020135,
+     "culminationAzimuth": 87.79048408572392,
+     "culminationRange": 2091.357816510067,
+     "setAzimuth": 59.59145371571919,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 58.36910116653032
+    },
+    {
+     "rise": 1792385082.8425996,
+     "culmination": 1792385384.2604222,
+     "set": 1792385681.9023623,
+     "riseAzimuth": 176.54961677136507,
+     "culminationAltitude": 57.012380558856165,
+     "culminationAzimuth": 253.85672786046615,
+     "culminationRange": 903.9449054424169,
+     "setAzimuth": 331.4408355824447,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 40.55671443206856
+    },
+    {
+     "rise": 1792419540.320399,
+     "culmination": 1792419675.5450375,
+     "set": 1792419811.1718695,
+     "riseAzimuth": 89.51931596914334,
+     "culminationAltitude": 12.977440721419326,
+     "culminationAzimuth": 116.0452004320445,
+     "culminationRange": 2113.6832166335676,
+     "setAzimuth": 142.49433825523886,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -44.938599430155065
+    },
+    {
+     "rise": 1792425271.530797,
+     "culmination": 1792425573.04677,
+     "set": 1792425878.9847598,
+     "riseAzimuth": 3.0375347571539155,
+     "culminationAltitude": 64.2038200381124,
+     "culminationAzimuth": 281.30089805384824,
+     "culminationRange": 849.7604260263757,
+     "setAzimuth": 199.37870778445279,
+     "visible": [
+      [
+       1792425830.5547228,
+       1792425878.9847598
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -34.925728189991204
+    },
+    {
+     "rise": 1792469213.067326,
+     "culmination": 1792469516.6365118,
+     "set": 1792469815.7911265,
+     "riseAzimuth": 158.66655453066213,
+     "culminationAltitude": 58.08740988164265,
+     "culminationAzimuth": 79.2633672681334,
+     "culminationRange": 893.8432370891824,
+     "setAzimuth": 0.03105989489756634,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 48.05208783155173
+    },
+    {
+     "rise": 1792475259.0649931,
+     "culmination": 1792475417.6355858,
+     "set": 1792475575.6183763,
+     "riseAzimuth": 213.25864052467034,
+     "culminationAltitude": 14.277582314592012,
+     "culminationAzimuth": 244.5937682093674,
+     "culminationRange": 2031.4190127456518,
+     "setAzimuth": 276.03349825460094,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 28.44780988895357
+    },
+    {
+     "rise": 1792509412.138882,
+     "culmination": 1792509706.712778,
+     "set": 1792510004.8670352,
+     "riseAzimuth": 31.609324694736696,
+     "culminationAltitude": 51.72171879512615,
+     "culminationAzimuth": 106.72467884403345,
+     "culminationRange": 956.5348045130904,
+     "setAzimuth": 181.55932356198232,
+     "visible": [
+      [
+       1792509924.6159327,
+       1792510004.8670352
+      ]
+     ],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -39.46820264694152
+    },
+    {
+     "rise": 1792515489.195671,
+     "culmination": 1792515656.2554753,
+     "set": 1792515824.6897798,
+     "riseAzimuth": 306.3604794163127,
+     "culminationAltitude": 14.691916347346668,
+     "culminationAzimuth": 272.77105820858503,
+     "culminationRange": 2000.804573198951,
+     "setAzimuth": 239.16463116881147,
+     "visible": [],
+     "sunlitAtCulmination": false,
+     "sunAltitudeAtCulmination": -24.851348447555043
+    },
+    {
+     "rise": 1792553393.2131984,
+     "culmination": 1792553636.9296756,
+     "set": 1792553877.7303016,
+     "riseAzimuth": 137.22100450503567,
+     "culminationAltitude": 23.441810210954984,
+     "culminationAzimuth": 84.54524588615611,
+     "culminationRange": 1574.8637953327084,
+     "setAzimuth": 31.92130918405272,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 55.09760298984442
+    },
+    {
+     "rise": 1792559297.264103,
+     "culmination": 1792559570.304103,
+     "set": 1792559840.713846,
+     "riseAzimuth": 187.9960883638869,
+     "culminationAltitude": 32.98603907629689,
+     "culminationAzimuth": 250.42552180045567,
+     "culminationRange": 1276.7688447172102,
+     "setAzimuth": 313.126850960934,
+     "visible": [],
+     "sunlitAtCulmination": true,
+     "sunAltitudeAtCulmination": 36.271497103842364
+    }
+   ]
+  }
+ ],
+ "looks": [
+  {
+   "satellite": "iss",
+   "site": "boulder",
+   "time": 1792296000.0,
+   "altitude": -45.943148998550555,
+   "azimuth": 340.3292652601889,
+   "rangeKilometers": 9758.8656579229,
+   "rangeRateKilometersPerSecond": 1.3279276082614275,
+   "isSunlit": true,
+   "sunAltitude": -42.23612043664005
+  },
+  {
+   "satellite": "iss",
+   "site": "boulder",
+   "time": 1792301400.0,
+   "altitude": -44.56574786203236,
+   "azimuth": 6.803722651740012,
+   "rangeKilometers": 9556.820146104621,
+   "rangeRateKilometersPerSecond": 2.7315568745951375,
+   "isSunlit": true,
+   "sunAltitude": -55.20199931423883
+  },
+  {
+   "satellite": "iss",
+   "site": "boulder",
+   "time": 1792336000.0,
+   "altitude": -42.660075571496996,
+   "azimuth": 97.05391428417396,
+   "rangeKilometers": 9241.596135012396,
+   "rangeRateKilometersPerSecond": 4.916030940176999,
+   "isSunlit": true,
+   "sunAltitude": 18.96314861782776
+  },
+  {
+   "satellite": "iss",
+   "site": "boulder",
+   "time": 1792396000.0,
+   "altitude": -33.90889227429761,
+   "azimuth": 37.451952638408365,
+   "rangeKilometers": 7848.53878353901,
+   "rangeRateKilometersPerSecond": 5.013256809813853,
+   "isSunlit": true,
+   "sunAltitude": -57.13050955695253
+  },
+  {
+   "satellite": "iss",
+   "site": "boulder",
+   "time": 1792496000.0,
+   "altitude": 5.641153366164303,
+   "azimuth": 41.824920631713475,
+   "rangeKilometers": 1829.9418264592439,
+   "rangeRateKilometersPerSecond": 6.318078571705006,
+   "isSunlit": true,
+   "sunAltitude": -20.548317333375802
+  },
+  {
+   "satellite": "css",
+   "site": "boulder",
+   "time": 1792296000.0,
+   "altitude": -85.56427791465782,
+   "azimuth": 294.1262120650831,
+   "rangeKilometers": 13101.005974663012,
+   "rangeRateKilometersPerSecond": -0.3291729535082993,
+   "isSunlit": true,
+   "sunAltitude": -42.23612043664005
+  },
+  {
+   "satellite": "css",
+   "site": "boulder",
+   "time": 1792301400.0,
+   "altitude": -80.0100927285358,
+   "azimuth": 74.71461116641993,
+   "rangeKilometers": 12950.828151512002,
+   "rangeRateKilometersPerSecond": 1.1905444577339064,
+   "isSunlit": true,
+   "sunAltitude": -55.20199931423883
+  },
+  {
+   "satellite": "css",
+   "site": "boulder",
+   "time": 1792336000.0,
+   "altitude": -61.43494333927337,
+   "azimuth": 88.34878245465183,
+   "rangeKilometers": 11637.17121018824,
+   "rangeRateKilometersPerSecond": 0.9042628632215742,
+   "isSunlit": true,
+   "sunAltitude": 18.96314861782776
+  },
+  {
+   "satellite": "css",
+   "site": "boulder",
+   "time": 1792396000.0,
+   "altitude": -84.57423953495844,
+   "azimuth": 100.02634096785448,
+   "rangeKilometers": 13081.121282959786,
+   "rangeRateKilometersPerSecond": 0.6547945573168746,
+   "isSunlit": true,
+   "sunAltitude": -57.13050955695253
+  },
+  {
+   "satellite": "css",
+   "site": "boulder",
+   "time": 1792496000.0,
+   "altitude": -72.88598796213245,
+   "azimuth": 87.39941190775549,
+   "rangeKilometers": 12590.414337027583,
+   "rangeRateKilometersPerSecond": 1.1290502253385362,
+   "isSunlit": true,
+   "sunAltitude": -20.548317333375802
+  },
+  {
+   "satellite": "hst",
+   "site": "boulder",
+   "time": 1792296000.0,
+   "altitude": -59.85221332475284,
+   "azimuth": 258.15604793634606,
+   "rangeKilometers": 11562.371239163442,
+   "rangeRateKilometersPerSecond": -2.911809516081562,
+   "isSunlit": true,
+   "sunAltitude": -42.23612043664005
+  },
+  {
+   "satellite": "hst",
+   "site": "boulder",
+   "time": 1792301400.0,
+   "altitude": -75.25468078217503,
+   "azimuth": 286.27036641960296,
+   "rangeKilometers": 12819.790810219049,
+   "rangeRateKilometersPerSecond": -1.2945812561920886,
+   "isSunlit": true,
+   "sunAltitude": -55.20199931423883
+  },
+  {
+   "satellite": "hst",
+   "site": "boulder",
+   "time": 1792336000.0,
+   "altitude": -62.82367034572966,
+   "azimuth": 86.67824402385489,
+   "rangeKilometers": 11869.539339584135,
+   "rangeRateKilometersPerSecond": 1.7284312894516458,
+   "isSunlit": true,
+   "sunAltitude": 18.96314861782776
+  },
+  {
+   "satellite": "hst",
+   "site": "boulder",
+   "time": 1792396000.0,
+   "altitude": -48.36870264179633,
+   "azimuth": 86.67115707921887,
+   "rangeKilometers": 10145.172035234555,
+   "rangeRateKilometersPerSecond": 4.3905575187235435,
+   "isSunlit": true,
+   "sunAltitude": -57.13050955695253
+  },
+  {
+   "satellite": "hst",
+   "site": "boulder",
+   "time": 1792496000.0,
+   "altitude": -14.640773400002706,
+   "azimuth": 266.8265434536716,
+   "rangeKilometers": 4574.671729662217,
+   "rangeRateKilometersPerSecond": -5.062356368617767,
+   "isSunlit": false,
+   "sunAltitude": -20.548317333375802
+  },
+  {
+   "satellite": "starlink",
+   "site": "boulder",
+   "time": 1792296000.0,
+   "altitude": -2.339921230753196,
+   "azimuth": 302.6573593188288,
+   "rangeKilometers": 2476.7432957720534,
+   "rangeRateKilometersPerSecond": -6.80349484110397,
+   "isSunlit": false,
+   "sunAltitude": -42.23612043664005
+  },
+  {
+   "satellite": "starlink",
+   "site": "boulder",
+   "time": 1792301400.0,
+   "altitude": -17.291464451307633,
+   "azimuth": 306.18595229550255,
+   "rangeKilometers": 4806.687192929245,
+   "rangeRateKilometersPerSecond": -5.912052482912484,
+   "isSunlit": true,
+   "sunAltitude": -55.20199931423883
+  },
+  {
+   "satellite": "starlink",
+   "site": "boulder",
+   "time": 1792336000.0,
+   "altitude": -63.32055858291401,
+   "azimuth": 276.39425687399887,
+   "rangeKilometers": 11805.27496948131,
+   "rangeRateKilometersPerSecond": -0.039771908810786356,
+   "isSunlit": false,
+   "sunAltitude": 18.96314861782776
+  },
+  {
+   "satellite": "starlink",
+   "site": "boulder",
+   "time": 1792396000.0,
+   "altitude": -19.761298025904487,
+   "azimuth": 245.09838078718008,
+   "rangeKilometers": 5222.844589797745,
+   "rangeRateKilometersPerSecond": 1.1370522077990197,
+   "isSunlit": false,
+   "sunAltitude": -57.13050955695253
+  },
+  {
+   "satellite": "starlink",
+   "site": "boulder",
+   "time": 1792496000.0,
+   "altitude": -46.72607023637005,
+   "azimuth": 234.0859482700065,
+   "rangeKilometers": 9766.228449710517,
+   "rangeRateKilometersPerSecond": 0.10685523496051477,
+   "isSunlit": false,
+   "sunAltitude": -20.548317333375802
+  },
+  {
+   "satellite": "gps",
+   "site": "boulder",
+   "time": 1792296000.0,
+   "altitude": 41.36567957606075,
+   "azimuth": 115.23880179026834,
+   "rangeKilometers": 22168.90641540408,
+   "rangeRateKilometersPerSecond": 0.4075452952996498,
+   "isSunlit": false,
+   "sunAltitude": -42.23612043664005
+  },
+  {
+   "satellite": "gps",
+   "site": "boulder",
+   "time": 1792301400.0,
+   "altitude": 6.7722668302209605,
+   "azimuth": 139.35781160168253,
+   "rangeKilometers": 25093.030609534042,
+   "rangeRateKilometersPerSecond": 0.640922281037132,
+   "isSunlit": true,
+   "sunAltitude": -55.20199931423883
+  },
+  {
+   "satellite": "gps",
+   "site": "boulder",
+   "time": 1792336000.0,
+   "altitude": -21.27716362974362,
+   "azimuth": 335.8631452215165,
+   "rangeKilometers": 28529.14303757773,
+   "rangeRateKilometersPerSecond": 0.4353169880126925,
+   "isSunlit": true,
+   "sunAltitude": 18.96314861782776
+  },
+  {
+   "satellite": "gps",
+   "site": "boulder",
+   "time": 1792396000.0,
+   "altitude": -41.224380164307696,
+   "azimuth": 137.68524908255938,
+   "rangeKilometers": 30043.863496648668,
+   "rangeRateKilometersPerSecond": 0.39714774883825793,
+   "isSunlit": true,
+   "sunAltitude": -57.13050955695253
+  },
+  {
+   "satellite": "gps",
+   "site": "boulder",
+   "time": 1792496000.0,
+   "altitude": -23.779670368970688,
+   "azimuth": 42.36304936043262,
+   "rangeKilometers": 28475.22231948042,
+   "rangeRateKilometersPerSecond": -0.40157921641806343,
+   "isSunlit": true,
+   "sunAltitude": -20.548317333375802
+  },
+  {
+   "satellite": "iss",
+   "site": "sydney",
+   "time": 1792310400.0,
+   "altitude": -39.13151404217183,
+   "azimuth": 110.32243850438451,
+   "rangeKilometers": 8698.961666598825,
+   "rangeRateKilometersPerSecond": 5.090755554111095,
+   "isSunlit": false,
+   "sunAltitude": 1.3429243467940342
+  },
+  {
+   "satellite": "iss",
+   "site": "sydney",
+   "time": 1792315800.0,
+   "altitude": -23.149934743759694,
+   "azimuth": 103.63581342928279,
+   "rangeKilometers": 5961.075122676113,
+   "rangeRateKilometersPerSecond": 5.75117837209239,
+   "isSunlit": false,
+   "sunAltitude": -16.445982744404915
+  },
+  {
+   "satellite": "iss",
+   "site": "sydney",
+   "time": 1792350400.0,
+   "altitude": -31.698092057802153,
+   "azimuth": 329.3784544953199,
+   "rangeKilometers": 7421.012555564236,
+   "rangeRateKilometersPerSecond": 1.9570848027160488,
+   "isSunlit": false,
+   "sunAltitude": -1.3980782308408661
+  },
+  {
+   "satellite": "iss",
+   "site": "sydney",
+   "time": 1792410400.0,
+   "altitude": 12.14598055477996,
+   "azimuth": 106.40271146488024,
+   "rangeKilometers": 1384.7766920467404,
+   "rangeRateKilometersPerSecond": 4.306649512979774,
+   "isSunlit": false,
+   "sunAltitude": -38.446789871971575
+  },
+  {
+   "satellite": "iss",
+   "site": "sydney",
+   "time": 1792510400.0,
+   "altitude": -24.542325065899384,
+   "azimuth": 231.3588207961779,
+   "rangeKilometers": 6218.244408702676,
+   "rangeRateKilometersPerSecond": -4.893870227192857,
+   "isSunlit": true,
+   "sunAltitude": -38.09666963390566
+  },
+  {
+   "satellite": "molniya",
+   "site": "sydney",
+   "time": 1792310400.0,
+   "altitude": -61.57819074034447,
+   "azimuth": 14.355991756800734,
+   "rangeKilometers": 46561.08039563134,
+   "rangeRateKilometersPerSecond": 1.0036628348906864,
+   "isSunlit": true,
+   "sunAltitude": 1.3429243467940342
+  },
+  {
+   "satellite": "molniya",
+   "site": "sydney",
+   "time": 1792315800.0,
+   "altitude": -63.02392925254719,
+   "azimuth": 10.34313020422053,
+   "rangeKilometers": 49934.15677758794,
+   "rangeRateKilometersPerSecond": 0.25730594941636625,
+   "isSunlit": true,
+   "sunAltitude": -16.445982744404915
+  },
+  {
+   "satellite": "molniya",
+   "site": "sydney",
+   "time": 1792350400.0,
+   "altitude": -17.209595991483432,
+   "azimuth": 350.04459275402115,
+   "rangeKilometers": 39064.301105228056,
+   "rangeRateKilometersPerSecond": 1.536763611704911,
+   "isSunlit": true,
+   "sunAltitude": -1.3980782308408661
+  },
+  {
+   "satellite": "molniya",
+   "site": "sydney",
+   "time": 1792410400.0,
+   "altitude": -71.79087233930687,
+   "azimuth": 23.766011170914012,
+   "rangeKilometers": 46605.06801113404,
+   "rangeRateKilometersPerSecond": -1.0357219701040519,
+   "isSunlit": true,
+   "sunAltitude": -38.446789871971575
+  },
+  {
+   "satellite": "molniya",
+   "site": "sydney",
+   "time": 1792510400.0,
+   "altitude": -0.3349566793969624,
+   "azimuth": 246.29238193823238,
+   "rangeKilometers": 6328.384661517403,
+   "rangeRateKilometersPerSecond": -0.37291930065269013,
+   "isSunlit": true,
+   "sunAltitude": -38.09666963390566
+  },
+  {
+   "satellite": "geo",
+   "site": "sydney",
+   "time": 1792310400.0,
+   "altitude": 21.28104042050076,
+   "azimuth": 274.69187599122,
+   "rangeKilometers": 39460.82328005862,
+   "rangeRateKilometersPerSecond": -0.024918376856180837,
+   "isSunlit": true,
+   "sunAltitude": 1.3429243467940342
+  },
+  {
+   "satellite": "geo",
+   "site": "sydney",
+   "time": 1792315800.0,
+   "altitude": 22.268760450159956,
+   "azimuth": 274.08789306715994,
+   "rangeKilometers": 39369.59854061392,
+   "rangeRateKilometersPerSecond": -0.007872292295053844,
+   "isSunlit": true,
+   "sunAltitude": -16.445982744404915
+  },
+  {
+   "satellite": "geo",
+   "site": "sydney",
+   "time": 1792350400.0,
+   "altitude": 6.661745148084404,
+   "azimuth": 294.81117931628705,
+   "rangeKilometers": 40909.46463874927,
+   "rangeRateKilometersPerSecond": 0.03345895031540232,
+   "isSunlit": true,
+   "sunAltitude": -1.3980782308408661
+  },
+  {
+   "satellite": "geo",
+   "site": "sydney",
+   "time": 1792410400.0,
+   "altitude": 21.387376764969535,
+   "azimuth": 277.03510404687023,
+   "rangeKilometers": 39450.6362484295,
+   "rangeRateKilometersPerSecond": 0.028831066065573164,
+   "isSunlit": true,
+   "sunAltitude": -38.446789871971575
+  },
+  {
+   "satellite": "geo",
+   "site": "sydney",
+   "time": 1792510400.0,
+   "altitude": 13.595648570653488,
+   "azimuth": 286.9936412087563,
+   "rangeKilometers": 40204.8464857591,
+   "rangeRateKilometersPerSecond": 0.06945558962346224,
+   "isSunlit": true,
+   "sunAltitude": -38.09666963390566
+  },
+  {
+   "satellite": "polar",
+   "site": "tromso",
+   "time": 1792324800.0,
+   "altitude": -66.67118652565398,
+   "azimuth": 160.63956603108,
+   "rangeKilometers": 12519.063047941992,
+   "rangeRateKilometersPerSecond": -2.6557268385212898,
+   "isSunlit": true,
+   "sunAltitude": 9.084593973164669
+  },
+  {
+   "satellite": "polar",
+   "site": "tromso",
+   "time": 1792330200.0,
+   "altitude": -82.81438846822297,
+   "azimuth": 133.01880431346007,
+   "rangeKilometers": 13410.686631186427,
+   "rangeRateKilometersPerSecond": -0.532556385339968,
+   "isSunlit": true,
+   "sunAltitude": 4.753779413626713
+  },
+  {
+   "satellite": "polar",
+   "site": "tromso",
+   "time": 1792364800.0,
+   "altitude": -26.756199448441244,
+   "azimuth": 147.9408234222876,
+   "rangeKilometers": 7176.006878990478,
+   "rangeRateKilometersPerSecond": 5.542760861025008,
+   "isSunlit": false,
+   "sunAltitude": -29.943270838395133
+  },
+  {
+   "satellite": "polar",
+   "site": "tromso",
+   "time": 1792424800.0,
+   "altitude": -43.295618151587284,
+   "azimuth": 39.372645581227374,
+   "rangeKilometers": 9812.660993023703,
+   "rangeRateKilometersPerSecond": 4.424104653864258,
+   "isSunlit": false,
+   "sunAltitude": -5.859563704337506
+  },
+  {
+   "satellite": "polar",
+   "site": "tromso",
+   "time": 1792524800.0,
+   "altitude": -23.561745508625076,
+   "azimuth": 299.57236663343633,
+   "rangeKilometers": 6668.2781918232595,
+   "rangeRateKilometersPerSecond": -4.937637720435373,
+   "isSunlit": true,
+   "sunAltitude": -24.71918952091204
+  },
+  {
+   "satellite": "polar",
+   "site": "sydney",
+   "time": 1792310400.0,
+   "altitude": -65.79552140570871,
+   "azimuth": 82.16785976020917,
+   "rangeKilometers": 12452.039644280441,
+   "rangeRateKilometersPerSecond": -1.5333977431752048,
+   "isSunlit": false,
+   "sunAltitude": 1.3429243467940342
+  },
+  {
+   "satellite": "polar",
+   "site": "sydney",
+   "time": 1792315800.0,
+   "altitude": -64.49194097752638,
+   "azimuth": 32.11046135451524,
+   "rangeKilometers": 12320.568379351482,
+   "rangeRateKilometersPerSecond": -0.6973226549050637,
+   "isSunlit": true,
+   "sunAltitude": -16.445982744404915
+  },
+  {
+   "satellite": "polar",
+   "site": "sydney",
+   "time": 1792350400.0,
+   "altitude": -67.63649598206432,
+   "azimuth": 84.3813371221571,
+   "rangeKilometers": 12604.486162553654,
+   "rangeRateKilometersPerSecond": 0.3244967998944713,
+   "isSunlit": true,
+   "sunAltitude": -1.3980782308408661
+  },
+  {
+   "satellite": "polar",
+   "site": "sydney",
+   "time": 1792410400.0,
+   "altitude": -61.28921118698426,
+   "azimuth": 276.2291352964104,
+   "rangeKilometers": 12035.331956125628,
+   "rangeRateKilometersPerSecond": 1.998883080784261,
+   "isSunlit": true,
+   "sunAltitude": -38.446789871971575
+  },
+  {
+   "satellite": "polar",
+   "site": "sydney",
+   "time": 1792510400.0,
+   "altitude": -12.55791644476139,
+   "azimuth": 189.11087925070504,
+   "rangeKilometers": 4935.507904737301,
+   "rangeRateKilometersPerSecond": 6.5313185030524785,
+   "isSunlit": true,
+   "sunAltitude": -38.09666963390566
+  }
+ ],
+ "shadowTransitions": [
+  {
+   "satellite": "iss",
+   "start": 1792296000.0,
+   "transitions": [
+    {
+     "time": 1792298471.5072632,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792300546.2142944,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792304049.3496704,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792306125.9921265,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792309627.184143,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792311705.7357788,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792315205.0112915,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792317285.4452515,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792320782.8305054,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792322865.1211548,
+     "entersSunlight": true
+    }
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "start": 1792296000.0,
+   "transitions": [
+    {
+     "time": 1792298121.064148,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792301480.1327515,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792303633.1100464,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792306993.0899048,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792309145.1254272,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792312506.0391235,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792314657.1115112,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792318018.981018,
+     "entersSunlight": false
+    },
+    {
+     "time": 1792320169.0682983,
+     "entersSunlight": true
+    },
+    {
+     "time": 1792323531.9155884,
+     "entersSunlight": false
+    }
+   ]
+  }
+ ],
+ "sgp4States": [
+  {
+   "satellite": "iss",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    4220.242028563761,
+    5329.574481398863,
+    0.005372903015491747
+   ],
+   "velocity": [
+    -3.727134123917451,
+    2.9494754814484554,
+    6.008133245779492
+   ]
+  },
+  {
+   "satellite": "iss",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    4811.000414845374,
+    4689.087814478678,
+    -1041.0726485432274
+   ],
+   "velocity": [
+    -2.703632992849198,
+    4.081055813578291,
+    5.892119986691282
+   ]
+  },
+  {
+   "satellite": "iss",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    -4672.626175945086,
+    -4939.785234997167,
+    12.702968161545902
+   ],
+   "velocity": [
+    3.443423271471379,
+    -3.274744902955058,
+    -6.006776040235948
+   ]
+  },
+  {
+   "satellite": "iss",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    -5460.814498833215,
+    -4052.1699484077635,
+    30.145162817831874
+   ],
+   "velocity": [
+    2.8087357129346544,
+    -3.832712871872313,
+    -6.0062346454191005
+   ]
+  },
+  {
+   "satellite": "iss",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    -3428.1258556998578,
+    2460.710585213819,
+    5326.542681407603
+   ],
+   "velocity": [
+    -4.480581674246497,
+    -6.209276709898353,
+    -0.014458520468088154
+   ]
+  },
+  {
+   "satellite": "iss",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    -218.93816181307474,
+    4373.303804915986,
+    5194.263343454587
+   ],
+   "velocity": [
+    -7.448225612863104,
+    1.202915150591203,
+    -1.3186954370310948
+   ]
+  },
+  {
+   "satellite": "css",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    2804.6544108708767,
+    -6154.8208252156155,
+    0.0003395364796771024
+   ],
+   "velocity": [
+    5.2326925872055385,
+    2.3907989080868832,
+    5.08798014055813
+   ]
+  },
+  {
+   "satellite": "css",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    2063.6993330929477,
+    -6409.114151822595,
+    -649.3302712121599
+   ],
+   "velocity": [
+    5.6481847192732815,
+    1.3140327571010402,
+    5.034103774556798
+   ]
+  },
+  {
+   "satellite": "css",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    -4969.245384235296,
+    3227.87233872896,
+    -3263.6810516462333
+   ],
+   "velocity": [
+    -1.9710191620317319,
+    -6.550105678980524,
+    -3.483386011277792
+   ]
+  },
+  {
+   "satellite": "css",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    -2646.2942761071013,
+    -5534.1072593623985,
+    -2853.6025003889254
+   ],
+   "velocity": [
+    4.93679284174546,
+    -4.3796242820283355,
+    3.919993236924766
+   ]
+  },
+  {
+   "satellite": "css",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    5358.91673299278,
+    -209.06359090085147,
+    4110.897251197844
+   ],
+   "velocity": [
+    -1.2573271249642954,
+    7.310189135106818,
+    2.003552417041946
+   ]
+  },
+  {
+   "satellite": "css",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    -2600.8705560035005,
+    -5451.742157626654,
+    3029.3187566204324
+   ],
+   "velocity": [
+    6.624097877796617,
+    -1.0740246686033683,
+    3.743212254054642
+   ]
+  },
+  {
+   "satellite": "hst",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    5143.812033296456,
+    -4517.948617919852,
+    -0.0005488484178367934
+   ],
+   "velocity": [
+    4.424059276522159,
+    5.045368857118448,
+    3.641964663449797
+   ]
+  },
+  {
+   "satellite": "hst",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    3935.5971468811586,
+    -5542.731408062665,
+    -822.6414800912975
+   ],
+   "velocity": [
+    5.754251598701839,
+    3.56892008777027,
+    3.524202191176765
+   ]
+  },
+  {
+   "satellite": "hst",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    889.2393677322633,
+    6256.455126420865,
+    2621.7510719643124
+   ],
+   "velocity": [
+    -7.070482637481646,
+    1.9160141866844207,
+    -2.164062635864991
+   ]
+  },
+  {
+   "satellite": "hst",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    4793.323023418529,
+    -4768.188125167273,
+    1070.193519692772
+   ],
+   "velocity": [
+    4.401794406854931,
+    5.205392126549162,
+    3.4397954477643893
+   ]
+  },
+  {
+   "satellite": "hst",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    841.2479469491356,
+    6136.412140331697,
+    2905.273776813787
+   ],
+   "velocity": [
+    -7.242678051197538,
+    1.7784155206856387,
+    -1.6511925729019532
+   ]
+  },
+  {
+   "satellite": "hst",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    3120.7409190176163,
+    -5181.425587741298,
+    3199.8187579993114
+   ],
+   "velocity": [
+    6.314134399985275,
+    4.236840544817206,
+    0.6993606919732237
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    -6613.6219286595615,
+    -1334.3576511787896,
+    0.0009125310697056395
+   ],
+   "velocity": [
+    0.9199745638411214,
+    -4.5168720991636215,
+    6.153774388449945
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    -6667.07387420722,
+    -794.645343894354,
+    -671.4999213786278
+   ],
+   "velocity": [
+    -0.05052661680682142,
+    -4.670800110369964,
+    6.105848360625644
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    2310.426499180423,
+    3986.7300300015154,
+    -4932.2748272441395
+   ],
+   "velocity": [
+    -7.180739637005937,
+    1.069982507570209,
+    -2.5029671529263897
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    -6459.784261211901,
+    -907.7309786682974,
+    1710.0782233549298
+   ],
+   "velocity": [
+    2.188325643396112,
+    -4.506654483567396,
+    5.83577885869741
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    -2720.3770470336453,
+    -4175.893487309583,
+    4535.532943130152
+   ],
+   "velocity": [
+    6.884872670134224,
+    -0.8639634319854119,
+    3.3222338549304626
+   ]
+  },
+  {
+   "satellite": "starlink",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    -1267.2788905837078,
+    5951.010892902216,
+    -2912.589165159916
+   ],
+   "velocity": [
+    -5.513651330317171,
+    1.3579985277366355,
+    5.179391731573327
+   ]
+  },
+  {
+   "satellite": "gps",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    24012.800353140432,
+    11381.368972332917,
+    3234.652290704297
+   ],
+   "velocity": [
+    -0.6414330729913723,
+    2.1624970694286305,
+    -3.1122363896104366
+   ]
+  },
+  {
+   "satellite": "gps",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    13928.861089461288,
+    18601.56757093363,
+    -12844.37562575765
+   ],
+   "velocity": [
+    -2.9097542375167653,
+    0.36629265977939224,
+    -2.5330769847845653
+   ]
+  },
+  {
+   "satellite": "gps",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    23849.946213308463,
+    11884.908049428477,
+    2474.035419658498
+   ],
+   "velocity": [
+    -0.7612470298275394,
+    2.1040196634733364,
+    -3.1266954795221875
+   ]
+  },
+  {
+   "satellite": "gps",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    23438.330404778713,
+    12847.685949039715,
+    944.9688386640795
+   ],
+   "velocity": [
+    -0.9983517345011136,
+    1.9796136260865516,
+    -3.1441046679544917
+   ]
+  },
+  {
+   "satellite": "gps",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    24083.390265221075,
+    11124.378817609306,
+    3613.4825270390534
+   ],
+   "velocity": [
+    -0.5812869233276207,
+    2.1907673206302585,
+    -3.103579748667301
+   ]
+  },
+  {
+   "satellite": "gps",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    18537.493282098316,
+    -4709.463583358918,
+    18862.89164170827
+   ],
+   "velocity": [
+    2.298725562983248,
+    2.6113472995692817,
+    -1.6017553877783426
+   ]
+  },
+  {
+   "satellite": "molniya",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    11566.706309008536,
+    4167.7015810735575,
+    -0.004367713784507479
+   ],
+   "velocity": [
+    2.4942537750038234,
+    3.6349688432453946,
+    5.507337085638832
+   ]
+  },
+  {
+   "satellite": "molniya",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    9659.577550787917,
+    14924.487625751759,
+    23029.734065001765
+   ],
+   "velocity": [
+    -1.496946773299528,
+    0.9637372589835934,
+    3.024466856879384
+   ]
+  },
+  {
+   "satellite": "molniya",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    12986.621549490295,
+    7036.6610978799245,
+    4804.888702194522
+   ],
+   "velocity": [
+    0.8325572717222253,
+    2.8880357361195634,
+    5.2164429485071375
+   ]
+  },
+  {
+   "satellite": "molniya",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    12940.30391219119,
+    11120.917123072106,
+    13198.513030930268
+   ],
+   "velocity": [
+    -0.6824079009192456,
+    1.8590742684474246,
+    4.236884875179173
+   ]
+  },
+  {
+   "satellite": "molniya",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    10181.556800956087,
+    2470.441911237981,
+    -2432.5599058625207
+   ],
+   "velocity": [
+    3.767241378459365,
+    4.02273028067468,
+    5.3544090472217665
+   ]
+  },
+  {
+   "satellite": "molniya",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    13130.969392428693,
+    11074.597124024045,
+    13675.999183450109
+   ],
+   "velocity": [
+    -0.6930672311734501,
+    1.8245162626772662,
+    4.173267564612334
+   ]
+  },
+  {
+   "satellite": "geo",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    -14669.332883032397,
+    38643.63387230283,
+    8137.98448929454
+   ],
+   "velocity": [
+    -2.8809123482359067,
+    -1.0118654176360986,
+    -0.3823672122171819
+   ]
+  },
+  {
+   "satellite": "geo",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    -28700.691575814442,
+    30355.613685902856,
+    5502.024100501582
+   ],
+   "velocity": [
+    -2.2485988116060853,
+    -2.0178869437649207,
+    -0.5812510439626835
+   ]
+  },
+  {
+   "satellite": "geo",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    -15363.14574775642,
+    38393.43788662668,
+    8043.2093854677705
+   ],
+   "velocity": [
+    -2.861561697059423,
+    -1.061483477392563,
+    -0.3928251521633879
+   ]
+  },
+  {
+   "satellite": "geo",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    -16734.32583877683,
+    37858.19486933477,
+    7845.779662943928
+   ],
+   "velocity": [
+    -2.8202523966444586,
+    -1.1595690949517998,
+    -0.41337157377796335
+   ]
+  },
+  {
+   "satellite": "geo",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    14287.38136727425,
+    -38846.97256019333,
+    -8205.095501474754
+   ],
+   "velocity": [
+    2.8862835072846167,
+    0.9832936438866035,
+    0.37604955881106866
+   ]
+  },
+  {
+   "satellite": "geo",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    4160.216292670914,
+    40803.50958318175,
+    9608.094086255926
+   ],
+   "velocity": [
+    -3.0584577682974317,
+    0.3314175170697536,
+    -0.08362439486670312
+   ]
+  },
+  {
+   "satellite": "polar",
+   "minutes": 0.0,
+   "error": 0,
+   "position": [
+    2988.8063433332995,
+    5940.632336037777,
+    2596.789610265776
+   ],
+   "velocity": [
+    2.2575958944054055,
+    1.880777418690873,
+    -6.872567471438096
+   ]
+  },
+  {
+   "satellite": "polar",
+   "minutes": 90.0,
+   "error": 0,
+   "position": [
+    1120.1014943411797,
+    3714.8663826295665,
+    5985.782855501153
+   ],
+   "velocity": [
+    3.6676619918421607,
+    5.2089949066558265,
+    -3.9101128179184523
+   ]
+  },
+  {
+   "satellite": "polar",
+   "minutes": 1440.0,
+   "error": 0,
+   "position": [
+    -697.4845462346067,
+    -3191.612270549079,
+    -6357.378786142462
+   ],
+   "velocity": [
+    -3.67154594726295,
+    -5.631511684995176,
+    3.231647101632259
+   ]
+  },
+  {
+   "satellite": "polar",
+   "minutes": 4320.0,
+   "error": 0,
+   "position": [
+    3258.0837954821036,
+    5171.1012662899975,
+    -3703.3234689617016
+   ],
+   "velocity": [
+    -0.9515607783041643,
+    -3.901336116709025,
+    -6.293508397118992
+   ]
+  },
+  {
+   "satellite": "polar",
+   "minutes": -720.0,
+   "error": 0,
+   "position": [
+    -933.0497947521915,
+    469.44237373591614,
+    7054.281992724068
+   ],
+   "velocity": [
+    3.7848097047121056,
+    6.4450161392739185,
+    0.07158134153729766
+   ]
+  },
+  {
+   "satellite": "polar",
+   "minutes": 20000.0,
+   "error": 0,
+   "position": [
+    -1597.346623189613,
+    -1931.2134523260372,
+    6677.1320701419845
+   ],
+   "velocity": [
+    1.661882523857044,
+    6.886241749296501,
+    2.3849987722439274
+   ]
+  }
+ ],
+ "frames": [
+  {
+   "time": 1767225600.0,
+   "sunTemeKilometers": [
+    26977468.56416325,
+    -132677339.1705053,
+    -57518706.6470577
+   ],
+   "greenwichMeanSiderealTimeDegrees": 100.66115205144153
+  },
+  {
+   "time": 1775025000.0,
+   "sunTemeKilometers": [
+    146450626.79704455,
+    27438647.161088295,
+    11897080.82508308
+   ],
+   "greenwichMeanSiderealTimeDegrees": 287.13624183788534
+  },
+  {
+   "time": 1782928800.0,
+   "sunTemeKilometers": [
+    -26188454.191839103,
+    137448212.01643598,
+    59586599.99829263
+   ],
+   "greenwichMeanSiderealTimeDegrees": 189.80246761712317
+  },
+  {
+   "time": 1792324800.0,
+   "sunTemeKilometers": [
+    -134948034.68687677,
+    -58067828.387541875,
+    -25176234.287472595
+   ],
+   "greenwichMeanSiderealTimeDegrees": 206.99178602879252
+  },
+  {
+   "time": 1798761570.0,
+   "sunTemeKilometers": [
+    26347189.12441738,
+    -132786542.8252628,
+    -57565234.44603633
+   ],
+   "greenwichMeanSiderealTimeDegrees": 100.29715737400545
+  },
+  {
+   "time": 1813029300.0,
+   "sunTemeKilometers": [
+    16315071.482597575,
+    138602580.27047804,
+    60085725.86408381
+   ],
+   "greenwichMeanSiderealTimeDegrees": 311.93784420556955
+  }
+ ]
+}

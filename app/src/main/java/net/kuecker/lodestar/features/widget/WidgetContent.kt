@@ -297,16 +297,16 @@ private fun SmallRoomyLayout(copy: WidgetCopy, moonImage: Bitmap?) {
 /** 4×2 and larger: the four items as tiles, two by two. */
 @Composable
 private fun GridLayout(copy: WidgetCopy, moonImage: Bitmap?, showDetail: Boolean) {
-    Column(GlanceModifier.fillMaxSize().padding(6.dp)) {
+    Column(GlanceModifier.fillMaxSize().padding(4.dp)) {
         Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
             Tile(Slot.DARK, copy, moonImage, showDetail)
-            Spacer(GlanceModifier.width(6.dp))
+            Spacer(GlanceModifier.width(4.dp))
             Tile(Slot.MOON, copy, moonImage, showDetail)
         }
-        Spacer(GlanceModifier.height(6.dp))
+        Spacer(GlanceModifier.height(4.dp))
         Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
             Tile(Slot.CORE, copy, moonImage, showDetail)
-            Spacer(GlanceModifier.width(6.dp))
+            Spacer(GlanceModifier.width(4.dp))
             Tile(Slot.EVENT, copy, moonImage, showDetail)
         }
     }
@@ -316,11 +316,12 @@ private fun GridLayout(copy: WidgetCopy, moonImage: Bitmap?, showDetail: Boolean
 private fun RowScope.Tile(slot: Slot, copy: WidgetCopy, moonImage: Bitmap?, showDetail: Boolean) {
     val item = copy.item(slot)
     Column(
-        tile(GlanceModifier.defaultWeight().fillMaxHeight()).padding(horizontal = 8.dp, vertical = 5.dp),
+        tile(GlanceModifier.defaultWeight().fillMaxHeight()).padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LabelLine(slot, item, moonImage, short = true)
-        Text(item.value, style = valueStyle(slot, 13.sp), maxLines = 1)
+        // 11 sp: "9:29 PM – 3:39 AM" then fits the tile of the smallest 4 × 2 widget (107 dp of text).
+        Text(item.value, style = valueStyle(slot, 11.sp), maxLines = 1)
         if (showDetail) item.detail?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }
     }
 }
@@ -339,7 +340,7 @@ private fun NarrowListLayout(copy: WidgetCopy, moonImage: Bitmap?) {
 /** 4×4 and larger: the title and the four items one under the other. */
 @Composable
 private fun ListLayout(copy: WidgetCopy, moonImage: Bitmap?, showExtra: Boolean) {
-    Column(GlanceModifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp)) {
+    Column(GlanceModifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(WidgetCopy.TITLE, style = accentStyle(14.sp), maxLines = 1)
             Spacer(GlanceModifier.defaultWeight())
@@ -347,18 +348,26 @@ private fun ListLayout(copy: WidgetCopy, moonImage: Bitmap?, showExtra: Boolean)
         }
         for (slot in Slot.entries) {
             Spacer(GlanceModifier.defaultWeight())
-            Entry(slot, copy, moonImage, short = false, detail = true, extra = showExtra)
+            Entry(slot, copy, moonImage, short = false, detail = true, extra = showExtra, valueSize = 13.sp)
         }
     }
 }
 
 /** One item of a list: its label line, its main line and the lines under it that fit. */
 @Composable
-private fun Entry(slot: Slot, copy: WidgetCopy, moonImage: Bitmap?, short: Boolean, detail: Boolean, extra: Boolean) {
+private fun Entry(
+    slot: Slot,
+    copy: WidgetCopy,
+    moonImage: Bitmap?,
+    short: Boolean,
+    detail: Boolean,
+    extra: Boolean,
+    valueSize: TextUnit = 14.sp,
+) {
     val item = copy.item(slot)
     Column(GlanceModifier.fillMaxWidth()) {
         LabelLine(slot, item, moonImage, short)
-        Text(item.value, style = valueStyle(slot, 14.sp), maxLines = 1)
+        Text(item.value, style = valueStyle(slot, valueSize), maxLines = 1)
         if (detail) item.detail?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }
         if (extra) item.extra?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }
     }

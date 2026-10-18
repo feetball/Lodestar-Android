@@ -209,75 +209,78 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
             )
             LodestarButton("Cancel", onClick = onDone, kind = LodestarButtonKind.SECONDARY)
         }
-        if (resolved == null || target == null || snapshot.state != MountConnectionState.CONNECTED) {
-            Text(
-                if (snapshot.state != MountConnectionState.CONNECTED) "The mount is not connected." else "There is no target or observing location.",
-                color = palette.secondaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(16.dp),
-            )
-            return@Column
-        }
-        val limit = service.preferences.settings.altitudeLimit
-        val problem = if (action == MountAction.GOTO && observer != null) {
-            MountTargeting.altitudeProblem(resolved, observer, now, limit)
-        } else {
-            null
-        }
-        val canConfirm = !isWorking && problem == null && !resolved.isSun
-
-        // The sections bring a margin of their own; everything else is given the same one.
-        val inset = Modifier.padding(horizontal = 16.dp)
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            TargetCard(target, resolved, snapshot.status.position?.let { MountText.position(it, app.settings.coordinateStyle) }, inset)
-            if (action == MountAction.GOTO) {
-                GotoDetails(resolved, service, limit, inset)
+        // What does not fit scrolls: the confirmation has more than a small phone can show.
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+            if (resolved == null || target == null || snapshot.state != MountConnectionState.CONNECTED) {
+                Text(
+                    if (snapshot.state != MountConnectionState.CONNECTED) "The mount is not connected." else "There is no target or observing location.",
+                    color = palette.secondaryText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
+                )
+                return@Column
+            }
+            val limit = service.preferences.settings.altitudeLimit
+            val problem = if (action == MountAction.GOTO && observer != null) {
+                MountTargeting.altitudeProblem(resolved, observer, now, limit)
             } else {
-                SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), inset)
+                null
             }
-            problem?.let { Box(inset) { MountMessage(it.userMessage, isError = true) } }
-            if (resolved.isSun) Box(inset) { MountMessage(MountTargeting.SUN_REFUSAL, isError = true) }
-            if (action == MountAction.SYNC && !resolved.isSun) {
-                SettingsSection(title = "Phone alignment") {
-                    SettingsToggleRow(
-                        title = "Also align the phone on this target",
-                        checked = alignsPhone,
-                        onCheckedChange = { alignsPhone = it },
-                        caption = "Uses the same centred frame to correct the phone's compass and bracket, as Align does.",
-                    )
-                }
-            }
-            failure?.let { Box(inset) { MountMessage(it, isError = true) } }
-            SettingsCaption(
+            val canConfirm = !isWorking && problem == null && !resolved.isSun
+
+            // The sections bring a margin of their own; everything else is given the same one.
+            val inset = Modifier.padding(horizontal = 16.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TargetCard(target, resolved, snapshot.status.position?.let { MountText.position(it, app.settings.coordinateStyle) }, inset)
                 if (action == MountAction.GOTO) {
-                    "Keep people, hands and cables clear of the mount before it moves. Stop is on the Aim screen the whole time."
+                    GotoDetails(resolved, service, limit, inset)
                 } else {
-                    "Sync only when the target is in the middle of your camera's frame. Syncing on the wrong star makes later " +
-                        "slews miss."
-                },
-                inset,
-            )
-            LodestarButton(
-                if (action == MountAction.GOTO) "Start slew" else "Sync mount",
-                onClick = {
-                    isWorking = true
-                    failure = null
-                    scope.launch {
-                        val result = if (action == MountAction.GOTO) service.goto(resolved) else service.sync(resolved)
-                        isWorking = false
-                        when (result) {
-                            is MountResult.Failure -> failure = result.message
-                            is MountResult.Success -> {
-                                if (action == MountAction.SYNC && alignsPhone) alignPhone(app, service, target)
-                                onDone()
+                    SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), inset)
+                }
+                problem?.let { Box(inset) { MountMessage(it.userMessage, isError = true) } }
+                if (resolved.isSun) Box(inset) { MountMessage(MountTargeting.SUN_REFUSAL, isError = true) }
+                if (action == MountAction.SYNC && !resolved.isSun) {
+                    SettingsSection(title = "Phone alignment") {
+                        SettingsToggleRow(
+                            title = "Also align the phone on this target",
+                            checked = alignsPhone,
+                            onCheckedChange = { alignsPhone = it },
+                            caption = "Uses the same centred frame to correct the phone's compass and bracket, as Align does.",
+                        )
+                    }
+                }
+                failure?.let { Box(inset) { MountMessage(it, isError = true) } }
+                SettingsCaption(
+                    if (action == MountAction.GOTO) {
+                        "Keep people, hands and cables clear of the mount before it moves. Stop is on the Aim screen the whole time."
+                    } else {
+                        "Sync only when the target is in the middle of your camera's frame. Syncing on the wrong star makes later " +
+                            "slews miss."
+                    },
+                    inset,
+                )
+                LodestarButton(
+                    if (action == MountAction.GOTO) "Start slew" else "Sync mount",
+                    onClick = {
+                        isWorking = true
+                        failure = null
+                        scope.launch {
+                            val result = if (action == MountAction.GOTO) service.goto(resolved) else service.sync(resolved)
+                            isWorking = false
+                            when (result) {
+                                is MountResult.Failure -> failure = result.message
+                                is MountResult.Success -> {
+                                    if (action == MountAction.SYNC && alignsPhone) alignPhone(app, service, target)
+                                    onDone()
+                                }
                             }
                         }
-                    }
-                },
-                modifier = inset.fillMaxWidth(),
-                enabled = canConfirm,
-                icon = if (action == MountAction.GOTO) Icons.Outlined.NearMe else Icons.Outlined.MyLocation,
-            )
+                    },
+                    modifier = inset.fillMaxWidth(),
+                    enabled = canConfirm,
+                    icon = if (action == MountAction.GOTO) Icons.Outlined.NearMe else Icons.Outlined.MyLocation,
+                )
+            }
         }
     }
 }

@@ -31,6 +31,9 @@ demo battery -e level 100 -e plugged false
 demo network -e wifi show -e level 4 -e mobile show -e datatype none -e level 4
 demo notifications -e visible false
 # No network: the online feeds of the app are filled from fixtures (online=...), and nothing may go to a real server.
+# Neither an error dialog of the system (the launcher is slow on a software-rendered emulator) nor a leftover one may
+# cover a picture: they are not shown, and closed before every start.
+adb shell settings put global hide_error_dialogs 1 || true
 adb shell svc wifi disable || true
 adb shell svc data disable || true
 # The debug widget host binds widgets with this permission, which the shell can give.
@@ -68,6 +71,7 @@ check() {
 # remote command line: quote the extra for the device's shell.
 launch() {
     adb shell am force-stop $package
+    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null || true
     adb shell "am start -W -n $1 --es lodestarScreenshot '$2'" >/dev/null || echo "could not start $1"
 }
 
@@ -222,8 +226,8 @@ MIN_WAIT=16 shot sa-11-tonight-night 9 tab=tonight online=satellites,clouds $sat
 # 6. The Tonight widgets, at the sizes of the widget picker and resized, in the day and the night palette.
 widgets wg-01-nominal-day sizes=110x110,146x146,250x110
 widgets wg-02-nominal-night sizes=110x110,146x146,250x110 night=1
-widgets wg-03-resized-a-day sizes=110x230,250x160
-widgets wg-04-resized-a-night sizes=110x230,250x160 night=1
+widgets wg-03-resized-a-day sizes=110x230,146x230,250x160,300x146
+widgets wg-04-resized-a-night sizes=110x230,146x230,250x160,300x146 night=1
 widgets wg-05-resized-b-day sizes=250x230,300x310
 widgets wg-06-resized-b-night sizes=250x230,300x310 night=1
 widgets wg-07-narrow-day sizes=100x90,120x120,160x110,200x110

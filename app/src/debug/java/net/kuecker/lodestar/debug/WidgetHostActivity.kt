@@ -51,6 +51,11 @@ class WidgetHostActivity : Activity() {
     private lateinit var host: AppWidgetHost
     private val widgetIDs = mutableListOf<Int>()
 
+    /** A widget as it was laid out, to tell it its room again once it has been drawn. */
+    private class Placed(val view: AppWidgetHostView, val bounds: Bundle, val width: Int, val height: Int)
+
+    private val placed = mutableListOf<Placed>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val values = ScreenshotMode.values(intent.getStringExtra(ScreenshotMode.EXTRA).orEmpty())
@@ -91,6 +96,10 @@ class WidgetHostActivity : Activity() {
         scope.launch {
             delay(REFRESH_DELAY_MS)
             WidgetRefresher.refresh(applicationContext)
+            // The host picks the layout for the room it was told about when the drawing arrives; telling it again once
+            // everything has been drawn makes the pictures the same from run to run.
+            delay(RETELL_DELAY_MS)
+            for (widget in placed) tell(widget.view, widget.bounds, widget.width, widget.height)
         }
     }
 
@@ -146,6 +155,7 @@ class WidgetHostActivity : Activity() {
         }
         manager.updateAppWidgetOptions(id, bounds)
         tell(view, bounds, width, height)
+        placed += Placed(view, bounds, width, height)
         content.addView(
             FrameLayout(this).apply {
                 addView(view, FrameLayout.LayoutParams(dp(width), dp(height)))
@@ -191,6 +201,7 @@ class WidgetHostActivity : Activity() {
         const val PAGE_PADDING = 16
         const val WIDGET_GAP = 12
         const val REFRESH_DELAY_MS = 1_500L
+        const val RETELL_DELAY_MS = 3_000L
         const val DAY_WALLPAPER = 0xFF5F7F9F.toInt()
         const val NIGHT_LABEL = 0xFF7A0000.toInt()
     }

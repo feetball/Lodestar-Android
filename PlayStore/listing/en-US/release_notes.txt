@@ -1,0 +1,8 @@
+New in Lodestar 1.1:
+• Events calendar: meteor showers, eclipses, conjunctions and more, with where to look
+• Comets and bright asteroids as targets, with the tail direction
+• GoTo mounts over Wi-Fi: OnStep/LX200, NexStar/SynScan, Alpaca, Sky-Watcher AZ-GTi
+• Mosaic, star-trail and time-lapse planners
+• Record your site's skyline for true rise and set times
+• A home-screen widget for tonight
+• Optional: satellite passes, Starlink streak warnings, cloud forecast

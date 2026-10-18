@@ -1,4 +1,4 @@
-Lodestar turns the phone on your camera into a smart finder for night photography. Pick a planet, nebula, galaxy or star, and on-screen arrows tell you which way to pan and tilt the tripod head until it sits in your frame.
+Lodestar turns the phone on your camera into a smart finder for night photography. Pick a planet, comet, nebula, galaxy or star, and on-screen arrows tell you which way to pan and tilt the tripod head until it sits in your frame.
 
 GUIDED AIMING
 • A live finder with a virtual sky or the camera view, the target marker and an arrow pointing the shortest way
@@ -12,14 +12,26 @@ ACCURACY BEYOND THE COMPASS
 • Works with the phone mounted in portrait, in landscape, upside down or flat on top of the camera
 
 FIND YOUR TARGET
-• Search and browse 9,000+ stars, 690+ galaxies, nebulae and clusters including all 110 Messier objects, the planets, the Moon and the Milky Way core
+• Search and browse 9,000+ stars, 690+ galaxies, nebulae and clusters including all 110 Messier objects, the planets, the Moon, the Milky Way core, and comets and bright asteroids
 • Sort by name, brightness, altitude or rise time; favourites, recents and custom coordinates
-• Each object shows where it is now, when it rises and sets, an altitude chart for the night, how it fits your frame and the longest exposure before stars trail
+• Each object shows where it is now, when it rises and sets, an altitude chart for the night, how it fits your frame and the longest exposure before stars trail; comets also show which way the tail points
 
 PLAN THE NIGHT
 • Tonight: sunset, twilight and darkness windows, the Moon's phase and hours, when the Milky Way core is up, the visible planets and the best targets
-• An all-sky chart with constellations and the Milky Way, with time travel
-• A polar-scope clock for aligning star trackers
+• An events calendar: meteor showers, lunar and solar eclipses, conjunctions, oppositions, supermoons and more, with when and where to look from your site
+• A mosaic planner for panoramas such as the Milky Way arch, and star-trail and time-lapse planners
+• Record your site's real skyline, so rise and set times respect trees and mountains
+• An all-sky chart with constellations and the Milky Way, with time travel, and a polar-scope clock for star trackers
+
+GOTO MOUNTS
+• Send a GoTo mount to your target over Wi-Fi: OnStep and LX200, Celestron NexStar and SynScan, ASCOM Alpaca, and the Sky-Watcher AZ-GTi and Star Adventurer GTi
+• Sync on a centred star, nudge with arrows, and a Stop button that is always there
+
+AT A GLANCE
+• Home-screen widgets with tonight's dark hours, the Moon, the Milky Way core and the next event
+
+OPTIONAL ONLINE DATA
+Off until you turn it on: ISS and bright satellite passes you can follow in the finder, Starlink streak warnings for your exposure, fresh comet orbits and tonight's cloud forecast.
 
 MADE FOR THE DARK
 • A pure red night-vision mode, automatic after sunset, with screen dimming
@@ -28,4 +40,4 @@ MADE FOR THE DARK
 PRIVATE BY DESIGN
 No accounts, analytics, ads or tracking. Your location and camera picture stay on your phone.
 
-Star data: HYG Database v4.1 (CC BY-SA 4.0). Deep-sky data: OpenNGC (CC BY-SA 4.0). Constellation figures and Milky Way outlines: d3-celestial (BSD-3-Clause). Geomagnetic model: NOAA/BGS WMM2025. Maps: OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors.
+Star data: HYG Database v4.1 (CC BY-SA 4.0). Deep-sky data: OpenNGC (CC BY-SA 4.0). Constellation figures and Milky Way outlines: d3-celestial (BSD-3-Clause). Geomagnetic model: NOAA/BGS WMM2025. Meteor showers: IMO. Orbital data: CelesTrak, T. S. Kelso. Comet and asteroid orbits: IAU Minor Planet Center. Weather forecast from MET Norway (CC BY 4.0). Maps: OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors.

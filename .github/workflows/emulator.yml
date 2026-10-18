@@ -2,12 +2,21 @@ name: Emulator
 
 on:
   workflow_dispatch:
+    inputs:
+      set:
+        description: "store: the Play Store screenshots on a phone and two tablets. review: every screen of the 1.1 features (events, mosaic, skyline, planners, mount control, widgets) on a phone, a 7-inch tablet and a 360 dp phone."
+        type: choice
+        options:
+          - store
+          - review
+        default: store
 
 permissions:
   contents: read
 
 jobs:
   screenshots:
+    if: ${{ inputs.set != 'review' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -42,5 +51,57 @@ jobs:
         if: always()
         with:
           name: screenshots
+          path: screenshots/
+          retention-days: 14
+
+  # One emulator per screen size, side by side: the review set is long (every screen, day and night, scrolled).
+  review:
+    if: ${{ inputs.set == 'review' }}
+    name: review (${{ matrix.device }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device: phone
+            size: 1080x2160
+            density: 420
+          - device: tablet-7in
+            size: 1200x1920
+            density: 320
+          - device: phone-360dp
+            size: 1080x2160
+            density: 480
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Debug build
+        run: ./gradlew :app:assembleDebug --console=plain
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Review screenshots
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated
+          script: |
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            tools/capture_review.sh screenshots/${{ matrix.device }} ${{ matrix.size }} ${{ matrix.density }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: review-${{ matrix.device }}
           path: screenshots/
           retention-days: 14

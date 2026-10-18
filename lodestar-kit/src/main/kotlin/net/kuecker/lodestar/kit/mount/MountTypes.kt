@@ -16,7 +16,13 @@ enum class MountProtocol(
     NEXSTAR("nexstar"),
 
     /** ASCOM Alpaca Telescope interface, REST over HTTP. */
-    ALPACA("alpaca");
+    ALPACA("alpaca"),
+
+    /**
+     * Sky-Watcher motor controller protocol over UDP, as spoken by the built-in Wi-Fi of the AZ-GTi, the Star Adventurer GTi and
+     * the Wi-Fi dongles of EQ mounts (see [SkyWatcherDriver]); "Sky-Watcher Wi-Fi (AZ-GTi, Star Adventurer GTi)" in menus.
+     */
+    SKYWATCHER("skywatcher");
 
     companion object {
         /** The protocol with the given raw value, or null if there is none. */

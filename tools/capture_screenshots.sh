@@ -12,6 +12,7 @@ common="date=2026-07-17T05:30:00Z lat=36.0544 lon=-112.1401 elevation=2130 site=
 # Phone screenshot geometry Play accepts (long side at most twice the short side), clean status bar.
 adb shell wm size 1080x2160
 adb shell wm density 420
+adb shell settings put secure immersive_mode_confirmations confirmed
 adb shell settings put global sysui_demo_allowed 1
 adb shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null
 adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 2230 >/dev/null
@@ -23,7 +24,8 @@ adb logcat -c
 shoot() {
     local name=$1; shift
     adb shell am force-stop $package
-    adb shell am start -W -n $activity --es lodestarScreenshot "$common $*" >/dev/null
+    # adb shell joins its arguments into one remote command line: quote the extra for the device's shell.
+    adb shell "am start -W -n $activity --es lodestarScreenshot '$common $*'" >/dev/null
     sleep 14
     adb exec-out screencap -p > "$out/$name.png"
     echo "captured $name"

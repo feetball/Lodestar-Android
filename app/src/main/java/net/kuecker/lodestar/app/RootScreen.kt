@@ -39,7 +39,8 @@ import net.kuecker.lodestar.theme.screenBackground
 fun RootScreen(app: AppModel) {
     val palette = app.palette
     CompositionLocalProvider(LocalAppModel provides app) {
-        val hideBars = app.selectedTab == AppTab.AIM || palette.isNight
+        // Aim is full screen; at night every screen is (the bars are white). Onboarding keeps the bars, as on iOS.
+        val hideBars = palette.isNight || (app.settings.hasCompletedOnboarding && app.selectedTab == AppTab.AIM)
         LodestarTheme(palette, redFilter = app.settings.redFilterOverlay) {
             SystemBarsEffect(hidden = hideBars)
             CompositionLocalProvider(LocalSystemBarsHidden provides hideBars) {

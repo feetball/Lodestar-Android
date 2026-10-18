@@ -1,10 +1,12 @@
 package net.kuecker.lodestar.features.mount
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +27,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -59,8 +62,11 @@ import net.kuecker.lodestar.shared.SettingsToggleRow
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
 
-/** Share of the screen the nudge sheet fills: little, so the sky and the target stay in view while centring. */
-private const val NUDGE_SHEET_HEIGHT = 0.5f
+/**
+ * Most of the screen the nudge sheet takes. It is only as tall as its pad needs, so that the sky and the target stay in
+ * view while centring; on a small screen it grows to this much before it scrolls.
+ */
+private const val NUDGE_SHEET_MAX_HEIGHT = 0.75f
 
 /** Share of the screen the connection sheet fills. */
 private const val CONTROL_SHEET_HEIGHT = 0.9f
@@ -89,17 +95,31 @@ fun MountAimSheets(target: CelestialObject?) {
             MountActionContent(MountAction.SYNC, target, LocalSheetDismiss.current)
         }
         MountSheetKind.NUDGE -> LodestarSheet(onDismiss = sheets::close, scrimColor = Color.Black.copy(alpha = 0.15f)) {
-            MountSheetFrame("Nudge mount", NUDGE_SHEET_HEIGHT, LocalSheetDismiss.current) { MountNudgeContent() }
+            MountSheetFrame("Nudge mount", NUDGE_SHEET_MAX_HEIGHT, LocalSheetDismiss.current, fitsContent = true) { MountNudgeContent() }
         }
         null -> Unit
     }
 }
 
-/** A sheet body: a title row with Done, and a scrolling [content] below it. */
+/**
+ * A sheet body: a title row with Done, and a scrolling [content] below it. The sheet fills [heightShare] of the screen,
+ * or, with [fitsContent], is as tall as its content up to that share.
+ */
 @Composable
-private fun MountSheetFrame(title: String, heightShare: Float, onDone: () -> Unit, content: @Composable () -> Unit) {
+private fun MountSheetFrame(
+    title: String,
+    heightShare: Float,
+    onDone: () -> Unit,
+    fitsContent: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     val palette = LocalPalette.current
-    Column(Modifier.fillMaxWidth().fillMaxHeight(heightShare)) {
+    val height = if (fitsContent) {
+        Modifier.heightIn(max = LocalConfiguration.current.screenHeightDp.dp * heightShare)
+    } else {
+        Modifier.fillMaxHeight(heightShare)
+    }
+    Column(Modifier.fillMaxWidth().then(height)) {
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -113,7 +133,7 @@ private fun MountSheetFrame(title: String, heightShare: Float, onDone: () -> Uni
             )
             LodestarButton("Done", onClick = onDone, kind = LodestarButtonKind.SECONDARY)
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        Column(Modifier.weight(1f, fill = !fitsContent).verticalScroll(rememberScrollState())) {
             content()
         }
     }
@@ -208,14 +228,16 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
         val needsFilter = action == MountAction.GOTO && resolved.isSun
         val canConfirm = !isWorking && problem == null && (!needsFilter || hasSolarFilter)
 
-        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            TargetCard(target, resolved, snapshot.status.position?.let { MountText.position(it, app.settings.coordinateStyle) })
+        // The sections bring a margin of their own; everything else is given the same one.
+        val inset = Modifier.padding(horizontal = 16.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            TargetCard(target, resolved, snapshot.status.position?.let { MountText.position(it, app.settings.coordinateStyle) }, inset)
             if (action == MountAction.GOTO) {
-                GotoDetails(resolved, service, limit)
+                GotoDetails(resolved, service, limit, inset)
             } else {
-                SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000))
+                SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), inset)
             }
-            problem?.let { MountMessage(it.userMessage, isError = true) }
+            problem?.let { Box(inset) { MountMessage(it.userMessage, isError = true) } }
             if (needsFilter) {
                 SettingsSection(title = "Sun") {
                     SettingsToggleRow(
@@ -236,7 +258,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
                     )
                 }
             }
-            failure?.let { MountMessage(it, isError = true) }
+            failure?.let { Box(inset) { MountMessage(it, isError = true) } }
             SettingsCaption(
                 if (action == MountAction.GOTO) {
                     "Keep people, hands and cables clear of the mount before it moves. Stop is on the Aim screen the whole time."
@@ -244,6 +266,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
                     "Sync only when the target is in the middle of your camera's frame. Syncing on the wrong star makes later " +
                         "slews miss."
                 },
+                inset,
             )
             LodestarButton(
                 if (action == MountAction.GOTO) "Start slew" else "Sync mount",
@@ -262,7 +285,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = inset.fillMaxWidth(),
                 enabled = canConfirm,
                 icon = if (action == MountAction.GOTO) Icons.Outlined.NearMe else Icons.Outlined.MyLocation,
             )
@@ -271,10 +294,10 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
 }
 
 @Composable
-private fun TargetCard(target: CelestialObject, resolved: MountTarget, mountPosition: String?) {
+private fun TargetCard(target: CelestialObject, resolved: MountTarget, mountPosition: String?, modifier: Modifier) {
     val palette = LocalPalette.current
     val app = LocalAppModel.current
-    Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CardTitle("Target")
         Text(
             target.name,
@@ -289,11 +312,11 @@ private fun TargetCard(target: CelestialObject, resolved: MountTarget, mountPosi
 }
 
 @Composable
-private fun GotoDetails(resolved: MountTarget, service: MountService, limit: Double) {
+private fun GotoDetails(resolved: MountTarget, service: MountService, limit: Double, modifier: Modifier) {
     val palette = LocalPalette.current
     val from = service.marker?.horizontal
     val summary = MountTargeting.slew(from, resolved.horizontal)
-    Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CardTitle("The slew")
         if (from != null) InfoRow("From", "${AppFormat.azimuth(from.azimuth)} · ${AppFormat.altitude(from.altitude)}")
         InfoRow("To", "${AppFormat.azimuth(resolved.horizontal.azimuth)} · ${AppFormat.altitude(resolved.horizontal.altitude)}")
@@ -307,9 +330,9 @@ private fun GotoDetails(resolved: MountTarget, service: MountService, limit: Dou
 }
 
 @Composable
-private fun SyncDetails(resolved: MountTarget, mountOffset: Double?) {
+private fun SyncDetails(resolved: MountTarget, mountOffset: Double?, modifier: Modifier) {
     val palette = LocalPalette.current
-    Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CardTitle("Sync")
         Text(
             "Tells the mount that it points at ${resolved.name} right now.",

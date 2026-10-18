@@ -46,8 +46,11 @@ import net.kuecker.lodestar.theme.colorScheme
 
 /** The widgets' layouts, by the room they have. */
 internal enum class WidgetLayoutKind {
-    /** The Moon and the darkness window. */
+    /** The Moon's lit part and the darkness window, as small as a widget gets. */
     SMALL,
+
+    /** The Moon, with its phase, and the darkness window. */
+    SMALL_ROOMY,
 
     /** All four items in a grid of two by two: a label and one line each. */
     GRID,
@@ -68,13 +71,14 @@ internal enum class WidgetLayoutKind {
 /** The sizes the widgets are laid out for (Glance picks the largest that fits) and what shows at each. */
 internal object WidgetSizes {
     val small = DpSize(100.dp, 90.dp)
+    val smallRoomy = DpSize(120.dp, 120.dp)
     val grid = DpSize(220.dp, 100.dp)
     val gridDetail = DpSize(220.dp, 150.dp)
     val listNarrow = DpSize(100.dp, 160.dp)
     val list = DpSize(220.dp, 230.dp)
     val listTall = DpSize(220.dp, 300.dp)
 
-    val all: Set<DpSize> = setOf(small, grid, gridDetail, listNarrow, list, listTall)
+    val all: Set<DpSize> = setOf(small, smallRoomy, grid, gridDetail, listNarrow, list, listTall)
 
     /** The sizes of the two widgets of the picker, for their previews: 2 × 2 and 4 × 2 cells. */
     val previewSmall = DpSize(110.dp, 110.dp)
@@ -89,6 +93,7 @@ internal object WidgetSizes {
             wide && size.height >= gridDetail.height -> WidgetLayoutKind.GRID_DETAIL
             wide -> WidgetLayoutKind.GRID
             size.height >= listNarrow.height -> WidgetLayoutKind.LIST_NARROW
+            size.width >= smallRoomy.width && size.height >= smallRoomy.height -> WidgetLayoutKind.SMALL_ROOMY
             else -> WidgetLayoutKind.SMALL
         }
     }
@@ -122,10 +127,11 @@ internal fun TonightWidgetContent(model: WidgetModel) {
         ) {
             val copy = model.copy
             if (copy == null) {
-                NeedsLocation(compact = size.height < WidgetSizes.listNarrow.height)
+                NeedsLocation(WidgetSizes.kind(size))
             } else {
                 when (WidgetSizes.kind(size)) {
                     WidgetLayoutKind.SMALL -> SmallLayout(copy, model.moonImage)
+                    WidgetLayoutKind.SMALL_ROOMY -> SmallRoomyLayout(copy, model.moonImage)
                     WidgetLayoutKind.GRID -> GridLayout(copy, model.moonImage, showDetail = false)
                     WidgetLayoutKind.GRID_DETAIL -> GridLayout(copy, model.moonImage, showDetail = true)
                     WidgetLayoutKind.LIST_NARROW -> NarrowListLayout(copy, model.moonImage)
@@ -235,21 +241,44 @@ private fun valueStyle(slot: Slot, size: TextUnit): TextStyle =
 // Layouts
 
 @Composable
-private fun NeedsLocation(compact: Boolean) {
+private fun NeedsLocation(kind: WidgetLayoutKind) {
+    val isTiny = kind == WidgetLayoutKind.SMALL
+    val isSmall = isTiny || kind == WidgetLayoutKind.SMALL_ROOMY
     Column(
-        GlanceModifier.fillMaxSize().padding(12.dp),
+        GlanceModifier.fillMaxSize().padding(if (isTiny) 8.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Glyph(WidgetGlyph.PLACE, if (compact) 20.dp else 28.dp, tinted = true)
-        Spacer(GlanceModifier.height(6.dp))
-        Text(WidgetCopy.NEEDS_LOCATION, style = primaryStyle(if (compact) 12.sp else 14.sp, bold = true, center = true))
+        Glyph(WidgetGlyph.PLACE, if (isTiny) 18.dp else if (isSmall) 22.dp else 28.dp, tinted = true)
+        Spacer(GlanceModifier.height(if (isTiny) 4.dp else 6.dp))
+        Text(
+            WidgetCopy.NEEDS_LOCATION,
+            style = primaryStyle(if (isTiny) 11.sp else if (isSmall) 12.sp else 14.sp, bold = true, center = true),
+        )
     }
 }
 
-/** 2×2: the Moon, and the darkness window under it. */
+/** As small as a widget gets (100 × 90): the Moon's lit part, and the darkness window under it. */
 @Composable
 private fun SmallLayout(copy: WidgetCopy, moonImage: Bitmap?) {
+    Column(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MoonPicture(moonImage, 26.dp)
+            Spacer(GlanceModifier.width(6.dp))
+            Column {
+                Text(copy.moon.trailing.orEmpty(), style = primaryStyle(14.sp, bold = true), maxLines = 1)
+                Text("lit", style = secondaryStyle(11.sp), maxLines = 1)
+            }
+        }
+        Spacer(GlanceModifier.defaultWeight())
+        LabelLine(Slot.DARK, copy.dark, null, short = true)
+        Text(copy.dark.value, style = accentStyle(13.sp), maxLines = 2)
+    }
+}
+
+/** 2×2 with some room (from 120 × 120): the Moon with its phase, and the darkness window under it. */
+@Composable
+private fun SmallRoomyLayout(copy: WidgetCopy, moonImage: Bitmap?) {
     Column(GlanceModifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             MoonPicture(moonImage, 36.dp)
@@ -261,7 +290,7 @@ private fun SmallLayout(copy: WidgetCopy, moonImage: Bitmap?) {
         }
         Spacer(GlanceModifier.defaultWeight())
         LabelLine(Slot.DARK, copy.dark, null, short = true)
-        Text(copy.dark.value, style = accentStyle(15.sp), maxLines = 2)
+        Text(copy.dark.value, style = accentStyle(14.sp), maxLines = 2)
     }
 }
 

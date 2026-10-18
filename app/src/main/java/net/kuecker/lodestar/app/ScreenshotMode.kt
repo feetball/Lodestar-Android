@@ -57,6 +57,9 @@ enum class ScreenshotScreen(val id: String) {
     /** Settings, the screen that records the skyline of the site (with a partial sweep played into it). */
     SKYLINE("skyline"),
 
+    /** Settings, the editor of the observing site, with its Horizon section. */
+    SITE_EDITOR("site-editor"),
+
     /** Settings, Star Trails & Time-Lapse, on star trails. */
     STAR_TRAILS("star-trails"),
 

@@ -74,12 +74,13 @@ page_down() {
 }
 
 # shot <name> <extra pages> <screenshot arguments...>: the first page, then each further page after a swipe.
-# MIN_WAIT (seconds the screen needs at least) and MAX_WAIT (at most; 20 s more by default) say how long it may take.
+# MIN_WAIT (seconds the screen needs at least) and MAX_WAIT (at most; 20 s more by default) say how long it may take;
+# with NO_SETTLE the picture is taken after MIN_WAIT, whatever moves (a slew in progress).
 shot() {
     local name=$1 pages=$2 min=${MIN_WAIT:-6}
     shift 2
     launch $activity "$common $*"
-    settle "$min" "${MAX_WAIT:-$((min + 20))}"
+    if [ -n "${NO_SETTLE:-}" ]; then sleep "$min"; else settle "$min" "${MAX_WAIT:-$((min + 20))}"; fi
     snap "$name"
     local page
     for page in $(seq 2 $((pages + 1))); do
@@ -110,10 +111,11 @@ veil="tab=aim target=dso.NGC6960 pointing=84,50 focal=600"
 # Order of capture: the cheap screens first, the ones that draw the whole sky (Aim, Sky) after they have been warmed up.
 
 # 1. Events: the card on Tonight, the calendar, and the detail of every kind of event.
-MIN_WAIT=10 shot ev-01-tonight-upcoming 4 tab=tonight
+MIN_WAIT=10 shot ev-01-tonight-upcoming 9 tab=tonight
 MIN_WAIT=12 shot ev-02-calendar 3 tab=tonight screen=events
 MIN_WAIT=12 shot ev-03-calendar-night 1 tab=tonight screen=events night=1
-for kind in meteorShower conjunction opposition greatestElongation earthApsis season fullMoonSpecial lunarEclipse solarEclipse; do
+# (earthApsis is not in the calendar: the engine leaves it out unless asked.)
+for kind in meteorShower conjunction opposition greatestElongation season fullMoonSpecial lunarEclipse solarEclipse; do
     MIN_WAIT=14 shot "ev-04-detail-$kind" 2 tab=tonight screen=event-detail event=$kind
 done
 MIN_WAIT=14 shot ev-05-detail-meteorShower-night 2 tab=tonight screen=event-detail event=meteorShower night=1
@@ -127,7 +129,7 @@ MIN_WAIT=14 shot mt-04-control 3 tab=settings screen=mount-control
 MIN_WAIT=14 shot mt-05-control-night 2 tab=settings screen=mount-control night=1
 MIN_WAIT=20 shot mt-06-aim-card 0 $aimed screen=aim-mount
 MIN_WAIT=20 shot mt-07-aim-card-night 0 $aimed screen=aim-mount night=1
-MIN_WAIT=20 shot mt-08-aim-slew 0 $aimed screen=aim-slew
+MIN_WAIT=14 NO_SETTLE=1 shot mt-08-aim-slew 0 tab=aim target=dso.M31 pointing=60,20 screen=aim-slew
 MIN_WAIT=20 shot mt-09-aim-goto 1 $aimed screen=aim-goto
 MIN_WAIT=20 shot mt-10-aim-goto-night 1 $aimed screen=aim-goto night=1
 MIN_WAIT=20 shot mt-11-aim-sync 0 $aimed screen=aim-sync
@@ -155,12 +157,15 @@ MIN_WAIT=20 shot hz-07-sky 0 tab=sky skyline=1 pointing=265,12
 MIN_WAIT=20 shot hz-08-aim 0 tab=aim skyline=1 target=dso.M8 pointing=215,8
 MIN_WAIT=20 shot hz-09-aim-night 0 tab=aim skyline=1 target=dso.M8 pointing=215,8 night=1
 MIN_WAIT=12 shot hz-10-objects 0 tab=objects skyline=1
+MIN_WAIT=10 shot hz-11-site-editor 3 tab=settings screen=site-editor skyline=1
+MIN_WAIT=10 shot hz-12-site-editor-night 2 tab=settings screen=site-editor skyline=1 night=1
+MIN_WAIT=10 shot hz-13-site-editor-open-horizon 1 tab=settings screen=site-editor
 
 # 5. Mosaic: the planning sheet for each source, and the mosaic running on Aim and on the Sky chart.
-MIN_WAIT=20 shot mo-01-sheet-target 2 $veil screen=mosaic mosaic=target
-MIN_WAIT=20 shot mo-02-sheet-target-night 2 $veil screen=mosaic mosaic=target night=1
-MIN_WAIT=20 shot mo-03-sheet-milkyway 2 tab=aim target=special.galacticCenter pointing=179,25 focal=24 screen=mosaic mosaic=milkyWay
-MIN_WAIT=20 shot mo-04-sheet-custom 2 $veil screen=mosaic mosaic=custom focal=135
+MIN_WAIT=20 shot mo-01-sheet-target 1 $veil screen=mosaic mosaic=target
+MIN_WAIT=20 shot mo-02-sheet-target-night 1 $veil screen=mosaic mosaic=target night=1
+MIN_WAIT=20 shot mo-03-sheet-milkyway 1 tab=aim target=special.galacticCenter pointing=179,25 focal=24 screen=mosaic mosaic=milkyWay
+MIN_WAIT=20 shot mo-04-sheet-custom 1 $veil screen=mosaic mosaic=custom focal=135
 MIN_WAIT=24 shot mo-05-running-aim 0 $veil screen=mosaic-running
 MIN_WAIT=24 shot mo-06-running-aim-night 0 $veil screen=mosaic-running night=1
 MIN_WAIT=24 shot mo-07-running-sky 0 tab=sky target=dso.NGC6960 pointing=84,50 focal=600 screen=mosaic-running
@@ -169,15 +174,15 @@ MIN_WAIT=24 shot mo-09-running-milkyway-aim 0 tab=aim target=special.galacticCen
 MIN_WAIT=24 shot mo-10-running-milkyway-sky 0 tab=sky target=special.galacticCenter pointing=179,25 focal=24 screen=mosaic-running mosaic=milkyWay
 
 # 6. The Tonight widgets, at the sizes of the widget picker and resized, in the day and the night palette.
-widgets wg-01-nominal-day sizes=110x110,250x110
-widgets wg-02-nominal-night sizes=110x110,250x110 night=1
+widgets wg-01-nominal-day sizes=110x110,146x146,250x110
+widgets wg-02-nominal-night sizes=110x110,146x146,250x110 night=1
 widgets wg-03-resized-a-day sizes=110x230,250x160
 widgets wg-04-resized-a-night sizes=110x230,250x160 night=1
-widgets wg-05-resized-b-day sizes=250x230,250x310
-widgets wg-06-resized-b-night sizes=250x230,250x310 night=1
-widgets wg-07-narrow-day sizes=100x90,160x110,200x110
-widgets wg-08-nolocation-day sizes=110x110,250x110,250x230 place=none
-widgets wg-09-nolocation-night sizes=110x110,250x110,250x230 place=none night=1
+widgets wg-05-resized-b-day sizes=250x230,300x310
+widgets wg-06-resized-b-night sizes=250x230,300x310 night=1
+widgets wg-07-narrow-day sizes=100x90,120x120,160x110,200x110
+widgets wg-08-nolocation-day sizes=100x90,146x146,250x110,250x230 place=none
+widgets wg-09-nolocation-night sizes=100x90,146x146,250x110,250x230 place=none night=1
 
 adb logcat -d > "$out/logcat.txt" || true
 if grep -E "FATAL EXCEPTION|Fatal signal|ANR in $package|AndroidRuntime: .*$package" "$out/crashes.txt" "$out/errors.txt" >/dev/null; then

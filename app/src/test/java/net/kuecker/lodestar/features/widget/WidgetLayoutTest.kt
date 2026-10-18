@@ -19,6 +19,13 @@ class WidgetLayoutTest {
     }
 
     @Test
+    fun aRoomierTwoByTwoAddsThePhaseOfTheMoon() {
+        assertEquals(WidgetLayoutKind.SMALL_ROOMY, kind(120, 120))
+        assertEquals(WidgetLayoutKind.SMALL_ROOMY, kind(146, 146))
+        assertEquals(WidgetLayoutKind.SMALL, kind(119, 130))
+    }
+
+    @Test
     fun aWideTwoCellsHighWidgetShowsAllFourInAGrid() {
         assertEquals(WidgetLayoutKind.GRID, kind(250, 110))
         assertEquals(WidgetLayoutKind.GRID, kind(320, 120))

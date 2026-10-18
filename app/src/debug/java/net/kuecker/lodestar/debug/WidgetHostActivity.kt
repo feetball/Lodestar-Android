@@ -136,6 +136,8 @@ class WidgetHostActivity : Activity() {
         }
         val info = manager.getAppWidgetInfo(id)
         val view = host.createView(this, id, info)
+        // The host view pads a widget of an old app; a launcher does not, and it tells the widget the room it has.
+        view.setPadding(0, 0, 0, 0)
         val bounds = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, width)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, width)

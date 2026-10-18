@@ -10,9 +10,9 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ControlCamera
 import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Sensors
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -247,7 +247,7 @@ private fun MountConnectionSection(service: MountService, draft: MountDraft, sna
             SettingsCaption("Join the mount's Wi-Fi network first. Connecting never moves the mount.")
         }
         SettingsDivider()
-        SettingsActionRow("Try a simulated mount", onClick = { service.connect(draft.connection(), demo = true) }, icon = Icons.Outlined.Share)
+        SettingsActionRow("Try a simulated mount", onClick = { service.connect(draft.connection(), demo = true) }, icon = Icons.Outlined.PlayCircle)
         SettingsRow {
             SettingsCaption("A mount without hardware, to see how Go to, Sync and the nudge arrows work.")
         }

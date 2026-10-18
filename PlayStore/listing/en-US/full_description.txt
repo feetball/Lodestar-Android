@@ -38,6 +38,6 @@ MADE FOR THE DARK
 • Everything works offline at remote dark-sky sites
 
 PRIVATE BY DESIGN
-No accounts, analytics, ads or tracking. Your location and camera picture stay on your phone.
+No accounts, analytics, ads or tracking. Your camera picture stays on your phone, and so does your location, apart from a position rounded to about 10 km for the optional cloud forecast.
 
 Star data: HYG Database v4.1 (CC BY-SA 4.0). Deep-sky data: OpenNGC (CC BY-SA 4.0). Constellation figures and Milky Way outlines: d3-celestial (BSD-3-Clause). Geomagnetic model: NOAA/BGS WMM2025. Meteor showers: IMO. Orbital data: CelesTrak, T. S. Kelso. Comet and asteroid orbits: IAU Minor Planet Center. Weather forecast from MET Norway (CC BY 4.0). Maps: OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors.

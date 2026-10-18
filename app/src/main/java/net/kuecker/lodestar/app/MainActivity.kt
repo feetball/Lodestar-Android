@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.text.format.DateFormat
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -13,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.CompletableDeferred
 import net.kuecker.lodestar.features.widget.WidgetLaunch
+import net.kuecker.lodestar.shared.AppFormat
 
 /** The single activity: hosts [RootScreen] and lends the services what only an activity has. */
 class MainActivity : ComponentActivity() {
@@ -48,6 +50,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        AppFormat.use24HourClock = DateFormat.is24HourFormat(this)
         app.handleLifecycle(started = true)
     }
 

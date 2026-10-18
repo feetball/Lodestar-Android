@@ -20,7 +20,27 @@ same astronomy engine ported line for line from Swift to Kotlin.
   framing and longest exposure for each object.
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
   targets, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
-- **Offline and private** — catalogs and ephemerides are on the device; nothing is collected.
+- **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
+  solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
+  and where to look and a button to aim at it.
+- **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
+  order, guided panel by panel in Aim), and star-trail and time-lapse planners.
+- **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set
+  times, Tonight and the charts then use the site's own skyline.
+- **Comets and asteroids** — 216 bright asteroids built in and, optionally, the daily comet file: brightness
+  estimates, elongation warnings, a Bright Comets list, and the direction of a comet's ion tail with the camera
+  tilt that lays it along the frame.
+- **GoTo mounts** — connect over Wi-Fi to OnStep/LX200, Celestron NexStar and SynScan, ASCOM Alpaca and the
+  Sky-Watcher AZ-GTi / Star Adventurer GTi (with home position and star alignment); Go to, Sync, nudge arrows and
+  an always-available Stop, with altitude limits and a built-in simulated mount to try it without hardware.
+- **Optional online data** — all off until switched on in Settings: ISS and bright-satellite passes (follow one in
+  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast (MET
+  Norway, location rounded to about 10 km).
+- **Home-screen widgets** — Tonight at a glance (dark hours, the Moon, the Milky Way core, the next event) in
+  two resizable sizes, worked out on the device; a tap opens Tonight.
+- **Offline and private** — catalogs and ephemerides are on the device; nothing is collected. The optional online
+  data downloads from CelesTrak, the Minor Planet Center and MET Norway only when you turn it on, and a GoTo mount
+  is reached over the local network only.
 
 ## Project layout
 
@@ -28,12 +48,14 @@ same astronomy engine ported line for line from Swift to Kotlin.
 android/
   lodestar-kit/     Pure Kotlin/JVM astronomy engine (port of the Swift LodestarKit): coordinates, precession,
                     nutation, aberration, refraction, VSOP87B planets, ELP/Meeus Moon, rise/set, twilight, Moon
-                    phases, catalog + search, aiming math, alignment solver, WMM2025, exposure tools, planning.
-                    893 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
-  app/              Android app (Jetpack Compose, Material 3, CameraX, MapLibre).
+                    phases, catalog + search, aiming math, alignment solver, WMM2025, exposure tools, planning,
+                    events, skyline, mosaics, satellites (SGP4), comets and asteroids, GoTo mount protocols.
+                    1,752 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
+  app/              Android app (Jetpack Compose, Material 3, CameraX, MapLibre, Glance widgets).
     app/            AppModel (state + service orchestration), activity, root screen
     model/ services/ theme/ shared/   settings, sensors/location/camera, night palette, shared views
-    features/       aim, objects, skychart, tonight, settings, onboarding, tools
+    features/       aim, objects, skychart, tonight, settings, onboarding, tools, events, mosaic, horizon,
+                    mount, smallbodies, satellites, online, widget
   tools/            Icon, feature-graphic and screenshot scripts
   PlayStore/        Store listing text and graphics
   docs/             GitHub Pages: privacy policy and support

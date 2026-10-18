@@ -9,7 +9,7 @@ permissions:
 jobs:
   screenshots:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -35,7 +35,9 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated
           script: |
             adb install -r app/build/outputs/apk/debug/app-debug.apk
-            tools/capture_screenshots.sh screenshots
+            tools/capture_screenshots.sh screenshots/phone 1080x2160 420
+            tools/capture_screenshots.sh screenshots/tablet-7in 1200x1920 320
+            tools/capture_screenshots.sh screenshots/tablet-10in 1600x2560 320
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

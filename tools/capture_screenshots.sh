@@ -1,17 +1,19 @@
 #!/bin/bash
 # Captures the Play Store screenshots and a smoke-test log from a running emulator (or device) with the debug
 # build installed. Screenshot mode (debug builds only) fixes the site, time, tab, target and pointing.
-#   tools/capture_screenshots.sh <output-dir>
+#   tools/capture_screenshots.sh <output-dir> [<width>x<height> <density>]   (default 1080x2160 at 420 dpi: a phone)
 set -euo pipefail
 out=${1:-screenshots}
+size=${2:-1080x2160}
+density=${3:-420}
 mkdir -p "$out"
 package=net.kuecker.lodestar
 activity=$package/.app.MainActivity
 common="date=2026-07-17T05:30:00Z lat=36.0544 lon=-112.1401 elevation=2130 site=Grand_Canyon tz=America/Phoenix"
 
 # Phone screenshot geometry Play accepts (long side at most twice the short side), clean status bar.
-adb shell wm size 1080x2160
-adb shell wm density 420
+adb shell wm size "$size"
+adb shell wm density "$density"
 adb shell settings put secure immersive_mode_confirmations confirmed
 adb shell settings put global sysui_demo_allowed 1
 demo() { adb shell am broadcast -p com.android.systemui -a com.android.systemui.demo -e command "$@" >/dev/null; }

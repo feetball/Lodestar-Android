@@ -14,11 +14,13 @@ adb shell wm size 1080x2160
 adb shell wm density 420
 adb shell settings put secure immersive_mode_confirmations confirmed
 adb shell settings put global sysui_demo_allowed 1
-adb shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null
-adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 2230 >/dev/null
-adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false >/dev/null
-adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 >/dev/null
-adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false >/dev/null
+demo() { adb shell am broadcast -p com.android.systemui -a com.android.systemui.demo -e command "$@" >/dev/null; }
+demo enter
+sleep 1
+demo clock -e hhmm 2230
+demo battery -e level 100 -e plugged false
+demo network -e wifi show -e level 4 -e mobile show -e datatype none -e level 4
+demo notifications -e visible false
 adb logcat -c
 
 shoot() {
@@ -30,6 +32,10 @@ shoot() {
     adb exec-out screencap -p > "$out/$name.png"
     echo "captured $name"
 }
+
+# Warm-up: the first start after installing compiles the app and decodes the catalog for the first time.
+adb shell "am start -W -n $activity --es lodestarScreenshot '$common tab=tonight'" >/dev/null
+sleep 30
 
 shoot 1-aim-guidance tab=aim target=special.galacticCenter pointing=172,18
 shoot 2-tonight tab=tonight

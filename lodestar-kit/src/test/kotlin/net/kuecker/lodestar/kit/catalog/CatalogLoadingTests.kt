@@ -240,7 +240,7 @@ class CatalogLoadingTests {
                         )
                     }
                 }
-                is ObjectPosition.SolarSystem, is ObjectPosition.CelestialPole -> assertNull(obj.j2000)
+                is ObjectPosition.SolarSystem, is ObjectPosition.CelestialPole, is ObjectPosition.SmallBodyOrbit -> assertNull(obj.j2000)
             }
             obj.magnitude?.let { assertTrue(it.isFinite(), obj.id) }
             obj.colorIndex?.let { assertTrue(it.isFinite(), obj.id) }

@@ -7,7 +7,8 @@ import kotlinx.serialization.Serializable
  * The kind of a sky object, as shown in lists and used to pick an icon.
  *
  * The cases follow the OpenNGC type codes for deep-sky objects, plus the kinds that the catalog
- * adds itself: the solar-system bodies, the Milky Way core, the celestial poles and
+ * adds itself: the solar-system bodies (the Sun, the Moon, the planets and, once small bodies are added with
+ * [Catalog.withSmallBodies], comets and asteroids), the Milky Way core, the celestial poles and
  * user-created targets.
  *
  * Serialized as its [rawValue] string (the Swift case name, e.g. `"doubleStar"`).
@@ -27,6 +28,14 @@ enum class ObjectCategory(val rawValue: String) {
     /** A planet. */
     @SerialName("planet")
     PLANET("planet"),
+
+    /** A comet; added to a catalog with [Catalog.withSmallBodies]. */
+    @SerialName("comet")
+    COMET("comet"),
+
+    /** An asteroid (minor planet); the bright ones are bundled, see [BundledAsteroids]. */
+    @SerialName("asteroid")
+    ASTEROID("asteroid"),
 
     /** A star. */
     @SerialName("star")
@@ -111,6 +120,8 @@ enum class ObjectCategory(val rawValue: String) {
             SUN -> "Sun"
             MOON -> "Moon"
             PLANET -> "Planet"
+            COMET -> "Comet"
+            ASTEROID -> "Asteroid"
             STAR -> "Star"
             DOUBLE_STAR -> "Double Star"
             GALAXY -> "Galaxy"
@@ -141,6 +152,8 @@ enum class ObjectCategory(val rawValue: String) {
             SUN -> "sun.max"
             MOON -> "moon"
             PLANET -> "circle.circle"
+            COMET -> "sparkle"
+            ASTEROID -> "circle.fill"
             STAR -> "star"
             DOUBLE_STAR -> "star.leadinghalf.filled"
             GALAXY -> "hurricane"
@@ -165,7 +178,7 @@ enum class ObjectCategory(val rawValue: String) {
     /** The browse group the category is listed under. */
     val group: ObjectGroup
         get() = when (this) {
-            SUN, MOON, PLANET -> ObjectGroup.SOLAR_SYSTEM
+            SUN, MOON, PLANET, COMET, ASTEROID -> ObjectGroup.SOLAR_SYSTEM
             STAR, DOUBLE_STAR, ASTERISM -> ObjectGroup.STARS
             GALAXY, GALAXY_GROUP -> ObjectGroup.GALAXIES
             EMISSION_NEBULA, REFLECTION_NEBULA, DARK_NEBULA, NEBULA, PLANETARY_NEBULA,
@@ -232,7 +245,7 @@ enum class ObjectCategory(val rawValue: String) {
  */
 @Serializable
 enum class ObjectGroup(val rawValue: String) {
-    /** The Sun, the Moon and the planets. */
+    /** The Sun, the Moon, the planets, comets and asteroids. */
     @SerialName("solarSystem")
     SOLAR_SYSTEM("solarSystem"),
 

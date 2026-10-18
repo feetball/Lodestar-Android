@@ -1,5 +1,9 @@
 package net.kuecker.lodestar.kit.catalog
 
+import net.kuecker.lodestar.kit.comets.SmallBody
+import net.kuecker.lodestar.kit.comets.SmallBodyBrightness
+import net.kuecker.lodestar.kit.comets.SmallBodyKind
+
 /**
  * A text an object can be found by, and which of the object's displayed texts it stands for.
  *
@@ -458,6 +462,25 @@ internal object CatalogFactory {
             }
         }
         return if (hasLetter) "dso.$alternateName" else null
+    }
+
+    /**
+     * The object of a comet or an asteroid, with the texts it can be found by: the title (entry 0), the designation
+     * ("C/2023 A3", "12P", "2024 YR4", "(4)" for a numbered asteroid, entry 1) and the common name (entry 2).
+     */
+    fun smallBody(body: SmallBody): ObjectDraft {
+        val estimate = SmallBodyBrightness.peakMagnitudeEstimate(body)
+        val prominence = Prominence.forSmallBody(estimate)
+        val isAsteroid = body.kind == SmallBodyKind.ASTEROID
+        val designation = if (isAsteroid && body.number != null) "(${body.designation})" else body.designation
+        val alternateNames = if (body.name.isEmpty()) emptyList() else listOf(body.name)
+        val obj = CelestialObject(
+            id = body.id, name = body.title, designations = listOf(designation), alternateNames = alternateNames,
+            category = if (isAsteroid) ObjectCategory.ASTEROID else ObjectCategory.COMET,
+            position = ObjectPosition.SmallBodyOrbit(body), isListed = prominence <= Prominence.lastListed,
+            prominence = prominence,
+        )
+        return ObjectDraft.plain(obj)
     }
 
     /** The search key of [text] as a string (its bytes are ASCII), to tell whether two texts are found alike. */

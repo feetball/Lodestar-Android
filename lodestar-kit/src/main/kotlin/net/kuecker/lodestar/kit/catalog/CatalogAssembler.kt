@@ -5,6 +5,7 @@ import java.util.EnumMap
 /** Everything a [Catalog] holds, as produced by [CatalogAssembler]. */
 internal class CatalogContents(
     val objects: List<CelestialObject>,
+    val listed: List<CelestialObject>,
     val constellations: ConstellationDirectory,
     val milkyWay: MilkyWayOutline,
     val renderStars: List<RenderStar>,
@@ -19,7 +20,8 @@ internal class CatalogContents(
 
 /** Reads the data files, validates their records and builds the catalog's objects and search index. */
 internal object CatalogAssembler {
-    private class ObjectTable {
+    /** The objects of a catalog or part of one, with the search index and the name keys that grow with them. */
+    class ObjectTable {
         val objects = ArrayList<CelestialObject>()
         val search = SearchIndexBuilder()
 
@@ -120,7 +122,8 @@ internal object CatalogAssembler {
         }
 
         return CatalogContents(
-            objects = table.objects, constellations = constellations, milkyWay = milkyWay,
+            objects = table.objects, listed = table.objects.filter { it.isListed },
+            constellations = constellations, milkyWay = milkyWay,
             renderStars = renderStars, report = report, searchIndex = table.search.finish(objectsByRank),
             indexByID = indexByID, listedByGroup = listedByGroup, deepSky = deepSkyObjects,
             deepSkyUpTo = deepSkyUpTo(deepSkyObjects), byCatalogue = byCatalogue(deepSkyObjects),

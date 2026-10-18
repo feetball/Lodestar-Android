@@ -97,6 +97,8 @@ class AppContractTests {
             ObjectCategory.SUN -> "sun"
             ObjectCategory.MOON -> "moon"
             ObjectCategory.PLANET -> "planet"
+            ObjectCategory.COMET -> "comet"
+            ObjectCategory.ASTEROID -> "asteroid"
             ObjectCategory.STAR -> "star"
             ObjectCategory.DOUBLE_STAR -> "doubleStar"
             ObjectCategory.GALAXY -> "galaxy"

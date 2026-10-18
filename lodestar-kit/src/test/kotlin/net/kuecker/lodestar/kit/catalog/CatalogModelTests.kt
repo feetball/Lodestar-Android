@@ -29,6 +29,7 @@ class CatalogModelTests {
     fun testCategoryDisplayNames() {
         val names: Map<ObjectCategory, String> = mapOf(
             ObjectCategory.SUN to "Sun", ObjectCategory.MOON to "Moon", ObjectCategory.PLANET to "Planet",
+            ObjectCategory.COMET to "Comet", ObjectCategory.ASTEROID to "Asteroid",
             ObjectCategory.STAR to "Star", ObjectCategory.DOUBLE_STAR to "Double Star",
             ObjectCategory.GALAXY to "Galaxy", ObjectCategory.GALAXY_GROUP to "Galaxy Group",
             ObjectCategory.EMISSION_NEBULA to "Emission Nebula",
@@ -41,12 +42,12 @@ class CatalogModelTests {
             ObjectCategory.MILKY_WAY to "Milky Way", ObjectCategory.CELESTIAL_POLE to "Celestial Pole",
             ObjectCategory.CUSTOM to "Custom Target", ObjectCategory.OTHER to "Other",
         )
-        assertEquals(22, ObjectCategory.entries.size)
+        assertEquals(24, ObjectCategory.entries.size)
         assertEquals(ObjectCategory.entries.toSet(), names.keys)
         for ((category, name) in names) {
             assertEquals(name, category.displayName)
         }
-        assertEquals(22, ObjectCategory.entries.map { it.displayName }.toSet().size, "display names are unique")
+        assertEquals(24, ObjectCategory.entries.map { it.displayName }.toSet().size, "display names are unique")
     }
 
     @Test
@@ -66,7 +67,7 @@ class CatalogModelTests {
         val verified = setOf(
             "sun.max", "moon", "circle.circle", "star", "star.leadinghalf.filled", "hurricane", "circle.hexagongrid",
             "cloud.fill", "cloud.sun", "cloud.fog.fill", "cloud", "circle.dotted", "burst", "sparkles", "aqi.medium",
-            "cloud.moon", "aqi.low", "star.circle", "moon.stars", "scope", "plus.circle", "sparkle",
+            "cloud.moon", "aqi.low", "star.circle", "moon.stars", "scope", "plus.circle", "sparkle", "circle.fill",
         )
         val used = ObjectCategory.entries.map { it.systemImageName }.toSet() + ObjectGroup.entries.map { it.systemImageName }
         assertEquals(emptySet(), used - verified)
@@ -76,7 +77,9 @@ class CatalogModelTests {
     @Test
     fun testCategoryGroups() {
         val groups: Map<ObjectGroup, List<ObjectCategory>> = mapOf(
-            ObjectGroup.SOLAR_SYSTEM to listOf(ObjectCategory.SUN, ObjectCategory.MOON, ObjectCategory.PLANET),
+            ObjectGroup.SOLAR_SYSTEM to listOf(
+                ObjectCategory.SUN, ObjectCategory.MOON, ObjectCategory.PLANET, ObjectCategory.COMET, ObjectCategory.ASTEROID,
+            ),
             ObjectGroup.STARS to listOf(ObjectCategory.STAR, ObjectCategory.DOUBLE_STAR, ObjectCategory.ASTERISM),
             ObjectGroup.GALAXIES to listOf(ObjectCategory.GALAXY, ObjectCategory.GALAXY_GROUP),
             ObjectGroup.NEBULAE to listOf(

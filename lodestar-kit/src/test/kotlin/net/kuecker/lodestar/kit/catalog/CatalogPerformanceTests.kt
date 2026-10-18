@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.kit.catalog
 
+import net.kuecker.lodestar.kit.comets.SyntheticOrbits
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -113,6 +114,42 @@ class CatalogPerformanceTests {
         assertTrue(sortTime < sortBudget, "sorting the listed objects took $sortTime ms")
         assertTrue(allTime < sortBudget * 10, "sorting all objects took $allTime ms")
         assertTrue(groupTime < sortBudget, "the group lookups took $groupTime ms")
+    }
+
+    @Test
+    fun testAddingSmallBodiesIsFastAndSearchStaysFast() {
+        val base = CatalogFixture.catalog()
+        val bundledAsteroids = BundledAsteroids.load().bodies
+        val comets = SyntheticOrbits(1).bodies(1_000)
+        val nearEarthObjects = SyntheticOrbits(2).bodies(43_000)
+        base.withSmallBodies(bundledAsteroids)
+        fun best(count: Int, body: () -> Unit): Double {
+            var best = Double.POSITIVE_INFINITY
+            repeat(count) { best = minOf(best, milliseconds(body)) }
+            return best
+        }
+        val loadTime = best(5) { BundledAsteroids.load() }
+        val asteroidTime = best(5) { base.withSmallBodies(bundledAsteroids) }
+        val cometTime = best(5) { base.withSmallBodies(comets) }
+        val nearEarthTime = best(3) { base.withSmallBodies(nearEarthObjects) }
+        val withBodies = base.withSmallBodies(bundledAsteroids + comets)
+        repeat(20) { withBodies.search("a", limit = 50) }
+        val searchTime = best(10) { withBodies.search("vesta", limit = 50) }
+        val broadSearchTime = best(10) { withBodies.search("a", limit = 50) }
+        val groupTime = best(5) { withBodies.objects(ObjectGroup.SOLAR_SYSTEM) }
+        println(
+            "CATALOG PERF BundledAsteroids.load ${"%.2f".format(java.util.Locale.ROOT, loadTime)} ms; withSmallBodies: ${bundledAsteroids.size} asteroids ${"%.2f".format(java.util.Locale.ROOT, asteroidTime)} ms, " +
+                "${comets.size} comets ${"%.2f".format(java.util.Locale.ROOT, cometTime)} ms, " +
+                "${nearEarthObjects.size} bodies ${"%.1f".format(java.util.Locale.ROOT, nearEarthTime)} ms; " +
+                "search \"vesta\" ${"%.3f".format(java.util.Locale.ROOT, searchTime)} ms, \"a\" ${"%.3f".format(java.util.Locale.ROOT, broadSearchTime)} ms",
+        )
+        assertTrue(loadTime < 100, "loading the bundled asteroids took $loadTime ms")
+        assertTrue(asteroidTime < 100, "adding the bundled asteroids took $asteroidTime ms")
+        assertTrue(cometTime < 150, "adding 1 000 comets took $cometTime ms")
+        assertTrue(nearEarthTime < 3_000, "adding 43 000 bodies took $nearEarthTime ms")
+        assertTrue(searchTime < searchBudget, "search took $searchTime ms")
+        assertTrue(broadSearchTime < searchBudget, "a broad search took $broadSearchTime ms")
+        assertTrue(groupTime < 1, "the group lookup took $groupTime ms")
     }
 
     @Test

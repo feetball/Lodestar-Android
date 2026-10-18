@@ -8,8 +8,9 @@ import kotlinx.serialization.Serializable
  *
  * The value is part of the catalog data: for deep-sky objects it follows the rules in `Tools/README.md`
  * (catalogue membership, name, brightness and size; dark nebulae have no magnitude and are rated by name and
- * size), for stars it follows the magnitude, and the Sun, the Moon, the planets, the Milky Way core, the
- * celestial poles and custom targets are always showpieces. A smaller value is more conspicuous, so the
+ * size), for stars it follows the magnitude, for comets and asteroids it follows the peak magnitude estimate
+ * ([forSmallBody]), and the Sun, the Moon, the planets, the Milky Way core, the celestial poles and custom targets are
+ * always showpieces. A smaller value is more conspicuous, so the
  * natural order is the order of importance: `SHOWPIECE < PROMINENT < NOTABLE < OBSCURE`.
  *
  * Use it to keep a crowded sky readable: draw (or label) only the objects up to a limit that grows as the
@@ -56,6 +57,32 @@ enum class Prominence(val rawValue: Int) {
 
         /** Stars brighter than this (inclusive) are notable; fainter ones are obscure. */
         const val notableStarMagnitude: Double = 5.0
+
+        /** Comets and asteroids with a peak magnitude estimate up to this value (inclusive) are showpieces: naked-eye class. */
+        const val showpieceSmallBodyMagnitude: Double = 6.0
+
+        /** Comets and asteroids with a peak magnitude estimate up to this value (inclusive) are prominent: binocular class. */
+        const val prominentSmallBodyMagnitude: Double = 8.0
+
+        /**
+         * Comets and asteroids with a peak magnitude estimate up to this value (inclusive) are notable: within reach of
+         * a camera on a tripod, the default limit of `SmallBodySelection`. Fainter ones, and bodies without magnitude
+         * parameters, are obscure.
+         */
+        const val notableSmallBodyMagnitude: Double = 10.0
+
+        /**
+         * The prominence of a comet or an asteroid from its peak magnitude estimate
+         * ([net.kuecker.lodestar.kit.comets.SmallBodyBrightness.peakMagnitudeEstimate]): 1 up to magnitude 6, 2 up to 8,
+         * 3 up to 10, else 4; a body without an estimate is 4 (Swift `init(smallBodyPeakMagnitude:)`).
+         */
+        fun forSmallBody(peakMagnitude: Double?): Prominence = when {
+            peakMagnitude == null -> OBSCURE
+            peakMagnitude <= showpieceSmallBodyMagnitude -> SHOWPIECE
+            peakMagnitude <= prominentSmallBodyMagnitude -> PROMINENT
+            peakMagnitude <= notableSmallBodyMagnitude -> NOTABLE
+            else -> OBSCURE
+        }
 
         /**
          * The prominence of a star of visual magnitude [starMagnitude]: 1 up to magnitude 1.5, 2 up to 3.5, 3 up

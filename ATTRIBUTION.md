@@ -120,7 +120,8 @@ Intrinsic magnitudes of the ISS, Tiangong and Hubble are from Heavens-Above.
 
 Comet orbital elements are downloaded at run time from the **IAU Minor Planet Center** (`CometEls.txt`, credit the
 MPC; the file's header is kept). Single-object elements and the test reference positions come from **NASA/JPL**
-(SBDB and Horizons, public domain; credit requested). Test fixtures contain small extracts of both.
+(SBDB and Horizons, public domain; credit requested). Test fixtures contain small extracts of both. The bundled `asteroids.txt` (bright asteroids, osculating epoch 2026-06-09) is an extract of the
+MPC orbit file and keeps the MPC header verbatim.
 
 ### d3-celestial — `constellations.json` and `milkyway.json`
 

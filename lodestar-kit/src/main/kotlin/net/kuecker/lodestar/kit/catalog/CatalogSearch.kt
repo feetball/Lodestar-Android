@@ -45,12 +45,44 @@ data class CatalogSearchResult internal constructor(
     val id: String get() = obj.id
 }
 
-/** Runs [query] against the catalog's search index; the implementation of [Catalog.search]. */
+/** Runs [query] against the catalog's search index (and that of its small bodies); the implementation of [Catalog.search]. */
 internal fun Catalog.performSearch(query: String, limit: Int): List<CatalogSearchResult> {
     val key = SearchText.key(query, maximumScalars = SearchText.maximumQueryScalars)
-    return searchIndex.search(key.bytes, limit).map { hit ->
+    val bundled = searchIndex.search(key.bytes, limit).map { hit ->
         val obj = objects[hit.objectIndex]
         val source = searchIndex.source(hit.keyIndex)
         CatalogSearchResult(obj, text(source.entry, obj), hit.kind)
     }
+    val smallIndex = smallBodyTable.searchIndex ?: return bundled
+    val own = smallIndex.search(key.bytes, limit).map { hit ->
+        val obj = smallBodyTable.objects[hit.objectIndex]
+        val source = smallIndex.source(hit.keyIndex)
+        CatalogSearchResult(obj, text(source.entry, obj), hit.kind)
+    }
+    if (own.isEmpty()) return bundled
+    return merged(bundled, own, limit)
+}
+
+/**
+ * The best [limit] of two result lists, each of them already the best of its own index: better kinds first, equal kinds
+ * in the order of equally good matches ([CatalogOrdering.searchComparator], which ends in the identifier and so is
+ * total). A loose [CatalogSearchResult.MatchKind.FUZZY] suggestion only counts when there is no other match in either list,
+ * as in a single index.
+ */
+private fun merged(first: List<CatalogSearchResult>, second: List<CatalogSearchResult>, limit: Int): List<CatalogSearchResult> {
+    class Ranked(val result: CatalogSearchResult, val item: CatalogOrdering.Item)
+
+    val all = ArrayList<Ranked>(first.size + second.size)
+    for (result in first) all.add(Ranked(result, CatalogOrdering.item(result.obj)))
+    for (result in second) all.add(Ranked(result, CatalogOrdering.item(result.obj)))
+    all.sortWith { lhs, rhs ->
+        if (lhs.result.kind != rhs.result.kind) {
+            lhs.result.kind.rawValue.compareTo(rhs.result.kind.rawValue)
+        } else {
+            CatalogOrdering.searchComparator.compare(lhs.item, rhs.item)
+        }
+    }
+    val hasBetterThanFuzzy = all.any { it.result.kind != CatalogSearchResult.MatchKind.FUZZY }
+    val kept = if (hasBetterThanFuzzy) all.filter { it.result.kind != CatalogSearchResult.MatchKind.FUZZY } else all
+    return kept.take(limit).map { it.result }
 }

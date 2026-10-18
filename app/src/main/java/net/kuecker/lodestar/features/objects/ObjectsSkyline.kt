@@ -2,11 +2,13 @@ package net.kuecker.lodestar.features.objects
 
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectPosition
+import net.kuecker.lodestar.kit.catalog.horizontal
 import net.kuecker.lodestar.kit.catalog.riseTransitSet
 import net.kuecker.lodestar.kit.ephemeris.RiseSetCalculator
 import net.kuecker.lodestar.kit.ephemeris.RiseTransitSet
 import net.kuecker.lodestar.kit.foundation.DateInterval
 import net.kuecker.lodestar.kit.foundation.Observer
+import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.horizon.HorizonVisibility
 import net.kuecker.lodestar.model.ObserverContext
@@ -27,4 +29,5 @@ internal fun HorizonVisibility.riseTransitSet(obj: CelestialObject, observer: Ob
         is ObjectPosition.Fixed -> riseTransitSet(position.coordinate, position.properMotion, observer, interval)
         is ObjectPosition.SolarSystem -> riseTransitSet(position.body, observer, interval)
         is ObjectPosition.CelestialPole -> RiseSetCalculator.riseTransitSet(obj, observer, interval)
+        is ObjectPosition.SmallBodyOrbit -> riseTransitSet({ SkyFrame(it, observer).horizontal(obj, false) }, interval)
     }

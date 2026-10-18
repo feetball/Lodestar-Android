@@ -1,5 +1,8 @@
 package net.kuecker.lodestar.kit.catalog
 
+import net.kuecker.lodestar.kit.comets.SmallBody
+import net.kuecker.lodestar.kit.comets.SmallBodyBrightness
+import net.kuecker.lodestar.kit.comets.SmallBodyKind
 import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
 import net.kuecker.lodestar.kit.foundation.ProperMotion
@@ -18,6 +21,12 @@ sealed interface ObjectPosition {
 
     /** The north or south celestial pole of date. */
     data class CelestialPole(val north: Boolean) : ObjectPosition
+
+    /**
+     * A comet or an asteroid; its position comes from its orbital elements (`SmallBodyEphemeris`, with the same
+     * pipeline as a planet). Swift `smallBody(_:)`.
+     */
+    data class SmallBodyOrbit(val body: SmallBody) : ObjectPosition
 }
 
 /**
@@ -28,19 +37,25 @@ sealed interface ObjectPosition {
  *
  * @property id A stable identifier: `"sun"`, `"moon"`, `"planet.mars"`, `"star.hip32349"` (or `"star.hr<n>"`,
  * `"star.hyg<n>"` for stars without a Hipparcos number), `"dso.M31"`, `"dso.NGC7000"`,
- * `"special.galacticCenter"`, `"special.ncp"`, `"special.scp"` or `"custom.<uuid>"`.
+ * `"special.galacticCenter"`, `"special.ncp"`, `"special.scp"`, `"comet.C/2023 A3"`, `"comet.12P"`, `"asteroid.4"`,
+ * `"asteroid.2024 YR4"` (the identifiers of `SmallBody`, which survive element updates) or `"custom.<uuid>"`.
  * @property name The name shown in lists. Stars use their proper name, else the Bayer designation with the
  * constellation ("γ Cas"), else the Flamsteed number ("48 Cas"), else a catalog number ("HR 123").
- * Deep-sky objects use their first common name, else "M 31", "NGC 7000" or "IC 434".
+ * Deep-sky objects use their first common name, else "M 31", "NGC 7000" or "IC 434". Comets and asteroids use
+ * their title: "C/2023 A3 (Tsuchinshan-ATLAS)", "12P/Pons-Brooks", "(4) Vesta", "2024 YR4".
  * @property designations Catalog designations, in display order: for example "M 31", "NGC 224" or "α CMa",
- * "Alpha Canis Majoris", "9 CMa", "HR 2491", "HD 48915", "HIP 32349". May contain [name].
- * @property alternateNames Common names other than [name].
+ * "Alpha Canis Majoris", "9 CMa", "HR 2491", "HD 48915", "HIP 32349". May contain [name]. A comet or an
+ * asteroid has its designation: "C/2023 A3", "12P", "2024 YR4", and "(4)" for a numbered asteroid.
+ * @property alternateNames Common names other than [name]. The name of a comet or an asteroid: "Tsuchinshan-ATLAS",
+ * "Vesta".
  * @property category The kind of object.
- * @property constellation The IAU abbreviation of the constellation the object lies in ("CMa"), if known.
+ * @property constellation The IAU abbreviation of the constellation the object lies in ("CMa"), if known. `null` for
+ * the objects that move through the sky (the Sun, the Moon, the planets, comets, asteroids).
  * @property constellationName The full name of the constellation ("Canis Major"), if known.
  * @property magnitude The visual magnitude, if known. For the few deep-sky objects that only have a blue
- * magnitude in the source data, that value. `null` for the Sun, the Moon and the planets, whose
- * brightness changes; use `SkyFrame.currentMagnitude(obj)` for those.
+ * magnitude in the source data, that value. `null` for the Sun, the Moon, the planets, comets and asteroids, whose
+ * brightness changes; use `SkyFrame.currentMagnitude(obj)` for those, or [estimatedPeakMagnitude] for a date-free
+ * rating.
  * @property angularSize The size of an extended object, if known.
  * @property position Where the object is.
  * @property colorIndex The B−V color index of a star, if known.
@@ -48,13 +63,14 @@ sealed interface ObjectPosition {
  * @property distanceLightYears The distance in light-years, if known.
  * @property isListed Whether browse lists show the object. All solar-system and special objects are listed, and
  * so are the deep-sky objects whose [prominence] is [Prominence.NOTABLE] or better, stars with a proper name and
- * other stars of magnitude 3.5 or brighter. The remaining objects (the obscure deep-sky objects and the faint
- * stars) are only found by search, by catalogue ([Catalog.objects] with a [DeepSkyCatalogue]) and drawn on the sky.
+ * other stars of magnitude 3.5 or brighter, and the comets and asteroids of [Prominence.NOTABLE] or better. The
+ * remaining objects (the obscure deep-sky objects, the faint stars, the faint comets and asteroids) are only found
+ * by search, by catalogue ([Catalog.objects] with a [DeepSkyCatalogue]) and drawn on the sky.
  * @property notes A short note for the detail view, if there is something worth saying.
  * @property prominence How conspicuous the object is, see [Prominence]. Deep-sky objects have the value of the
  * data file (a record without one counts as [Prominence.NOTABLE]), stars follow their magnitude
- * ([Prominence.forStar]), and the Sun, the Moon, the planets, the special directions and custom targets are
- * showpieces.
+ * ([Prominence.forStar]), comets and asteroids follow their [estimatedPeakMagnitude] ([Prominence.forSmallBody]), and
+ * the Sun, the Moon, the planets, the special directions and custom targets are showpieces.
  * @property catalogNumbers The object's numbers in the catalogues of [DeepSkyCatalogue], in the order of
  * [designations] (Messier, NGC, IC, then the others). Empty for stars, solar-system bodies and deep-sky objects
  * that are only in other catalogues (ESO, PGC, UGC...).
@@ -96,8 +112,18 @@ data class CelestialObject internal constructor(
     /** The J2000 position of a fixed object; `null` for solar-system bodies and the poles. */
     val j2000: EquatorialCoordinate? get() = (position as? ObjectPosition.Fixed)?.coordinate
 
-    /** `true` for the Sun, the Moon and the planets. */
-    val isSolarSystem: Boolean get() = position is ObjectPosition.SolarSystem
+    /** `true` for the Sun, the Moon, the planets, comets and asteroids: the objects whose place and brightness change. */
+    val isSolarSystem: Boolean get() = position is ObjectPosition.SolarSystem || position is ObjectPosition.SmallBodyOrbit
+
+    /** The comet or asteroid behind the object; `null` for every other object. */
+    val smallBody: SmallBody? get() = (position as? ObjectPosition.SmallBodyOrbit)?.body
+
+    /**
+     * The date-free peak magnitude estimate of a comet or an asteroid
+     * ([SmallBodyBrightness.peakMagnitudeEstimate]), the number behind its [prominence] and its place in a
+     * brightness order; `null` for other objects and for bodies without magnitude parameters.
+     */
+    val estimatedPeakMagnitude: Double? get() = smallBody?.let { SmallBodyBrightness.peakMagnitudeEstimate(it) }
 
     /** One line describing the object, such as "Galaxy · Andromeda · mag 3.4". */
     val subtitle: String
@@ -110,14 +136,17 @@ data class CelestialObject internal constructor(
 
     /**
      * The magnitude used to order objects by brightness: the catalog magnitude, or for
-     * solar-system bodies a typical peak magnitude, or +∞ when nothing is known.
+     * solar-system bodies a typical peak magnitude, for comets and asteroids [estimatedPeakMagnitude], or +∞ when
+     * nothing is known.
      */
     internal val rankingMagnitude: Double
         get() {
             if (magnitude != null) return magnitude
-            val position = position
-            if (position is ObjectPosition.SolarSystem) return typicalPeakMagnitude(position.body)
-            return Double.POSITIVE_INFINITY
+            return when (val position = position) {
+                is ObjectPosition.SolarSystem -> typicalPeakMagnitude(position.body)
+                is ObjectPosition.SmallBodyOrbit -> SmallBodyBrightness.peakMagnitudeEstimate(position.body) ?: Double.POSITIVE_INFINITY
+                is ObjectPosition.Fixed, is ObjectPosition.CelestialPole -> Double.POSITIVE_INFINITY
+            }
         }
 
     companion object {
@@ -138,6 +167,20 @@ data class CelestialObject internal constructor(
             SolarSystemBody.URANUS -> 5.7
             SolarSystemBody.NEPTUNE -> 7.8
         }
+
+        // MARK: Comets and asteroids
+
+        /**
+         * Creates the catalog object of a comet or an asteroid (Swift `init(smallBody:)`).
+         *
+         * The identifier is the body's own ([SmallBody.id]), the name its [SmallBody.title]; the designation (and for a
+         * numbered asteroid the number in parentheses, "(4)") is the one designation, the common name the one alternate
+         * name. There is no constellation and no fixed magnitude: the position and the magnitude come from
+         * `SkyFrame.horizontal` and `SkyFrame.currentMagnitude`. [prominence] and [isListed] follow the
+         * [estimatedPeakMagnitude]. A [Catalog] builds these objects itself ([Catalog.withSmallBodies]); use this for a
+         * single body that is not in a catalog, for example one fetched for a target.
+         */
+        fun fromSmallBody(body: SmallBody): CelestialObject = CatalogFactory.smallBody(body).obj
 
         // MARK: Custom targets
 

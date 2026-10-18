@@ -78,6 +78,14 @@ sealed class CatalogError(val description: String) : Exception(description) {
      */
     data class NoValidRecords(val file: CatalogFile, val rejected: Int) :
         CatalogError("The catalog data file ${file.fileName} has no valid records ($rejected rejected).")
+
+    /**
+     * The bundled list of bright asteroids ([BundledAsteroids]) is missing, unreadable, larger than
+     * [BundledAsteroids.maximumFileBytes] or has no valid line. It is not one of the catalog's four data files, so
+     * it has no [CatalogFile].
+     */
+    data class BrightAsteroidsUnavailable(val reason: String) :
+        CatalogError("The bundled bright-asteroid list is unavailable: $reason")
 }
 
 /** What happened to the records of the data files while a catalog was loaded. */

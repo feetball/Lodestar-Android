@@ -5,6 +5,8 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.Adjust
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.BlurCircular
 import androidx.compose.material.icons.outlined.BlurOn
 import androidx.compose.material.icons.outlined.BubbleChart
@@ -50,6 +52,8 @@ val ObjectCategory.icon: ImageVector
         ObjectCategory.MILKY_WAY -> Icons.Outlined.NightsStay
         ObjectCategory.CELESTIAL_POLE -> Icons.Outlined.GpsFixed
         ObjectCategory.CUSTOM -> Icons.Outlined.AddCircleOutline
+        ObjectCategory.COMET -> Icons.Outlined.AutoFixHigh
+        ObjectCategory.ASTEROID -> Icons.Outlined.Circle
         ObjectCategory.OTHER -> Icons.Outlined.AutoAwesome
     }
 

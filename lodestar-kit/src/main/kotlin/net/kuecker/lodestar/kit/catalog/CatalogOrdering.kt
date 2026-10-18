@@ -69,6 +69,9 @@ internal object CatalogOrdering {
             )
         }
 
+    /** The values of one object that is not part of a table (its [Item.index] is 0). */
+    fun item(obj: CelestialObject): Item = items(listOf(obj)).first()
+
     fun sorted(objects: List<CelestialObject>, order: CatalogSortOrder): List<CelestialObject> {
         val items = items(objects)
         when (order) {

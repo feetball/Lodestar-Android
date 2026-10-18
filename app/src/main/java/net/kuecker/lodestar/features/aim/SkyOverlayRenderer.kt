@@ -13,7 +13,9 @@ import net.kuecker.lodestar.kit.foundation.AstroMath
 import net.kuecker.lodestar.kit.foundation.Matrix3
 import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.pointing.DeviceAttitude
+import net.kuecker.lodestar.features.mount.drawMountMarker
 import net.kuecker.lodestar.services.CameraGeometry
+import net.kuecker.lodestar.services.MountMarker
 import net.kuecker.lodestar.shared.ScreenAxes
 import net.kuecker.lodestar.theme.Palette
 import kotlin.math.atan
@@ -65,8 +67,8 @@ internal class SkyOverlayScratch(textMeasurer: TextMeasurer, density: Density) {
 
 /**
  * Paints one frame of the sky overlay: Milky Way, grid, constellations, horizon, deep-sky objects, stars, planets,
- * the ground below the recorded skyline, the panels of a running mosaic, the DSLR frame, the target and the reticle,
- * followed by their labels.
+ * the ground below the recorded skyline, the panels of a running mosaic, the DSLR frame, the mount marker, the target
+ * and the reticle, followed by their labels.
  *
  * Everything is projected with the phone's own back camera, the heading offset applied and the DSLR's device
  * correction not; only the DSLR frame itself comes from the corrected pointing. (A phone that lies on top of the
@@ -88,6 +90,8 @@ internal class SkyOverlayRenderer private constructor(
     val mosaic: AimMosaicPointings?,
     /** The place in the shooting order of the panel being shot (the panel count when all are done). */
     val mosaicStep: Int,
+    /** Where the connected GoTo mount points, or `null` without one. */
+    val mountMarker: MountMarker?,
     /** Whether the camera picture is behind the overlay (the ground shading then darkens it instead of covering it). */
     val isCameraPicture: Boolean,
     /** Seconds on a continuous clock; drives the pulse of the target ring. */
@@ -122,6 +126,7 @@ internal class SkyOverlayRenderer private constructor(
         drawSkyline()
         drawMosaic()
         drawDSLRFrame()
+        drawMountMarker()
         drawTarget()
         drawReticle()
         labels.draw(this, size, hudRotation, density)
@@ -178,6 +183,7 @@ internal class SkyOverlayRenderer private constructor(
             palette: Palette,
             mosaic: AimMosaicPointings?,
             mosaicStep: Int,
+            mountMarker: MountMarker?,
             camera: CameraGeometry?,
             virtualFieldOfView: Double,
             hudRotation: AimHUDRotation,
@@ -209,6 +215,7 @@ internal class SkyOverlayRenderer private constructor(
                 palette = palette,
                 mosaic = mosaic,
                 mosaicStep = mosaicStep,
+                mountMarker = mountMarker,
                 isCameraPicture = camera != null,
                 time = time,
                 hudRotation = hudRotation,

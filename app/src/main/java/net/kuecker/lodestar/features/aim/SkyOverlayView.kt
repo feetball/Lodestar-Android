@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.rememberTextMeasurer
+import net.kuecker.lodestar.features.mount.rememberMountService
 import net.kuecker.lodestar.shared.rememberScreenAxes
 import net.kuecker.lodestar.theme.LocalPalette
 
@@ -41,6 +42,7 @@ fun SkyOverlayView(model: AimViewModel, isActive: Boolean, modifier: Modifier = 
     val textMeasurer = rememberTextMeasurer()
     val scratch = remember(textMeasurer, density) { SkyOverlayScratch(textMeasurer, density) }
     val context = LocalContext.current
+    val mount = rememberMountService()
     var tick by remember { mutableLongStateOf(0L) }
     var reduceMotion by remember { mutableStateOf(false) }
 
@@ -75,6 +77,7 @@ fun SkyOverlayView(model: AimViewModel, isActive: Boolean, modifier: Modifier = 
             palette = palette,
             mosaic = model.mosaicPointings?.takeIf { it.plan === session.plan },
             mosaicStep = session.step,
+            mountMarker = mount.marker,
             camera = model.cameraGeometry,
             virtualFieldOfView = model.virtualFieldOfView,
             hudRotation = model.hudRotation,

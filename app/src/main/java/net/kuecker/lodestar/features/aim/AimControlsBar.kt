@@ -32,9 +32,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import net.kuecker.lodestar.features.mount.MountAimButton
+import net.kuecker.lodestar.features.mount.rememberMountService
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.model.NightModeSetting
 import net.kuecker.lodestar.services.CameraAuthorization
+import net.kuecker.lodestar.services.MountConnectionState
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.monospacedDigits
 import kotlin.math.abs
@@ -59,9 +62,13 @@ internal fun AimControlsBar(
     val isAligned = app.alignment.isAligned
     val mosaic = model.mosaic
     val buttonHeight = if (axis == Orientation.Horizontal) 54.dp else 46.dp
+    // Most users aim a camera on a tripod: the Mount button joins the bar only once a GoTo mount has been connected.
+    val mount = rememberMountService()
+    val showsMount = mount.preferences.hasConnectedBefore || mount.snapshot.state != MountConnectionState.DISCONNECTED ||
+        mount.snapshot.lostConnection
 
     // Both layouts hold the same buttons; each one gets the weight (row) or half the width (two columns) it needs.
-    val buttons: List<@Composable (Modifier) -> Unit> = listOf(
+    val buttons: List<@Composable (Modifier) -> Unit> = listOfNotNull(
         { slot ->
             AimControl(
                 title = "Target", icon = Icons.Outlined.GpsFixed, minHeight = buttonHeight,
@@ -110,13 +117,16 @@ internal fun AimControlsBar(
             )
         },
         { slot -> AimFieldOfViewButton(model, buttonHeight, slot) },
+        if (showsMount) { slot -> MountAimButton(buttonHeight, slot) } else null,
     )
     if (axis == Orientation.Horizontal) {
-        Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Closer together when the Mount button makes it seven.
+        val spacing = if (buttons.size > 6) 4.dp else 8.dp
+        Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
             for (button in buttons) button(Modifier.weight(1f))
         }
     } else {
-        // Six buttons would be taller than a phone clamped sideways: two columns of three.
+        // Six or seven buttons would be taller than a phone clamped sideways: two columns.
         Column(modifier.width(WIDE_COLUMN_WIDTH), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (pair in buttons.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.mount.MountHudCard
 import net.kuecker.lodestar.theme.LocalPalette
 import kotlin.math.min
 
@@ -102,6 +103,7 @@ private fun TallLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
             AimStatusChips(model)
             Spacer(Modifier.weight(1f))
             AimReadout(model, onSheet, isActive)
+            MountHudCard(model.guidanceTarget)
             AimControlsBar(model, onSheet)
         }
         // Below the chips and clear of the arrow around the reticle.
@@ -119,6 +121,7 @@ private fun WideLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
             AimStatusChips(model)
             Spacer(Modifier.weight(1f))
             AimReadout(model, onSheet, isActive)
+            MountHudCard(model.guidanceTarget)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             AimLevelGauge(model, isActive)

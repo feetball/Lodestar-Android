@@ -39,6 +39,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.mount.MountControlScreen
+import net.kuecker.lodestar.features.mount.SettingsMountControlSection
 import net.kuecker.lodestar.features.tools.ExposureCalculatorScreen
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.features.tools.SensorDiagnosticsScreen
@@ -55,6 +57,7 @@ import net.kuecker.lodestar.theme.screenBackground
 internal sealed interface SettingsRoute {
     data object Root : SettingsRoute
     data object MountPicker : SettingsRoute
+    data object MountControl : SettingsRoute
     data object AccuracyNotes : SettingsRoute
     data object DataCredits : SettingsRoute
     data object ExposureCalculator : SettingsRoute
@@ -75,6 +78,7 @@ fun SettingsScreen() {
         when (route) {
             SettingsRoute.Root -> SettingsRoot(onOpen = stack::push)
             SettingsRoute.MountPicker -> MountPresetPickerView(onBack = back)
+            SettingsRoute.MountControl -> MountControlScreen(onBack = back)
             SettingsRoute.AccuracyNotes -> AccuracyNotesView(onBack = back)
             SettingsRoute.DataCredits -> DataCreditsView(onBack = back)
             SettingsRoute.ExposureCalculator -> ExposureCalculatorScreen(onBack = back)
@@ -99,6 +103,7 @@ private fun SettingsRoot(onOpen: (SettingsRoute) -> Unit) {
         Column(Modifier.weight(1f).imePadding().verticalScroll(scroll)) {
             SettingsLocationSection()
             SettingsMountSection(onOpen)
+            SettingsMountControlSection(onOpen = { onOpen(SettingsRoute.MountControl) })
             SettingsCameraSection()
             SettingsNightSection()
             SettingsFeedbackSection()

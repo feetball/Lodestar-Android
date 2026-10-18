@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import net.kuecker.lodestar.app.AppTab
 import net.kuecker.lodestar.features.mosaic.MosaicPlanSheet
+import net.kuecker.lodestar.features.mount.MountAimSheets
 import net.kuecker.lodestar.services.MotionStatus
 import net.kuecker.lodestar.shared.EmptyStateView
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -94,6 +95,7 @@ fun AimScreen() {
             else -> AimStage(model, onSheet = { sheet = it }, isActive = isActive)
         }
     }
+    MountAimSheets(target = model.guidanceTarget)
     when (sheet) {
         AimSheet.TARGET_PICKER -> AimTargetPickerSheet(model, onDismiss = { sheet = null })
         AimSheet.ALIGNMENT -> AlignmentSheet(model, onDismiss = { sheet = null })

@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.shared.ObjectIcon
 import net.kuecker.lodestar.shared.monospacedDigits
@@ -87,7 +88,7 @@ private fun Names(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.Bottom) {
             Text(
-                obj.name,
+                SmallBodyText.displayName(obj),
                 color = palette.primaryText,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                 maxLines = MAXIMUM_NAME_LINES,
@@ -112,11 +113,12 @@ private fun Names(
             }
         }
         Text(
-            ObjectsFormat.subtitle(obj, position?.magnitude) +
+            ObjectsFormat.subtitle(obj, position?.magnitude, position = position) +
                 if (showsProminence) " · ${obj.prominence.displayName}" else "",
             color = palette.secondaryText,
             style = MaterialTheme.typography.bodySmall,
-            maxLines = subtitleLines,
+            // The kind, magnitude, elongation and warnings of a comet or an asteroid take two lines.
+            maxLines = if (obj.smallBody != null) maxOf(subtitleLines, 2) else subtitleLines,
             overflow = TextOverflow.Ellipsis,
         )
     }

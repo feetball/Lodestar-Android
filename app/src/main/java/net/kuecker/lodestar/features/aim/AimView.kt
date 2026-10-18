@@ -76,6 +76,7 @@ fun AimScreen() {
         if (isActive) model.keepMosaicCurrent(mosaicPlan, observer)
     }
     LaunchedEffect(mosaicPlan, model.mosaic.step) { model.syncMosaic() }
+    LaunchedEffect(model.satellite.source, observer) { model.syncSatellite() }
     LaunchedEffect(isActive) {
         if (isActive) model.runLoop() else model.stopFeedback()
     }

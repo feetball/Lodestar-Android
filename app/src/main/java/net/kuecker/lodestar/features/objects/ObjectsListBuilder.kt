@@ -11,7 +11,9 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.ui.graphics.vector.ImageVector
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CatalogSortOrder
+import net.kuecker.lodestar.features.smallbodies.SmallBodyFavorites
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
 import net.kuecker.lodestar.kit.catalog.Prominence
 import net.kuecker.lodestar.shared.icon
@@ -54,11 +56,19 @@ internal class ObjectsCatalogIndex(catalog: Catalog) {
 }
 
 /** One titled block of rows in the Objects list. */
-internal class ObjectsListSection(val kind: Kind, val objects: List<CelestialObject>) {
+internal class ObjectsListSection(
+    val kind: Kind,
+    val objects: List<CelestialObject>,
+    /** Favorite comets and asteroids that have no current orbit: listed after [objects] with "no current orbit". */
+    val unavailable: List<String> = emptyList(),
+) {
     sealed interface Kind {
         data object Favorites : Kind
         data object Recent : Kind
         data class Group(val group: ObjectGroup) : Kind
+
+        /** The comets or the asteroids, which the Solar System group holds besides the Sun, the Moon and the planets. */
+        data class SmallBodies(val category: ObjectCategory) : Kind
         data class ByProminence(val prominence: Prominence) : Kind
         data class Catalogue(val filter: ObjectsCatalogueFilter) : Kind
         data object All : Kind
@@ -71,6 +81,7 @@ internal class ObjectsListSection(val kind: Kind, val objects: List<CelestialObj
             Kind.Favorites -> "favorites"
             Kind.Recent -> "recent"
             is Kind.Group -> "group.${kind.group.rawValue}"
+            is Kind.SmallBodies -> "category.${kind.category.rawValue}"
             is Kind.ByProminence -> "prominence.${kind.prominence.rawValue}"
             is Kind.Catalogue -> "catalogue.${kind.filter.rawValue}"
             Kind.All -> "all"
@@ -82,6 +93,7 @@ internal class ObjectsListSection(val kind: Kind, val objects: List<CelestialObj
             Kind.Favorites -> "Favorites"
             Kind.Recent -> "Recent"
             is Kind.Group -> kind.group.displayName
+            is Kind.SmallBodies -> "${kind.category.displayName}s"
             is Kind.ByProminence -> when (kind.prominence) {
                 Prominence.SHOWPIECE -> "Showpieces"
                 else -> kind.prominence.displayName
@@ -96,6 +108,7 @@ internal class ObjectsListSection(val kind: Kind, val objects: List<CelestialObj
             Kind.Favorites -> Icons.Filled.Star
             Kind.Recent -> Icons.Outlined.Schedule
             is Kind.Group -> kind.group.icon
+            is Kind.SmallBodies -> kind.category.icon
             is Kind.ByProminence -> when (kind.prominence) {
                 Prominence.SHOWPIECE -> Icons.Outlined.AutoAwesome
                 Prominence.PROMINENT -> Icons.Outlined.Stars
@@ -145,7 +158,15 @@ internal object ObjectsListBuilder {
 
         val sections = mutableListOf<ObjectsListSection>()
         val favorites = ordered(resolved(favoriteIDs), effective, index, positions)
-        if (favorites.isNotEmpty()) sections.add(ObjectsListSection(ObjectsListSection.Kind.Favorites, favorites))
+        // A favorite comet that dropped out of the orbit data stays, as "no current orbit", unless a filter is on.
+        val lostFavorites = if (effective.showsOnlyAboveHorizon || effective.showsOnlyPopular || catalogue.isCatalogue) {
+            emptyList()
+        } else {
+            SmallBodyFavorites.withoutOrbit(favoriteIDs, catalog)
+        }
+        if (favorites.isNotEmpty() || lostFavorites.isNotEmpty()) {
+            sections.add(ObjectsListSection(ObjectsListSection.Kind.Favorites, favorites, lostFavorites))
+        }
         // Recents keep their most-recent-first order whatever the sort order is.
         val recents = resolved(recentIDs)
         if (recents.isNotEmpty()) sections.add(ObjectsListSection(ObjectsListSection.Kind.Recent, recents))
@@ -170,8 +191,21 @@ internal object ObjectsListBuilder {
                 val byGroup = visible.groupBy { it.group }
                 for (group in ObjectGroup.entries) {
                     val members = byGroup[group] ?: continue
-                    val objects = ordered(members, effective, index, positions, presorted = poolOrder)
-                    sections.add(ObjectsListSection(ObjectsListSection.Kind.Group(group), objects))
+                    // The Solar System group holds the comets and asteroids too: they get a section each.
+                    val smallBodies = members.groupBy { it.category }
+                    val others = members.filter { it.smallBody == null }
+                    val parts = listOf(ObjectCategory.COMET, ObjectCategory.ASTEROID).mapNotNull { category ->
+                        smallBodies[category]?.let { ObjectsListSection.Kind.SmallBodies(category) to it }
+                    }
+                    val split = if (group == ObjectGroup.SOLAR_SYSTEM) {
+                        listOf<Pair<ObjectsListSection.Kind, List<CelestialObject>>>(ObjectsListSection.Kind.Group(group) to others) + parts
+                    } else {
+                        listOf(ObjectsListSection.Kind.Group(group) to members)
+                    }
+                    for ((kind, part) in split) {
+                        if (part.isEmpty()) continue
+                        sections.add(ObjectsListSection(kind, ordered(part, effective, index, positions, presorted = poolOrder)))
+                    }
                 }
             }
             ObjectsGrouping.PROMINENCE -> {
@@ -192,7 +226,8 @@ internal object ObjectsListBuilder {
         if (options.catalogue.isCatalogue && options.catalogue.numberKey(obj) == null) return false
         if (options.showsOnlyPopular && obj.prominence > Prominence.PROMINENT) return false
         if (options.showsOnlyAboveHorizon && positions[obj.id]?.isUp != true) return false
-        val magnitude = obj.magnitude
+        // A comet or an asteroid has no catalog magnitude: its current one decides.
+        val magnitude = obj.magnitude ?: if (obj.smallBody != null) positions[obj.id]?.magnitude else null
         if (options.hidesFaintObjects && magnitude != null && magnitude > ObjectsListOptions.FAINT_MAGNITUDE_LIMIT) return false
         return true
     }

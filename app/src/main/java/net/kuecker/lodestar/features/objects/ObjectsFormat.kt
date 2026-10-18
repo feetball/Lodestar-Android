@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.objects
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.shared.AppFormat
@@ -48,7 +49,9 @@ internal object ObjectsFormat {
      * [magnitude] overrides the catalog magnitude for objects whose brightness changes. With [spoken] the parts are
      * separated by commas and "magnitude" is written out.
      */
-    fun subtitle(obj: CelestialObject, magnitude: Double?, spoken: Boolean = false): String {
+    fun subtitle(obj: CelestialObject, magnitude: Double?, spoken: Boolean = false, position: ObjectSkyPosition? = null): String {
+        // A comet or an asteroid: kind, magnitude estimate, elongation and warnings.
+        if (obj.smallBody != null) return SmallBodyText.subtitle(obj, position?.smallBody, position != null, spoken)
         val parts = mutableListOf(obj.category.displayName)
         obj.constellationName?.let(parts::add)
         (magnitude ?: obj.magnitude)?.let { value ->
@@ -99,9 +102,9 @@ internal object ObjectsFormat {
 
     /** Everything a row shows, as one screen-reader label. */
     fun spokenSummary(obj: CelestialObject, position: ObjectSkyPosition?, isFavorite: Boolean, zone: ZoneId): String {
-        val parts = mutableListOf(obj.name)
+        val parts = mutableListOf(SmallBodyText.displayName(obj))
         rowDesignations(obj)?.let(parts::add)
-        parts.add(subtitle(obj, position?.magnitude, spoken = true))
+        parts.add(subtitle(obj, position?.magnitude, spoken = true, position = position))
         if (position != null) parts.add(spokenPosition(position, zone))
         if (isFavorite) parts.add("Favorite")
         return parts.joinToString(", ")

@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -14,6 +15,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.app.AppModel
 import net.kuecker.lodestar.features.mosaic.MosaicSession
+import net.kuecker.lodestar.features.satellites.SatelliteAimSession
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.foundation.AstroMath
 import net.kuecker.lodestar.kit.foundation.Observer
@@ -25,6 +27,8 @@ import net.kuecker.lodestar.model.NightModeSetting
 import net.kuecker.lodestar.services.CameraGeometry
 import net.kuecker.lodestar.services.CatalogService
 import net.kuecker.lodestar.shared.ScreenAxes
+import java.time.Instant
+import kotlin.math.abs
 
 /**
  * The state and background work behind the Aim screen. A screen makes one with `remember { AimViewModel(app) }`
@@ -81,6 +85,12 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
      * instead of the target; see [keepMosaicCurrent] and [syncMosaic].
      */
     val mosaic: MosaicSession = app.retained.getOrPut(MosaicSession.KEY) { MosaicSession() }
+
+    /**
+     * The satellite (or the peak of a pass) Aim follows, chosen on the satellite pass screens (shared with them). While it
+     * is set, guidance leads to it instead of the target; see [syncSatellite].
+     */
+    val satellite: SatelliteAimSession = app.retained.getOrPut(SatelliteAimSession.KEY) { SatelliteAimSession() }
 
     /** Where every panel of the running mosaic stands in the sky, as of about a second ago; `null` without a mosaic. */
     var mosaicPointings: AimMosaicPointings? by mutableStateOf(null)
@@ -143,7 +153,30 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     /** Points the engine at the current guidance target. */
     fun syncTarget() {
         engine.setTarget(guidanceTarget?.id)
+        // Choosing another target ends the satellite guidance.
+        satellite.targetChanged(guidanceTarget?.id)
         wasOnTarget = null
+    }
+
+    /**
+     * Points the engine at the chosen satellite, or back at the target when there is none. A satellite chosen for another
+     * observing place is dropped. Call whenever [SatelliteAimSession.source] or the observer changes.
+     */
+    fun syncSatellite() {
+        val source = satellite.source
+        if (source != null && source.observer != app.observerContext?.observer) satellite.stop()
+        engine.setSatellite(satellite.source, ::satelliteNow)
+        wasOnTarget = null
+    }
+
+    /**
+     * The instant to look a satellite up at: the wall clock, since the app clock ticks once a second and a satellite
+     * moves up to a degree in that time. A stopped app clock (screenshot mode) wins.
+     */
+    private fun satelliteNow(): Instant {
+        val tick = Snapshot.withoutReadObservation { app.clock.now }
+        val wall = Instant.now()
+        return if (abs(wall.toEpochMilli() - tick.toEpochMilli()) < 2_000) wall else tick
     }
 
     // Background work

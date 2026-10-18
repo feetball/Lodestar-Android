@@ -9,6 +9,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.features.smallbodies.SmallBodyInfo
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.currentMagnitude
 import net.kuecker.lodestar.kit.catalog.horizontal
@@ -34,7 +35,7 @@ internal data class ObjectSkyPosition(
     val nextRise: Instant?,
     /** `true` when the object stays below the horizon throughout the search window. */
     val neverRises: Boolean,
-    /** The current magnitude of the Sun, the Moon and the planets, whose brightness changes; `null` for other objects. */
+    /** The current magnitude of the Sun, the Moon, the planets, comets and asteroids, whose brightness changes; `null` for other objects. */
     val magnitude: Double?,
     /** The instant the position was computed for. */
     val computedAt: Instant,
@@ -44,6 +45,8 @@ internal data class ObjectSkyPosition(
     val isUp: Boolean = altitude > 0,
     /** `true` when the object rises at this place but only ever sinks behind or stays behind the skyline in the window. */
     val isBlockedBySkyline: Boolean = false,
+    /** For a comet or an asteroid: distances, elongation and warnings now; `null` for other objects and when its orbit cannot be evaluated. */
+    val smallBody: SmallBodyInfo? = null,
 ) {
     /** `true` when the object is above the true horizon, whatever the skyline does. */
     val isAboveHorizon: Boolean get() = altitude > 0
@@ -97,6 +100,7 @@ internal object ObjectsPositionCalculator {
                 usesSkyline = !flat,
                 isUp = horizon?.isVisible(horizontal.altitude, horizontal.azimuth, refracted = true) ?: (horizontal.altitude > 0),
                 isBlockedBySkyline = isHiddenAllWindow && !neverRises,
+                smallBody = obj.smallBody?.let { SmallBodyInfo.compute(it, frame) },
             )
         }
         return result

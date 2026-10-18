@@ -62,6 +62,7 @@ internal fun TonightContent(
     onOpenPolarAlignment: () -> Unit,
     onOpenEvent: (AstronomicalEvent) -> Unit,
     onOpenCalendar: () -> Unit,
+    onOpenSmallBodies: () -> Unit,
 ) {
     val app = LocalAppModel.current
     val zone = context.timeZone
@@ -140,7 +141,7 @@ internal fun TonightContent(
             )
             PlaceLine("${context.name} · times in ${TonightFormat.zoneName(zone, report?.nightStart ?: now)}")
             if (report != null) {
-                TonightReportCards(report, onOpenObject)
+                TonightReportCards(report, onOpenObject, onOpenSmallBodies)
             } else {
                 TonightPendingCard()
             }

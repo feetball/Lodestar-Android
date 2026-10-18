@@ -1,7 +1,9 @@
 package net.kuecker.lodestar.shared
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodySkyMarkers
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
 import net.kuecker.lodestar.kit.catalog.ObjectPosition
 import net.kuecker.lodestar.kit.catalog.Prominence
@@ -40,6 +42,8 @@ class SkySnapshot(
     val target: Target?,
     /** The site's recorded skyline the snapshot was built for, or `null` for an open horizon. */
     val horizon: HorizonProfile? = null,
+    /** The comets and asteroids to draw: the target and the bright ones, target first, then brightest first. */
+    val smallBodies: List<SmallBodyMarker> = emptyList(),
 ) {
     data class Star(
         val id: String,
@@ -65,6 +69,22 @@ class SkySnapshot(
         val isBehindSkyline: Boolean = false,
     ) {
         val id: String get() = obj.id
+    }
+
+    /** A comet or an asteroid, drawn as a dot (a comet with a short line along its ion tail). */
+    data class SmallBodyMarker(
+        val obj: CelestialObject,
+        val direction: Vector3,
+        val horizontal: HorizontalCoordinate,
+        /** The current magnitude, an estimate; `null` without magnitude parameters. */
+        val magnitude: Double?,
+        /** A point one degree from [direction] along the ion tail of a comet (apparent, East–North–Up); otherwise `null`. */
+        val tailEnd: Vector3?,
+        /** `true` when the recorded skyline hides the body; always `false` for an open horizon. */
+        val isBehindSkyline: Boolean = false,
+    ) {
+        val id: String get() = obj.id
+        val isComet: Boolean get() = obj.category == ObjectCategory.COMET
     }
 
     data class DeepSky(
@@ -128,6 +148,8 @@ data class SkySnapshotOptions(
      * nebulae have no magnitude at all. The views thin the symbols and names out further when they are zoomed out.
      */
     val deepSkyProminence: Prominence = Prominence.PROMINENT,
+    /** Comets and asteroids brighter than this magnitude are included, and the target whatever its brightness. */
+    val smallBodyMagnitudeLimit: Double = SmallBodySkyMarkers.DEFAULT_MAGNITUDE_LIMIT,
 )
 
 object SkySnapshotBuilder {
@@ -208,7 +230,9 @@ object SkySnapshotBuilder {
             SkySnapshot.Target(obj, horizontal.unitVector, horizontal)
         }
 
-        return SkySnapshot(date, observer, stars, bodies, deepSky, constellations, milkyWay, targetPosition, horizon)
+        val smallBodies = SmallBodySkyMarkers.build(catalog.smallBodies, frame, target, options.smallBodyMagnitudeLimit, mask)
+
+        return SkySnapshot(date, observer, stars, bodies, deepSky, constellations, milkyWay, targetPosition, horizon, smallBodies)
     }
 
     /**

@@ -1,11 +1,14 @@
 package net.kuecker.lodestar.features.aim
 
+import net.kuecker.lodestar.features.satellites.SatelliteAimFix
+import net.kuecker.lodestar.features.satellites.SatelliteAimSource
 import net.kuecker.lodestar.kit.pointing.Guidance
 import net.kuecker.lodestar.kit.pointing.GuidanceTracker
 import net.kuecker.lodestar.kit.pointing.PointingSolution
 import net.kuecker.lodestar.services.MotionSample
 import net.kuecker.lodestar.services.MotionService
 import net.kuecker.lodestar.shared.SkySnapshot
+import java.time.Instant
 
 /** One moment of aiming: where the camera points and how to reach the target from there. */
 class AimFrame(
@@ -23,6 +26,8 @@ class AimFrame(
      * it; `null` without a panel.
      */
     val rollDifference: Double? = null,
+    /** Where a chosen satellite (or the peak of its pass) is; guidance leads there instead of to the target. */
+    val satellite: SatelliteAimFix? = null,
 )
 
 /**
@@ -38,6 +43,10 @@ class AimFrameEngine(private val motion: MotionService, configuration: AimConfig
     private var targetID: String? = null
     private var target: SkySnapshot.Target? = null
     private var panel: AimPanelAim? = null
+    private var satellite: SatelliteAimSource? = null
+    private var satelliteNow: () -> Instant = Instant::now
+    private var satelliteSample: MotionSample? = null
+    private var satelliteFix: SatelliteAimFix? = null
 
     fun configure(configuration: AimConfiguration) {
         if (configuration.onTargetThreshold != tracker.onTargetThreshold) {
@@ -67,6 +76,19 @@ class AimFrameEngine(private val motion: MotionService, configuration: AimConfig
         panel = aim
     }
 
+    /**
+     * Leads guidance to [source] (a moving satellite, or the fixed peak of its pass) instead of the target, or back to the
+     * target for `null`. A mosaic panel still comes first. [now] is the instant to look the satellite up at; the look
+     * is made once per motion sample. Another source starts the on-target state afresh.
+     */
+    fun setSatellite(source: SatelliteAimSource?, now: () -> Instant = Instant::now) {
+        if (source?.key != satellite?.key) tracker.reset()
+        satellite = source
+        satelliteNow = now
+        satelliteSample = null
+        satelliteFix = null
+    }
+
     /** The target's position from a freshly built snapshot; ignored if it belongs to another object. */
     fun update(target: SkySnapshot.Target?) {
         if (target == null || target.obj.id != targetID) return
@@ -83,8 +105,22 @@ class AimFrameEngine(private val motion: MotionService, configuration: AimConfig
                 sample, pointing, tracker.update(pointing, aim.horizontal), null, aim, aim.rollDifference(pointing),
             )
         }
+        val source = satellite
+        if (source != null) {
+            val fix = satelliteFix(source, sample)
+            return AimFrame(sample, pointing, fix?.let { tracker.update(pointing, it.horizontal) }, null, satellite = fix)
+        }
         val target = target
         val guidance = if (target != null) tracker.update(pointing, target.horizontal) else null
         return AimFrame(sample, pointing, guidance, target)
+    }
+
+    /** The satellite's place for [sample]: one look per attitude update, however often the frame is asked for. */
+    private fun satelliteFix(source: SatelliteAimSource, sample: MotionSample): SatelliteAimFix? {
+        if (sample !== satelliteSample) {
+            satelliteSample = sample
+            satelliteFix = source.fix(satelliteNow())
+        }
+        return satelliteFix
     }
 }

@@ -1,5 +1,7 @@
 package net.kuecker.lodestar.features.skychart
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodyChartMarkers
+import net.kuecker.lodestar.features.smallbodies.SmallBodyChartMarker
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
@@ -172,6 +174,7 @@ internal class SkyChartPickable(
     ) {
         TARGET(0.5f),
         BODY(0.5f),
+        SMALL_BODY(0.6f),
         DEEP_SKY(0.8f),
         STAR(1f),
     }
@@ -199,6 +202,8 @@ internal class SkyChartScene(
     val skyline: SkyChartSkyline? = null,
     /** The panels of the mosaic being shot, as they stand at the scene's instant; `null` without a mosaic. */
     val mosaic: SkyChartMosaic? = null,
+    /** The comets and asteroids above the horizon: the target and the bright ones. */
+    val smallBodies: List<SmallBodyChartMarker> = emptyList(),
 ) {
     /**
      * The thing a tap at ([tapX], [tapY]) selects: the nearest pickable within [tolerance] pixels, where a planet or the
@@ -251,11 +256,13 @@ internal object SkyChartSceneBuilder {
         val deepSky = deepSkyMarkers(snapshot.deepSky)
         val target = snapshot.target?.let { SkyChartTargetMarker(it.obj, it.direction, it.horizontal) }
         val (constellationLines, constellationLabels) = constellations(snapshot.constellations)
+        val smallBodies = SmallBodyChartMarkers.build(snapshot.smallBodies, snapshot.target?.obj?.id)
 
         val labels = ArrayList<SkyChartLabel>(constellationLabels)
         labels += starLabels(snapshot.stars)
         labels += deepSkyLabels(snapshot.deepSky)
         for (body in bodies) if (body.isShown) labels += bodyLabel(body)
+        labels += SmallBodyChartMarkers.labels(smallBodies)
         if (target != null && target.isAboveHorizon) {
             val point = PlanisphereProjection.chartPoint(target.direction)
             labels += SkyChartLabel(
@@ -275,9 +282,10 @@ internal object SkyChartSceneBuilder {
             deepSky = deepSky,
             target = target,
             labels = labels,
-            pickables = pickables(snapshot, bodies, target),
+            pickables = pickables(snapshot, bodies, target) + SmallBodyChartMarkers.pickables(smallBodies),
             skyline = snapshot.horizon?.takeUnless { it.isFlat }?.let(::SkyChartSkyline),
             mosaic = mosaic?.let { SkyChartMosaicBuilder.build(it, snapshot.frame) },
+            smallBodies = smallBodies,
         )
     }
 

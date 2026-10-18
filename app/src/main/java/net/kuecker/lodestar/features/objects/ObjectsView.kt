@@ -60,6 +60,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.features.smallbodies.SmallBodyNoOrbitRow
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.services.CatalogService
@@ -403,10 +404,11 @@ private fun ObjectsList(
                 item(key = "skyline-note") { ObjectsSkylineNote() }
             }
             for (section in sections) {
+                val rowCount = section.objects.size + section.unavailable.size
                 stickyHeader(key = "header/${section.id}") {
-                    ObjectsSectionHeader(section.title, section.icon, section.objects.size)
+                    ObjectsSectionHeader(section.title, section.icon, rowCount)
                 }
-                val lastIndex = section.objects.lastIndex
+                val lastIndex = rowCount - 1
                 itemsIndexed(section.objects, key = { _, obj -> "${section.id}/${obj.id}" }) { itemIndex, obj ->
                     ObjectsSwipeRow(
                         obj = obj,
@@ -419,6 +421,17 @@ private fun ObjectsList(
                         onOpen = { onOpen(obj) },
                         onToggleFavorite = { app.settingsStore.toggleFavorite(obj.id) },
                         onAim = { app.aim(obj) },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+                // Favorite comets and asteroids without a current orbit stay in the list.
+                itemsIndexed(section.unavailable, key = { _, id -> "${section.id}/unavailable/$id" }) { itemIndex, id ->
+                    val rowIndex = section.objects.size + itemIndex
+                    SmallBodyNoOrbitRow(
+                        id = id,
+                        shape = rowShape(isFirst = rowIndex == 0, isLast = rowIndex == lastIndex),
+                        showsDivider = rowIndex != lastIndex,
+                        onRemove = { app.settingsStore.toggleFavorite(id) },
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }

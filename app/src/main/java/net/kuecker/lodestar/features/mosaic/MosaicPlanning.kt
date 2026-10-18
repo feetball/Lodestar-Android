@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.mosaic
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Observer
@@ -48,7 +49,12 @@ internal object MosaicPlanning {
         } catch (error: MosaicError.ObjectHasNoSize) {
             "${target.name} has no known size. Plan a custom size instead."
         } catch (error: MosaicError.ObjectNotFixed) {
-            "${target.name} moves across the sky, so a fixed mosaic cannot follow it. Plan a custom size instead."
+            // A comet or an asteroid drifts against the stars: the words say so.
+            if (target.smallBody != null) {
+                SmallBodyText.mosaicRefusal(target)
+            } else {
+                "${target.name} moves across the sky, so a fixed mosaic cannot follow it. Plan a custom size instead."
+            }
         } catch (error: MosaicError) {
             error.message ?: "${target.name} cannot be covered."
         }

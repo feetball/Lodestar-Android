@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.tonight
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodyListEntry
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
@@ -40,6 +41,8 @@ internal data class TonightTarget(
     val peakAzimuth: Double,
     /** The hours of darkness the object spends at or above [TonightCalculator.minimumTargetAltitude]. */
     val hoursAboveMinimum: Double,
+    /** The line under the name in place of the catalog description: a comet's or asteroid's magnitude estimate and elongation. */
+    val note: String? = null,
 ) {
     val id: String get() = obj.id
 }
@@ -68,6 +71,8 @@ internal data class TonightReport(
     val nightsFromTonight: Int,
     /** The site's recorded skyline when the Moon, the Milky Way core, the planets and the targets respect it. */
     val skyline: HorizonProfile? = null,
+    /** The comets that are bright tonight; `null` while the catalog has not been loaded (the card is left out). */
+    val smallBodies: List<SmallBodyListEntry>? = null,
 ) {
     /** Local noon of the date this night starts on. */
     val nightStart: Instant get() = summary.night.start

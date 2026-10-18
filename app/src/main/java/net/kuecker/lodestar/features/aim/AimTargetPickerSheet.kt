@@ -38,6 +38,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.app.AppTab
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LodestarButton
@@ -175,7 +177,7 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (query.isEmpty()) {
                 Text(
-                    "Search stars, planets, Messier, NGC…",
+                    "Search stars, planets, comets, Messier, NGC…",
                     color = palette.tertiaryText,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
@@ -297,6 +299,10 @@ private fun ObjectRow(obj: CelestialObject, onChoose: (CelestialObject) -> Unit)
     val app = LocalAppModel.current
     val palette = LocalPalette.current
     val shape = RoundedCornerShape(12.dp)
+    // A comet or asteroid shows its brightness estimate and where it stands from the Sun, worked out once per row.
+    val subtitle = remember(obj) {
+        if (obj.smallBody != null) SmallBodyText.summary(obj, Snapshot.withoutReadObservation { app.clock.now }) else obj.subtitle
+    }
     Row(
         Modifier
             .fillMaxWidth()
@@ -312,11 +318,11 @@ private fun ObjectRow(obj: CelestialObject, onChoose: (CelestialObject) -> Unit)
         ObjectIcon(obj.category)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                obj.name,
+                SmallBodyText.displayName(obj),
                 color = palette.primaryText,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             )
-            Text(obj.subtitle, color = palette.secondaryText, style = MaterialTheme.typography.labelMedium)
+            Text(subtitle, color = palette.secondaryText, style = MaterialTheme.typography.labelMedium)
         }
         if (app.target?.id == obj.id) {
             Icon(Icons.Filled.Check, contentDescription = "Current target", tint = palette.accent, modifier = Modifier.size(20.dp))

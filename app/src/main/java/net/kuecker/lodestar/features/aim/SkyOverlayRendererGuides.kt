@@ -129,6 +129,10 @@ internal fun SkyOverlayRenderer.drawTarget() {
         drawAimMarker(target.direction, target.obj.name)
         return
     }
+    frame.satellite?.let {
+        drawAimMarker(it.direction, it.label)
+        return
+    }
     val panel = frame.panel ?: return
     drawAimMarker(panel.direction, panel.label)
 }

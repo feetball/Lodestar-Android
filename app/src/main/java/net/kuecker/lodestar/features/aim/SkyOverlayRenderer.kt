@@ -14,6 +14,7 @@ import net.kuecker.lodestar.kit.foundation.Matrix3
 import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.pointing.DeviceAttitude
 import net.kuecker.lodestar.features.mount.drawMountMarker
+import net.kuecker.lodestar.features.smallbodies.drawSmallBodies
 import net.kuecker.lodestar.services.CameraGeometry
 import net.kuecker.lodestar.services.MountMarker
 import net.kuecker.lodestar.shared.ScreenAxes
@@ -123,6 +124,7 @@ internal class SkyOverlayRenderer private constructor(
         drawDeepSky()
         drawStars()
         drawBodies()
+        drawSmallBodies()
         drawSkyline()
         drawMosaic()
         drawDSLRFrame()

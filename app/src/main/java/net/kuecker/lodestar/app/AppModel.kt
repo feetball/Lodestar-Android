@@ -4,11 +4,15 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
 import net.kuecker.lodestar.kit.ephemeris.horizontal
@@ -33,6 +37,7 @@ import net.kuecker.lodestar.services.FeedbackService
 import net.kuecker.lodestar.services.LocationService
 import net.kuecker.lodestar.services.MagneticReference
 import net.kuecker.lodestar.services.MotionService
+import net.kuecker.lodestar.services.OnlineDataService
 import net.kuecker.lodestar.services.ScreenController
 import net.kuecker.lodestar.shared.RetainedState
 import net.kuecker.lodestar.theme.Palette
@@ -58,6 +63,11 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     val motion = MotionService(context, scope)
     val camera = CameraService(context)
     val catalog = CatalogService(scope)
+
+    /** The optional downloads (Settings ▸ Online Data): satellites, comets and the cloud forecast. All off until switched on. */
+    val online: OnlineDataService by lazy {
+        OnlineDataService(context, scope, catalog, locationProvider = { observerContext?.location })
+    }
     val feedback = FeedbackService(context)
     val screen = ScreenController()
 
@@ -185,9 +195,25 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             if (screenshotTarget != null) {
                 target = screenshotTarget
             } else if (target == null) {
-                settings.recentObjectIDs.firstOrNull()?.let(catalog::objectWithID)?.let { target = it }
+                settings.recentObjectIDs.firstOrNull()?.let { id ->
+                    val found = catalog.objectWithID(id)
+                    if (found != null) target = found else restoreWhenCataloged(id)
+                }
             }
             evaluateSun(force = true)
+        }
+    }
+
+    /**
+     * A recent target that is a downloaded comet is not in the catalog until the saved comet file has been applied
+     * ([OnlineDataService]): set it as soon as it resolves, unless a target was chosen meanwhile.
+     */
+    private fun restoreWhenCataloged(id: String) {
+        scope.launch {
+            val found = withTimeoutOrNull(RESTORE_WAIT_MILLIS) {
+                snapshotFlow { catalog.objectWithID(id) }.filterNotNull().first()
+            }
+            if (found != null && target == null) target = found
         }
     }
 
@@ -197,6 +223,7 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         if (started) {
             clock.start()
             startMaintenance()
+            online.onForeground()
         } else {
             settingsStore.saveNow()
             clock.stop()
@@ -372,3 +399,6 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         demo.pointing?.let(motion::useScreenshotPointing)
     }
 }
+
+/** How long a recent target that is not in the catalog yet is waited for (a downloaded comet). */
+private const val RESTORE_WAIT_MILLIS = 60_000L

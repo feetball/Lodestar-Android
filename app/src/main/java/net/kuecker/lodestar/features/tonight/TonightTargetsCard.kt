@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.services.CatalogService
@@ -70,6 +71,9 @@ internal fun TonightTargetsCard(
                             "are listed.",
                         style = TonightNoteStyle.FOOTNOTE,
                     )
+                    if (outcome.targets.any { it.note != null }) {
+                        TonightNote(SmallBodyText.TARGETS_NOTE, style = TonightNoteStyle.FOOTNOTE)
+                    }
                     if (isSkylineApplied) {
                         TonightSkylineNote(
                             "Targets hidden behind your recorded skyline are left out. The hours and the best time " +
@@ -128,7 +132,11 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
                 color = palette.primaryText,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             )
-            Text(TonightFormat.description(obj), color = palette.secondaryText, style = MaterialTheme.typography.bodySmall)
+            Text(
+                target.note ?: TonightFormat.description(obj),
+                color = palette.secondaryText,
+                style = MaterialTheme.typography.bodySmall,
+            )
             Text(timing(target, zone), color = palette.tertiaryText, style = MaterialTheme.typography.bodySmall)
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -149,8 +157,10 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
 }
 
 /** The name, with the first catalog designation when it differs: "Andromeda Galaxy · M 31". */
-private fun title(obj: CelestialObject): String =
-    TonightFormat.designation(obj)?.let { "${obj.name} · $it" } ?: obj.name
+private fun title(obj: CelestialObject): String {
+    val name = SmallBodyText.displayName(obj)
+    return TonightFormat.designation(obj)?.let { "$name · $it" } ?: name
+}
 
 /** "Best 23:40 facing SE · 7h 12m above 20°". */
 private fun timing(target: TonightTarget, zone: ZoneId): String {
@@ -162,7 +172,7 @@ private fun timing(target: TonightTarget, zone: ZoneId): String {
 
 private fun spokenSummary(target: TonightTarget, zone: ZoneId): String {
     val obj = target.obj
-    val parts = arrayListOf(obj.name, obj.category.displayName)
+    val parts = arrayListOf(SmallBodyText.displayName(obj), obj.category.displayName)
     obj.constellationName?.let(parts::add)
     parts.add(
         "highest ${AngleFormatter.formatDegrees(target.peakAltitude, 0)} at ${AppFormat.time(target.peakTime, zone)}" +

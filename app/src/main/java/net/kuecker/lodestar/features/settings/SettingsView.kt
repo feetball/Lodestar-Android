@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.mount.MountControlScreen
 import net.kuecker.lodestar.features.mount.SettingsMountControlSection
+import net.kuecker.lodestar.features.online.SettingsOnlineDataSection
 import net.kuecker.lodestar.features.tools.ExposureCalculatorScreen
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.features.tools.SensorDiagnosticsScreen
@@ -109,6 +110,7 @@ private fun SettingsRoot(onOpen: (SettingsRoute) -> Unit) {
             SettingsFeedbackSection()
             SettingsSkyDisplaySection()
             SettingsAtmosphereSection()
+            SettingsOnlineDataSection()
             SettingsToolsSection(onOpen)
             SettingsAboutSection(onOpen)
             Spacer(Modifier.height(24.dp))

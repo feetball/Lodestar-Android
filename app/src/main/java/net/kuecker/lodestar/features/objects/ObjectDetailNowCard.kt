@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.smallbodies.SmallBodyNowRows
 import net.kuecker.lodestar.model.CoordinateStyle
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.CardTitle
@@ -76,6 +77,11 @@ private fun Rows(current: ObjectDetailCurrent, style: CoordinateStyle) {
     current.skylineAltitude?.let { InfoRow("Skyline this way", AppFormat.altitude(it)) }
     InfoRow("RA (of date)", AppFormat.rightAscension(current.equatorial, style))
     InfoRow("Dec (of date)", AppFormat.declination(current.equatorial, style))
+    if (current.isSmallBody) {
+        // A comet or an asteroid: badges, brightness estimate, distances, elongation and phase.
+        SmallBodyNowRows(current.smallBody)
+        return
+    }
     current.magnitude?.let { InfoRow("Brightness", AppFormat.magnitude(it)) }
     current.angularSize?.let { InfoRow("Apparent size", it.description) }
     current.distance?.let { InfoRow("Distance", it.text) }

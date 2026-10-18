@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.LodestarButton
@@ -66,7 +67,7 @@ internal fun SkyChartCallout(
                 ObjectIcon(selection.obj.category)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
-                        selection.obj.name,
+                        SmallBodyText.displayName(selection.obj),
                         color = palette.primaryText,
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         maxLines = 2,
@@ -110,6 +111,7 @@ internal fun Modifier.blocksTouches(): Modifier = pointerInput(Unit) {}
 /** The object's type, constellation and current magnitude. */
 private fun subtitle(selection: SkyChartSelection): String {
     val obj = selection.obj
+    if (obj.smallBody != null) return SmallBodyText.summary(obj, selection.smallBody)
     val parts = arrayListOf(obj.category.displayName)
     obj.constellationName?.let(parts::add)
     selection.magnitude?.let { parts.add(AppFormat.magnitude(it)) }

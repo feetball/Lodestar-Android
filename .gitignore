@@ -16,3 +16,6 @@ captures/
 keystore.properties
 *service-account*.json
 play-*.json
+
+# Signed bundles for manual Play Console uploads
+PlayStore/upload/

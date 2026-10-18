@@ -2,6 +2,7 @@ package net.kuecker.lodestar.features.mount
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -83,9 +84,9 @@ class MountDraft(private val service: MountService) {
         private set
     var host: String by mutableStateOf(service.preferences.lastConnection.host)
         private set
-    var port: Int by mutableStateOf(service.preferences.lastConnection.port)
+    var port: Int by mutableIntStateOf(service.preferences.lastConnection.port)
         private set
-    var deviceNumber: Int by mutableStateOf(service.preferences.lastConnection.deviceNumber)
+    var deviceNumber: Int by mutableIntStateOf(service.preferences.lastConnection.deviceNumber)
         private set
     var deviceName: String? by mutableStateOf(service.preferences.lastConnection.deviceName)
         private set

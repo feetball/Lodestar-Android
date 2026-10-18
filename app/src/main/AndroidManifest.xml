@@ -8,6 +8,8 @@
     <!-- Map tiles and place search when you add an observing site. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- WorkManager (the widget refresh) asks for this; Lodestar never runs foreground work. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
     <!-- Optional: without a magnetometer, Aim runs in Gyro Lock and the heading comes from star alignment. -->
@@ -40,6 +42,34 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Home-screen widgets: Tonight at a glance, in two sizes of the widget picker. -->
+        <receiver
+            android:name=".features.widget.TonightWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_tonight_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tonight_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".features.widget.TonightSmallWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_tonight_small_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tonight_small_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

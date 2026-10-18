@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home-screen widgets -->
+    <string name="widget_tonight_label">Tonight</string>
+    <string name="widget_tonight_description">Tonight at a glance: when the sky is dark, the Moon, the Milky Way core and the next astronomical event for your location.</string>
+    <string name="widget_tonight_small_label">Tonight (small)</string>
+    <string name="widget_tonight_small_description">The Moon and when the sky is dark tonight.</string>
+
+    <!-- The static previews of the widgets in the widget picker (Android 12 to 14; Android 15 and later get one generated from real data). -->
+    <string name="widget_preview_dark_label" translatable="false">Dark</string>
+    <string name="widget_preview_dark_value" translatable="false">21:46 – 04:27</string>
+    <string name="widget_preview_moon_label" translatable="false">Moon</string>
+    <string name="widget_preview_moon_percent" translatable="false">17%</string>
+    <string name="widget_preview_moon_lit" translatable="false">17% lit</string>
+    <string name="widget_preview_moon_value" translatable="false">Waning Crescent</string>
+    <string name="widget_preview_core_label" translatable="false">Milky Way</string>
+    <string name="widget_preview_core_value" translatable="false">21:46 – 00:39</string>
+    <string name="widget_preview_event_label" translatable="false">Next event</string>
+    <string name="widget_preview_event_badge" translatable="false"> · in 4 days</string>
+    <string name="widget_preview_event_value" translatable="false">Perseids peak</string>
+</resources>

@@ -26,6 +26,7 @@ import net.kuecker.lodestar.features.onboarding.OnboardingScreen
 import net.kuecker.lodestar.features.settings.SettingsScreen
 import net.kuecker.lodestar.features.skychart.SkyChartScreen
 import net.kuecker.lodestar.features.tonight.TonightScreen
+import net.kuecker.lodestar.features.widget.WidgetSync
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LocalSystemBarsHidden
 import net.kuecker.lodestar.theme.LodestarTheme
@@ -53,6 +54,7 @@ fun RootScreen(app: AppModel) {
         }
     }
     LaunchedEffect(app.settings) { app.syncServices() }
+    WidgetSync(app)
 }
 
 @Composable

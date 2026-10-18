@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A waning crescent, 17% lit, as the widget draws the Moon in the northern hemisphere. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:pivotX="12"
+        android:pivotY="12"
+        android:scaleX="-1">
+        <path
+            android:fillColor="@color/widget_preview_primary"
+            android:pathData="M12,2A10,10 0 0 1 12,22A6.6,10 0 0 0 12,2Z" />
+    </group>
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M12,2A10,10 0 1 1 12,22A10,10 0 1 1 12,2Z"
+        android:strokeColor="@color/widget_preview_secondary"
+        android:strokeWidth="1" />
+</vector>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The normal palette of the app (theme/Palette.kt), for the static previews of the home-screen widgets only: the
+     widgets themselves take their colours from the palette in use, normal or night. -->
+<resources>
+    <color name="widget_preview_background">#10141F</color>
+    <color name="widget_preview_tile">#181D2C</color>
+    <color name="widget_preview_primary">#F2F4F8</color>
+    <color name="widget_preview_secondary">#A7AFC2</color>
+    <color name="widget_preview_accent">#F5B841</color>
+</resources>

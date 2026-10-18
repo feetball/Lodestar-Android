@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.CompletableDeferred
+import net.kuecker.lodestar.features.widget.WidgetLaunch
 
 /** The single activity: hosts [RootScreen] and lends the services what only an activity has. */
 class MainActivity : ComponentActivity() {
@@ -40,6 +41,8 @@ class MainActivity : ComponentActivity() {
         model.screen.attach(window)
         model.feedback.view = window.decorView
         model.launch()
+        WidgetLaunch.handle(intent, model)
+        addOnNewIntentListener { WidgetLaunch.handle(it, model) }
         setContent { RootScreen(model) }
     }
 

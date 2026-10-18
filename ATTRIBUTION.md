@@ -116,6 +116,12 @@ free to use with credit. The SGP4/SDP4 propagator is a port of the reference imp
 P. Crawford, R. Hujsak and T. S. Kelso ("Revisiting Spacetrack Report #3", AIAA 2006-6753), distributed by CelesTrak.
 Intrinsic magnitudes of the ISS, Tiangong and Hubble are from Heavens-Above.
 
+### Comet and asteroid orbits
+
+Comet orbital elements are downloaded at run time from the **IAU Minor Planet Center** (`CometEls.txt`, credit the
+MPC; the file's header is kept). Single-object elements and the test reference positions come from **NASA/JPL**
+(SBDB and Horizons, public domain; credit requested). Test fixtures contain small extracts of both.
+
 ### d3-celestial — `constellations.json` and `milkyway.json`
 
 - **Title:** d3-celestial

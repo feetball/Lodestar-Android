@@ -39,6 +39,7 @@ data class RenderStar internal constructor(
  * to faintest.
  * @property listedObjects The objects that browse lists show ([CelestialObject.isListed]), in the order of
  * [objects].
+ * @property deepSkyObjects Every deep-sky object, listed or not, in the order of [objects].
  * @property constellations The 88 constellations in alphabetical order of their names.
  * @property milkyWay The brightness outlines of the Milky Way.
  * @property renderStars All stars from brightest to faintest, prepared for drawing.
@@ -47,6 +48,7 @@ data class RenderStar internal constructor(
 class Catalog private constructor(contents: CatalogContents) {
     val objects: List<CelestialObject> = contents.objects
     val listedObjects: List<CelestialObject> = contents.objects.filter { it.isListed }
+    val deepSkyObjects: List<CelestialObject> = contents.deepSky
     val constellations: List<Constellation> = contents.constellations.constellations
     val milkyWay: MilkyWayOutline = contents.milkyWay
     val renderStars: List<RenderStar> = contents.renderStars
@@ -56,6 +58,8 @@ class Catalog private constructor(contents: CatalogContents) {
     private val indexByID: Map<String, Int> = contents.indexByID
     private val constellationDirectory: ConstellationDirectory = contents.constellations
     private val listedByGroup: Map<ObjectGroup, List<CelestialObject>> = contents.listedByGroup
+    private val deepSkyUpTo: List<List<CelestialObject>> = contents.deepSkyUpTo
+    private val byCatalogue: Map<DeepSkyCatalogue, List<CelestialObject>> = contents.byCatalogue
 
     /**
      * Creates a catalog from the JSON of the four data files (see `Tools/README.md` of the Swift package for
@@ -86,12 +90,15 @@ class Catalog private constructor(contents: CatalogContents) {
      * "alpha1") and drops leading zeros of numbers. So "m31", "M 31", "Messier 31" and "M031" are the
      * same query, as are "ngc224" and "NGC 0224", and "alpha cma", "alpha canis majoris" and "α CMa".
      * It matches names, common names and the designations of every object: Messier, NGC and IC
-     * numbers, Bayer and Flamsteed designations with the constellation as abbreviation or genitive,
-     * and HR, HD and HIP numbers.
+     * numbers, the numbers of the other deep-sky catalogues (Caldwell "C 14" and "Caldwell 14", Sharpless
+     * "Sh2-155", "Sh 2-155" and "Sharpless 155", Barnard "B33" and "Barnard 33", Lynds "LDN 1622" and
+     * "Lynds 1622", Collinder "Cr 399", Melotte "Mel 20", Trumpler "Tr 24", Stock "St 2"), Bayer and
+     * Flamsteed designations with the constellation as abbreviation or genitive, and HR, HD and HIP numbers.
      *
      * Results are ordered by [CatalogSearchResult.MatchKind]; matches of the same kind are ordered by listed
-     * objects first, then brighter objects, then name. `MatchKind.FUZZY` results only appear when there
-     * are no other matches.
+     * objects first, then more prominent objects ([CelestialObject.prominence]), then brighter objects (objects
+     * without a magnitude last), then name. `MatchKind.FUZZY` results only appear when there are no other
+     * matches.
      *
      * (In Swift this method is declared in `CatalogSearch.swift`; here it is a member so that callers need
      * no import.)
@@ -104,6 +111,22 @@ class Catalog private constructor(contents: CatalogContents) {
 
     /** The listed objects of a group, sorted by name (Swift `objects(in:)`). */
     fun objects(group: ObjectGroup): List<CelestialObject> = listedByGroup[group] ?: emptyList()
+
+    /**
+     * The deep-sky objects of a catalogue, listed or not, in the order of their catalogue numbers: Caldwell 1
+     * to 109, Sharpless 1 to 313, and so on. An object that has several numbers in the catalogue (NGC 6523 and
+     * NGC 6533 are both M 8's) is listed once, at the first. Constant time; the list is shared (Swift
+     * `objects(in:)`).
+     */
+    fun objects(catalogue: DeepSkyCatalogue): List<CelestialObject> = byCatalogue[catalogue] ?: emptyList()
+
+    /**
+     * The deep-sky objects of [maximum] prominence or better, in the order of [deepSkyObjects]: the
+     * showpieces for `Prominence.SHOWPIECE`, everything for `Prominence.OBSCURE`. Constant time; the lists are
+     * shared. This is the list a sky view draws, with a limit that grows as the field of view narrows
+     * (Swift `deepSkyObjects(upTo:)`).
+     */
+    fun deepSkyObjects(maximum: Prominence): List<CelestialObject> = deepSkyUpTo[maximum.ordinal]
 
     /** The constellation with an IAU abbreviation, ignoring case ("cma" finds "CMa"). */
     fun constellation(abbreviation: String): Constellation? = constellationDirectory.constellation(abbreviation)
@@ -140,8 +163,8 @@ class Catalog private constructor(contents: CatalogContents) {
         /**
          * Loads the catalog from the data files bundled with the library.
          *
-         * This reads and checks about 1.4 MB of JSON and builds the search index, which takes a few
-         * hundred milliseconds: call it off the main thread.
+         * This reads and checks about 1.6 MB of JSON and builds the search index, which takes a few
+         * tens of milliseconds on a warm JVM and a few hundred on a phone: call it off the main thread.
          *
          * @throws CatalogError when a file is missing, unreadable or unusable as a whole. Single
          * bad records are skipped and counted in [loadReport] instead.

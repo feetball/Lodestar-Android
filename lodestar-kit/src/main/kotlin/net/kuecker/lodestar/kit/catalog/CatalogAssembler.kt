@@ -12,6 +12,9 @@ internal class CatalogContents(
     val searchIndex: SearchIndex,
     val indexByID: Map<String, Int>,
     val listedByGroup: Map<ObjectGroup, List<CelestialObject>>,
+    val deepSky: List<CelestialObject>,
+    val deepSkyUpTo: List<List<CelestialObject>>,
+    val byCatalogue: Map<DeepSkyCatalogue, List<CelestialObject>>,
 )
 
 /** Reads the data files, validates their records and builds the catalog's objects and search index. */
@@ -73,8 +76,10 @@ internal object CatalogAssembler {
         }
 
         val acronymAliases = ArrayList<AcronymAlias>()
+        val deepSkyObjects = ArrayList<CelestialObject>(distinctDeepSky.size)
         for (entry in distinctDeepSky) {
             val draft = CatalogFactory.deepSkyObject(entry, constellations)
+            deepSkyObjects.add(draft.obj)
             for (alternate in draft.obj.alternateNames) {
                 val alias = CatalogFactory.acronymAlias(alternate)
                 if (alias != null) acronymAliases.add(AcronymAlias(alias, table.objects.size))
@@ -117,8 +122,45 @@ internal object CatalogAssembler {
         return CatalogContents(
             objects = table.objects, constellations = constellations, milkyWay = milkyWay,
             renderStars = renderStars, report = report, searchIndex = table.search.finish(objectsByRank),
-            indexByID = indexByID, listedByGroup = listedByGroup,
+            indexByID = indexByID, listedByGroup = listedByGroup, deepSky = deepSkyObjects,
+            deepSkyUpTo = deepSkyUpTo(deepSkyObjects), byCatalogue = byCatalogue(deepSkyObjects),
         )
+    }
+
+    /** The deep-sky objects of each prominence and the more prominent ones, in the order of [deepSky]. */
+    private fun deepSkyUpTo(deepSky: List<CelestialObject>): List<List<CelestialObject>> =
+        Prominence.entries.map { limit -> deepSky.filter { it.prominence <= limit } }
+
+    /**
+     * The deep-sky objects of each catalogue by catalogue number (then letter, then identifier). An object with
+     * several numbers in one catalogue, such as NGC 6523 and NGC 6533, is listed once, at the first.
+     */
+    private fun byCatalogue(deepSky: List<CelestialObject>): Map<DeepSkyCatalogue, List<CelestialObject>> {
+        class Placed(val number: CatalogNumber, val obj: CelestialObject)
+
+        val placed = EnumMap<DeepSkyCatalogue, ArrayList<Placed>>(DeepSkyCatalogue::class.java)
+        for (obj in deepSky) {
+            var seen = 0
+            for (number in obj.catalogNumbers) {
+                val bit = 1 shl number.catalogue.ordinal
+                if (seen and bit != 0) continue
+                seen = seen or bit
+                placed.getOrPut(number.catalogue) { ArrayList() }.add(Placed(number, obj))
+            }
+        }
+        val result = EnumMap<DeepSkyCatalogue, List<CelestialObject>>(DeepSkyCatalogue::class.java)
+        for (catalogue in DeepSkyCatalogue.entries) {
+            val entries = placed[catalogue] ?: ArrayList()
+            entries.sortWith { lhs, rhs ->
+                when {
+                    lhs.number.number != rhs.number.number -> lhs.number.number.compareTo(rhs.number.number)
+                    lhs.number.suffix != rhs.number.suffix -> CatalogText.compare(lhs.number.suffix, rhs.number.suffix)
+                    else -> CatalogText.compare(lhs.obj.id, rhs.obj.id)
+                }
+            }
+            result[catalogue] = entries.map { it.obj }
+        }
+        return result
     }
 
     private val NO_KEY = ByteArray(0)

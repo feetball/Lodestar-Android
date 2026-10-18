@@ -199,7 +199,7 @@ class CatalogSearchTests {
 
     /**
      * The ranking rules: kinds never get worse down the list, and results of one kind are ordered by
-     * listed objects first, then brighter ones, then name.
+     * listed objects first, then more prominent ones, then brighter ones, then name.
      */
     private fun assertRankingOrder(results: List<CatalogSearchResult>, query: String) {
         for ((first, second) in results.zip(results.drop(1))) {
@@ -207,6 +207,13 @@ class CatalogSearchTests {
             if (first.kind != second.kind) continue
             if (first.obj.isListed != second.obj.isListed) {
                 assertTrue(first.obj.isListed, "$query: unlisted ${first.obj.id} before listed ${second.obj.id}")
+                continue
+            }
+            if (first.obj.prominence != second.obj.prominence) {
+                assertTrue(
+                    first.obj.prominence < second.obj.prominence,
+                    "$query: ${first.obj.id} (${first.obj.prominence}) before ${second.obj.id} (${second.obj.prominence})",
+                )
                 continue
             }
             if (first.obj.rankingMagnitude != second.obj.rankingMagnitude) {
@@ -558,7 +565,7 @@ class CatalogSearchTests {
     // MARK: Ranking
 
     @Test
-    fun testResultsAreRankedByKindThenListingBrightnessAndName() {
+    fun testResultsAreRankedByKindThenListingProminenceBrightnessAndName() {
         val catalog = catalog()
         val queries = listOf(
             "a", "m", "ngc", "hr", "hd 4", "alpha", "the", "cen", "1", "7", "ori", "sag", "nebula", "cluster", "m1",

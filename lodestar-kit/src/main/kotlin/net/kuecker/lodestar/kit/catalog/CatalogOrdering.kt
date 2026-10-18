@@ -35,6 +35,7 @@ internal object CatalogOrdering {
         val nameKey: ByteArray,
         val magnitude: Double,
         val isListed: Boolean,
+        val prominence: Int,
         val id: String,
     )
 
@@ -63,6 +64,7 @@ internal object CatalogOrdering {
                 nameKey = nameKey(index),
                 magnitude = obj.rankingMagnitude,
                 isListed = obj.isListed,
+                prominence = obj.prominence.rawValue,
                 id = obj.id,
             )
         }
@@ -88,8 +90,9 @@ internal object CatalogOrdering {
     fun magnitudeOrder(lhs: Item, rhs: Item): Boolean = compareMagnitudes(lhs, rhs) < 0
 
     /**
-     * Listed objects first, then brighter first, then alphabetical: the order of equally good
-     * search matches.
+     * Listed objects first, then more prominent ones, then brighter first, then alphabetical: the order of
+     * equally good search matches. Prominence comes before brightness so that a showpiece without a magnitude
+     * (the Horsehead Nebula) is not outranked by a faint galaxy.
      */
     fun searchOrder(lhs: Item, rhs: Item): Boolean = compareForSearch(lhs, rhs) < 0
 
@@ -110,6 +113,7 @@ internal object CatalogOrdering {
 
     private fun compareForSearch(lhs: Item, rhs: Item): Int {
         if (lhs.isListed != rhs.isListed) return if (lhs.isListed) -1 else 1
+        if (lhs.prominence != rhs.prominence) return if (lhs.prominence < rhs.prominence) -1 else 1
         return compareMagnitudes(lhs, rhs)
     }
 }

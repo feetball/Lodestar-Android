@@ -115,6 +115,7 @@ internal class DeepSkyRecord(
     val m: Long?,
     val ngc: List<Long>?,
     val ic: List<Long>?,
+    val cat: List<String>?,
     val names: List<String>?,
     val t: String?,
     val ra: Double?,
@@ -127,12 +128,14 @@ internal class DeepSkyRecord(
     val pa: Double?,
     val h: String?,
     val sb: Double?,
+    val p: Long?,
 ) {
     companion object {
         private val ID = CatalogJsonReader.keyCode("id")
         private val M = CatalogJsonReader.keyCode("m")
         private val NGC = CatalogJsonReader.keyCode("ngc")
         private val IC = CatalogJsonReader.keyCode("ic")
+        private val CAT = CatalogJsonReader.keyCode("cat")
         private val NAMES = CatalogJsonReader.keyCode("names")
         private val T = CatalogJsonReader.keyCode("t")
         private val RA = CatalogJsonReader.keyCode("ra")
@@ -145,6 +148,7 @@ internal class DeepSkyRecord(
         private val PA = CatalogJsonReader.keyCode("pa")
         private val H = CatalogJsonReader.keyCode("h")
         private val SB = CatalogJsonReader.keyCode("sb")
+        private val P = CatalogJsonReader.keyCode("p")
 
         /** Reads the next value of [reader] as a deep-sky record; `null` if it has the wrong shape. */
         fun read(reader: CatalogJsonReader): DeepSkyRecord? {
@@ -153,6 +157,7 @@ internal class DeepSkyRecord(
             var m: Long? = null
             var ngc: List<Long>? = null
             var ic: List<Long>? = null
+            var cat: List<String>? = null
             var names: List<String>? = null
             var t: String? = null
             var ra: Double? = null
@@ -165,6 +170,7 @@ internal class DeepSkyRecord(
             var pa: Double? = null
             var h: String? = null
             var sb: Double? = null
+            var p: Long? = null
             var first = true
             while (true) {
                 val key = reader.nextKey(first)
@@ -187,11 +193,13 @@ internal class DeepSkyRecord(
                     PA -> pa = reader.double(1 shl 13)
                     H -> h = reader.string(1 shl 14)
                     SB -> sb = reader.double(1 shl 15)
+                    CAT -> cat = reader.stringList(1 shl 16)
+                    P -> p = reader.long(1 shl 17)
                     else -> reader.skipValue()
                 }
             }
             if (reader.failedMask != 0) return null
-            return DeepSkyRecord(id, m, ngc, ic, names, t, ra, de, c, vm, bm, maj, minorAxis, pa, h, sb)
+            return DeepSkyRecord(id, m, ngc, ic, cat, names, t, ra, de, c, vm, bm, maj, minorAxis, pa, h, sb, p)
         }
     }
 }
@@ -319,6 +327,7 @@ internal class DeepSkyEntry(
     val messier: Int?,
     val ngc: List<Int>,
     val ic: List<Int>,
+    val cat: List<String>,
     val names: List<String>,
     val typeCode: String,
     val position: EquatorialCoordinate,
@@ -330,6 +339,7 @@ internal class DeepSkyEntry(
     val positionAngle: Double?,
     val hubbleType: String?,
     val surfaceBrightness: Double?,
+    val prominence: Prominence?,
 )
 
 /**
@@ -428,6 +438,7 @@ internal object CatalogValidation {
         // The arguments of the Swift initializer are evaluated in this order, which decides which rejection is reported.
         val ngc = designationNumbers(record.ngc, "ngc")
         val ic = designationNumbers(record.ic, "ic")
+        val cat = crossDesignations(record.cat)
         val names = commonNames(record.names)
         val position = position(record.ra, record.de)
         val constellation = constellationAbbreviation(record.c)
@@ -436,12 +447,13 @@ internal object CatalogValidation {
         val positionAngle = number(record.pa, "pa", 0.0, 360.0)
         val hubbleType = cleanedText(record.h, "h", 16)
         val surfaceBrightness = positiveNumber(record.sb, "sb", 40.0)
+        val prominence = prominence(record.p)
         return DeepSkyEntry(
-            id = id, messier = messier, ngc = ngc, ic = ic, names = names, typeCode = typeCode,
+            id = id, messier = messier, ngc = ngc, ic = ic, cat = cat, names = names, typeCode = typeCode,
             position = position, constellation = constellation,
             visualMagnitude = visualMagnitude, blueMagnitude = blueMagnitude,
             majorAxis = major, minorAxis = minor, positionAngle = positionAngle,
-            hubbleType = hubbleType, surfaceBrightness = surfaceBrightness,
+            hubbleType = hubbleType, surfaceBrightness = surfaceBrightness, prominence = prominence,
         )
     }
 
@@ -543,6 +555,34 @@ internal object CatalogValidation {
             if (!result.contains(number)) result.add(number)
         }
         return result
+    }
+
+    /** The most cross-catalogue designations a record may carry. */
+    const val maximumCrossDesignations: Int = 16
+
+    /**
+     * The designations of other catalogues in compact form (`C20`, `Sh2-117`, `LDN1622`, see [CatalogDesignation]),
+     * without repeats. A malformed one, or more than [maximumCrossDesignations], rejects the record.
+     */
+    private fun crossDesignations(values: List<String>?): List<String> {
+        val result = ArrayList<String>()
+        if (values == null) return result
+        for (value in values) {
+            val text = cleanedText(value, "cat", 16)
+            if (text == null || !CatalogDesignation.isCompact(text)) {
+                throw Rejection("cat entry ${CatalogText.prefixCharacters(value, 16)} is not a catalogue designation")
+            }
+            if (!result.contains(text)) result.add(text)
+        }
+        if (result.size > maximumCrossDesignations) throw Rejection("cat has too many entries")
+        return result
+    }
+
+    /** The prominence of a record: absent is `null` (the default applies), a number outside 1 to 4 rejects it. */
+    private fun prominence(value: Long?): Prominence? {
+        if (value == null) return null
+        val prominence = if (value in 1L..4L) Prominence.fromRawValue(value.toInt()) else null
+        return prominence ?: throw Rejection("p $value out of range")
     }
 
     private fun commonNames(values: List<String>?): List<String> {

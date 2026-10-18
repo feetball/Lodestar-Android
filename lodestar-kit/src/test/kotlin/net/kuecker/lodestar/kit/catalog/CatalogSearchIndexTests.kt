@@ -34,6 +34,7 @@ private class ReferenceSearch(catalog: Catalog) {
             val a = objects[first]
             val b = objects[second]
             if (a.isListed != b.isListed) return a.isListed
+            if (a.prominence != b.prominence) return a.prominence < b.prominence
             if (a.rankingMagnitude != b.rankingMagnitude) return a.rankingMagnitude < b.rankingMagnitude
             val nameA = SearchText.key(a.name).bytes
             val nameB = SearchText.key(b.name).bytes

@@ -61,19 +61,26 @@ internal object CatalogDesignation {
      */
     class Spelling(val display: String, val aliases: List<String>)
 
-    /** The form shown and the other spellings of an OpenNGC identifier prefix. */
-    private class Names(val display: String, val aliases: List<String>)
+    /**
+     * The form shown and the other spellings of an identifier prefix.
+     *
+     * @property catalogue The catalogue the prefix stands for, if it is one of [DeepSkyCatalogue].
+     */
+    private class Names(val display: String, val aliases: List<String>, val catalogue: DeepSkyCatalogue? = null)
 
-    /** Prefix of an OpenNGC identifier → the form shown and the other spellings of the prefix. */
+    /** Prefix of a compact designation → the form shown and the other spellings of the prefix. */
     private val prefixes: Map<String, Names> = mapOf(
-        "M" to Names("M", listOf("Messier")),
-        "NGC" to Names("NGC", emptyList()),
-        "IC" to Names("IC", emptyList()),
-        "C" to Names("Caldwell", listOf("C")),
-        "Mel" to Names("Melotte", listOf("Mel")),
-        "B" to Names("Barnard", listOf("B")),
+        "M" to Names("M", listOf("Messier"), DeepSkyCatalogue.MESSIER),
+        "NGC" to Names("NGC", emptyList(), DeepSkyCatalogue.NGC),
+        "IC" to Names("IC", emptyList(), DeepSkyCatalogue.IC),
+        "C" to Names("Caldwell", listOf("C"), DeepSkyCatalogue.CALDWELL),
+        "Mel" to Names("Melotte", listOf("Mel"), DeepSkyCatalogue.MELOTTE),
+        "B" to Names("Barnard", listOf("B"), DeepSkyCatalogue.BARNARD),
         "H" to Names("Harvard", listOf("H")),
-        "Cl" to Names("Collinder", listOf("Cl", "Cr")),
+        "Cl" to Names("Collinder", listOf("Cl", "Cr"), DeepSkyCatalogue.COLLINDER),
+        "Tr" to Names("Trumpler", listOf("Tr"), DeepSkyCatalogue.TRUMPLER),
+        "St" to Names("Stock", listOf("St"), DeepSkyCatalogue.STOCK),
+        "LDN" to Names("LDN", listOf("Lynds", "L"), DeepSkyCatalogue.LYNDS),
         "ESO" to Names("ESO", emptyList()),
         "HCG" to Names("HCG", listOf("Hickson")),
         "MWSC" to Names("MWSC", emptyList()),
@@ -81,8 +88,34 @@ internal object CatalogDesignation {
         "UGC" to Names("UGC", emptyList()),
     )
 
-    /** The spelling of an OpenNGC identifier such as `M31`, `C14`, `ESO56-115` or `IC2431_NED02`. */
+    /** The prefix of the Sharpless 2 designations, which carry the catalogue number: `Sh2-155`. */
+    private const val sharplessPrefix = "Sh2-"
+
+    /** The longest number a Sharpless 2 designation has (the catalogue ends at 313). */
+    private const val maximumSharplessDigits = 4
+
+    /** "Sharpless 2-155" is only an alias of numbers with this many digits, see [spelling]. */
+    private const val minimumDigitsOfUnambiguousSharplessAlias = 3
+
+    /** The longest prefix and the longest number a compact designation has. */
+    private const val maximumPrefixLength = 6
+    private const val maximumNumberDigits = 6
+
+    /**
+     * The spelling of a compact designation, that is an OpenNGC identifier such as `M31`, `C14`, `Sh2-155`,
+     * `LDN1622`, `ESO56-115` or `IC2431_NED02`.
+     *
+     * Sharpless regions are shown as "Sh2-155" and found as "Sh 2-155", "Sharpless 155" and, from Sh2-100 on,
+     * "Sharpless 2-155". The last form is left out below 100 because a search key has no punctuation:
+     * "Sharpless 2-45" and "Sharpless 245" are the same key, and "Sharpless 245" must find Sh2-245, not M 17.
+     */
     fun spelling(id: String): Spelling {
+        if (id.startsWith(sharplessPrefix) && id.length > sharplessPrefix.length) {
+            val number = id.substring(sharplessPrefix.length)
+            val aliases = arrayListOf("Sh 2-$number", "Sharpless $number")
+            if (number.length >= minimumDigitsOfUnambiguousSharplessAlias) aliases.add("Sharpless 2-$number")
+            return Spelling("Sh2-$number", aliases)
+        }
         var prefixLength = 0
         while (prefixLength < id.length && isAsciiLetter(id[prefixLength])) prefixLength += 1
         val prefix = id.substring(0, prefixLength)
@@ -94,6 +127,58 @@ internal object CatalogDesignation {
         val display = known?.display ?: prefix
         val aliases = known?.aliases ?: emptyList()
         return Spelling("$display $number", aliases.map { "$it $number" })
+    }
+
+    /**
+     * Whether [text] is a compact designation of the kind the `cat` member of a deep-sky record holds: one to
+     * six ASCII letters, the first of them upper case, and a number of up to six digits, optionally followed by
+     * one more letter (`C20`, `Mel22`, `B67a`, `NGC2818A`, `LDN1622`), or a Sharpless 2 designation (`Sh2-117`).
+     */
+    fun isCompact(text: String): Boolean = parse(text) != null
+
+    /** A compact designation split into its prefix, its number and the letter after the number, if any. */
+    private class Parts(val prefix: String, val number: Int, val suffix: String)
+
+    private fun parse(text: String): Parts? {
+        if (text.startsWith(sharplessPrefix)) {
+            val digits = text.substring(sharplessPrefix.length)
+            val number = number(digits, maximumSharplessDigits) ?: return null
+            return Parts("Sh2", number, "")
+        }
+        var index = 0
+        while (index < text.length && isAsciiLetter(text[index])) index += 1
+        if (index == 0 || index > maximumPrefixLength || text[0] !in 'A'..'Z') return null
+        val prefix = text.substring(0, index)
+        var end = index
+        while (end < text.length && text[end] in '0'..'9') end += 1
+        val number = number(text.substring(index, end), maximumNumberDigits) ?: return null
+        val suffix = text.substring(end)
+        if (suffix.length > 1 || (suffix.isNotEmpty() && !isAsciiLetter(suffix[0]))) return null
+        return Parts(prefix, number, suffix)
+    }
+
+    private fun number(digits: String, maximumDigits: Int): Int? {
+        if (digits.isEmpty() || digits.length > maximumDigits) return null
+        for (character in digits) {
+            if (character !in '0'..'9') return null
+        }
+        val value = digits.toInt()
+        return if (value >= 1) value else null
+    }
+
+    /**
+     * The catalogue number of a compact designation (`M31`, `NGC7000`, `C14`, `Sh2-155`, `B67a`, `LDN1622`,
+     * `Cl399`, `Mel20`), or `null` for an identifier of a catalogue that is not a [DeepSkyCatalogue] (`ESO56-115`,
+     * `H20`, `PGC143`) or for something that is no designation.
+     */
+    fun catalogNumber(text: String): CatalogNumber? {
+        val parts = parse(text) ?: return null
+        val catalogue = if (parts.prefix == "Sh2") {
+            DeepSkyCatalogue.SHARPLESS
+        } else {
+            prefixes[parts.prefix]?.catalogue
+        } ?: return null
+        return CatalogNumber(catalogue, parts.number, parts.suffix)
     }
 
     private fun isAsciiLetter(character: Char): Boolean = character in 'a'..'z' || character in 'A'..'Z'
@@ -256,6 +341,7 @@ internal object CatalogFactory {
             distanceLightYears = entry.distanceParsecs?.let { it * lightYearsPerParsec },
             isListed = entry.properName != null || entry.magnitude <= maximumListedStarMagnitude,
             notes = if (isQuasar) quasarNote else null,
+            prominence = Prominence.forStar(entry.magnitude),
         )
         return ObjectDraft(obj, keys)
     }
@@ -290,6 +376,7 @@ internal object CatalogFactory {
         }
 
         val majorAxis = entry.majorAxis
+        val prominence = entry.prominence ?: Prominence.NOTABLE
         val obj = CelestialObject(
             id = "dso.${entry.id}", name = name, designations = designations, alternateNames = alternateNames,
             category = ObjectCategory.fromOpenNGCType(entry.typeCode),
@@ -301,34 +388,61 @@ internal object CatalogFactory {
             } else {
                 null
             },
-            position = ObjectPosition.Fixed(entry.position, null), isListed = true,
+            position = ObjectPosition.Fixed(entry.position, null), isListed = prominence <= Prominence.lastListed,
             notes = if (noteSentences.isEmpty()) null else noteSentences.joinToString(separator = " "),
+            prominence = prominence, catalogNumbers = catalogNumbers(entry),
         )
         return ObjectDraft(obj, keys)
     }
 
     /**
      * The designations of a deep-sky record: Messier, NGC and IC numbers, then the identifier of
-     * the data file when it is from another catalog.
+     * the data file when it is from another catalog, then the designations of other catalogues the record
+     * lists (`cat`: Caldwell, Sharpless, Melotte...). A designation that reads like an earlier one is left out.
      */
     fun spellings(entry: DeepSkyEntry): List<CatalogDesignation.Spelling> {
-        val spellings = ArrayList<CatalogDesignation.Spelling>()
+        val spellings = ArrayList<CatalogDesignation.Spelling>(2 + entry.cat.size)
+        val keys = ArrayList<ByteArray>(2 + entry.cat.size)
+        fun add(spelling: CatalogDesignation.Spelling) {
+            val key = SearchText.key(spelling.display).bytes
+            if (keys.none { it.contentEquals(key) }) {
+                keys.add(key)
+                spellings.add(spelling)
+            }
+        }
         val messier = entry.messier
         if (messier != null) {
-            spellings.add(CatalogDesignation.Spelling("M $messier", listOf("Messier $messier")))
+            add(CatalogDesignation.Spelling("M $messier", listOf("Messier $messier")))
         }
         for (number in entry.ngc) {
-            spellings.add(CatalogDesignation.Spelling("NGC $number", emptyList()))
+            add(CatalogDesignation.Spelling("NGC $number", emptyList()))
         }
         for (number in entry.ic) {
-            spellings.add(CatalogDesignation.Spelling("IC $number", emptyList()))
+            add(CatalogDesignation.Spelling("IC $number", emptyList()))
         }
-        val own = CatalogDesignation.spelling(entry.id)
-        val ownKey = SearchText.key(own.display).bytes
-        if (spellings.none { SearchText.key(it.display).bytes.contentEquals(ownKey) }) {
-            spellings.add(own)
+        add(CatalogDesignation.spelling(entry.id))
+        for (designation in entry.cat) {
+            add(CatalogDesignation.spelling(designation))
         }
         return spellings
+    }
+
+    /**
+     * The catalogue numbers of a deep-sky record, in the order of its designations: Messier, NGC, IC, the
+     * identifier of the data file, then `cat`; repeats and identifiers of other catalogues are left out.
+     */
+    fun catalogNumbers(entry: DeepSkyEntry): List<CatalogNumber> {
+        val numbers = ArrayList<CatalogNumber>(2 + entry.cat.size)
+        fun add(number: CatalogNumber?) {
+            if (number != null && !numbers.contains(number)) numbers.add(number)
+        }
+        val messier = entry.messier
+        if (messier != null) add(CatalogNumber(DeepSkyCatalogue.MESSIER, messier))
+        for (number in entry.ngc) add(CatalogNumber(DeepSkyCatalogue.NGC, number))
+        for (number in entry.ic) add(CatalogNumber(DeepSkyCatalogue.IC, number))
+        add(CatalogDesignation.catalogNumber(entry.id))
+        for (designation in entry.cat) add(CatalogDesignation.catalogNumber(designation))
+        return numbers
     }
 
     /** The identifier under which a deep-sky object with an acronym for a name ("LMC") also answers. */

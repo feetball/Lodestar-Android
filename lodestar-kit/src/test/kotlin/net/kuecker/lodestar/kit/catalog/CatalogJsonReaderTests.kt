@@ -259,8 +259,15 @@ class CatalogJsonReaderTests {
         assertEquals(-16.716116, sirius.de)
         assertEquals(-1.44, sirius.m)
         val dsoFile = CatalogJsonReader(Catalog.bundledData(CatalogFile.DEEP_SKY_OBJECTS)).readFile("objects", DeepSkyRecord::read)
-        assertEquals(693, dsoFile.records.size)
+        assertEquals(2441, dsoFile.records.size)
+        assertTrue(dsoFile.records.none { it == null })
         assertEquals("M1", dsoFile.records[0]?.id)
         assertEquals(4.0, dsoFile.records[0]?.minorAxis)
+        assertEquals(1L, dsoFile.records[0]?.p)
+        assertEquals(listOf("Sh2-244"), dsoFile.records[0]?.cat)
+        val northAmerica = assertNotNull(dsoFile.records.firstOrNull { it?.id == "NGC7000" })
+        assertEquals(listOf("C20", "Sh2-117"), northAmerica.cat)
+        assertEquals(listOf(7000L), northAmerica.ngc)
+        assertEquals(1L, northAmerica.p)
     }
 }

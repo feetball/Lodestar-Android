@@ -46,10 +46,18 @@ sealed interface ObjectPosition {
  * @property colorIndex The B−V color index of a star, if known.
  * @property spectralType The spectral type of a star, if known.
  * @property distanceLightYears The distance in light-years, if known.
- * @property isListed Whether browse lists show the object. All solar-system and special objects and all
- * deep-sky objects are listed, and so are stars with a proper name and other stars of magnitude 3.5 or
- * brighter. The remaining stars are only found by search and drawn on the sky.
+ * @property isListed Whether browse lists show the object. All solar-system and special objects are listed, and
+ * so are the deep-sky objects whose [prominence] is [Prominence.NOTABLE] or better, stars with a proper name and
+ * other stars of magnitude 3.5 or brighter. The remaining objects (the obscure deep-sky objects and the faint
+ * stars) are only found by search, by catalogue ([Catalog.objects] with a [DeepSkyCatalogue]) and drawn on the sky.
  * @property notes A short note for the detail view, if there is something worth saying.
+ * @property prominence How conspicuous the object is, see [Prominence]. Deep-sky objects have the value of the
+ * data file (a record without one counts as [Prominence.NOTABLE]), stars follow their magnitude
+ * ([Prominence.forStar]), and the Sun, the Moon, the planets, the special directions and custom targets are
+ * showpieces.
+ * @property catalogNumbers The object's numbers in the catalogues of [DeepSkyCatalogue], in the order of
+ * [designations] (Messier, NGC, IC, then the others). Empty for stars, solar-system bodies and deep-sky objects
+ * that are only in other catalogues (ESO, PGC, UGC...).
  */
 @ConsistentCopyVisibility
 data class CelestialObject internal constructor(
@@ -68,6 +76,8 @@ data class CelestialObject internal constructor(
     val distanceLightYears: Double? = null,
     val isListed: Boolean,
     val notes: String? = null,
+    val prominence: Prominence = Prominence.NOTABLE,
+    val catalogNumbers: List<CatalogNumber> = emptyList(),
 ) {
     /** Hashes the identifier only, so objects with the same identifier hash alike. */
     override fun hashCode(): Int = id.hashCode()
@@ -76,6 +86,12 @@ data class CelestialObject internal constructor(
 
     /** The browse group of the object's category. */
     val group: ObjectGroup get() = category.group
+
+    /** The catalogues the object is in, in the order of [catalogNumbers] (for example Messier, NGC, Caldwell). */
+    val catalogues: List<DeepSkyCatalogue> get() = catalogNumbers.map { it.catalogue }.distinct()
+
+    /** `true` for the objects of the deep-sky data (identifiers starting with `"dso."`). */
+    val isDeepSky: Boolean get() = id.startsWith("dso.")
 
     /** The J2000 position of a fixed object; `null` for solar-system bodies and the poles. */
     val j2000: EquatorialCoordinate? get() = (position as? ObjectPosition.Fixed)?.coordinate
@@ -154,6 +170,7 @@ data class CelestialObject internal constructor(
                 category = ObjectCategory.CUSTOM,
                 position = ObjectPosition.Fixed(position, null),
                 isListed = true,
+                prominence = Prominence.SHOWPIECE,
             )
         }
 

@@ -82,6 +82,27 @@ OpenNGC readme, are:
   <http://heasarc.gsfc.nasa.gov/>
 - Harold Corwin's NGC/IC Positions and Notes. <http://haroldcorwin.net/ngcic/index.html>
 
+### Additional deep-sky catalogues — `dsos.json`
+
+`Tools/build_catalogs.py` adds these catalogues to the OpenNGC selection (all pinned by URL and sha256 in
+`Tools/sources.lock.json`). They are factual compilations distributed by CDS/VizieR; the original authors are credited
+here as CDS asks.
+
+- **Sharpless 2** HII regions — S. Sharpless, ApJS 4, 257 (1959); CDS VII/20.
+- **Barnard** dark nebulae — E. E. Barnard, *A Photographic Atlas of Selected Regions of the Milky Way* (1927);
+  CDS VII/220A, machine-readable by J. Takahashi & M. Ohishi (NAOJ), diameters and notes by Bill Gray, corrections by
+  Mati Morel.
+- **Lynds** dark nebulae (opacity 6 or area ≥ 1 deg², plus named clouds) — B. T. Lynds, ApJS 7, 1 (1962); CDS VII/7A,
+  prepared by J. Marcout & F. Ochsenbein from T. Nagy's ADC version.
+- **Open clusters** (selected Collinder, Melotte, Trumpler and Stock clusters) — W. S. Dias et al., A&A 389, 871
+  (2002), version 3.5; CDS B/ocl.
+- **Constellation boundaries** for objects outside OpenNGC — N. G. Roman, PASP 99, 695 (1987), after Delporte (1930);
+  CDS VI/42.
+- **Caldwell** numbers come from OpenNGC's identifiers.
+
+This research has made use of the VizieR catalogue access tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier).
+The original description of the VizieR service was published in 2000, A&AS 143, 23.
+
 ### d3-celestial — `constellations.json` and `milkyway.json`
 
 - **Title:** d3-celestial

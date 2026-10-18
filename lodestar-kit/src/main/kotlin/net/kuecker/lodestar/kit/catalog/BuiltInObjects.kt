@@ -36,7 +36,7 @@ internal object BuiltInObjects {
         }
         CelestialObject(
             id = id, name = body.displayName, alternateNames = alternateNames(body), category = category,
-            position = ObjectPosition.SolarSystem(body), isListed = true,
+            position = ObjectPosition.SolarSystem(body), isListed = true, prominence = Prominence.SHOWPIECE,
             notes = if (body == SolarSystemBody.SUN) {
                 "Look at the Sun only through a certified solar filter. Pointing a camera or telescope at it " +
                     "without one can damage eyes and equipment."
@@ -68,7 +68,7 @@ internal object BuiltInObjects {
                     ),
                     null,
                 ),
-                isListed = true,
+                isListed = true, prominence = Prominence.SHOWPIECE,
                 notes = "The direction of Sagittarius A*, the center of the Milky Way. The brightest part of the " +
                     "Milky Way band, and a favorite for wide-field astrophotography.",
             ),
@@ -77,6 +77,7 @@ internal object BuiltInObjects {
                 alternateNames = listOf("Celestial North Pole"), category = ObjectCategory.CELESTIAL_POLE,
                 constellation = "UMi", constellationName = constellationName("UMi"),
                 position = ObjectPosition.CelestialPole(north = true), isListed = true,
+                prominence = Prominence.SHOWPIECE,
                 notes = "The point in the sky that the Earth's axis points to; the stars appear to turn around it. " +
                     "Polaris lies within one degree of it.",
             ),
@@ -85,6 +86,7 @@ internal object BuiltInObjects {
                 alternateNames = listOf("Celestial South Pole"), category = ObjectCategory.CELESTIAL_POLE,
                 constellation = "Oct", constellationName = constellationName("Oct"),
                 position = ObjectPosition.CelestialPole(north = false), isListed = true,
+                prominence = Prominence.SHOWPIECE,
                 notes = "The southern counterpart of the north celestial pole. No bright star marks it; the faint " +
                     "σ Octantis lies about one degree away.",
             ),

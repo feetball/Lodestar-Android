@@ -62,6 +62,8 @@ internal object CatalogFixture {
         val pa: Double? = null,
         val h: String? = null,
         val sb: Double? = null,
+        val cat: List<String>? = null,
+        val p: Int? = null,
     )
 
     @Serializable
@@ -139,7 +141,7 @@ class CatalogLoadingTests {
         val stars = CatalogFixture.rawStars()
         val deepSky = CatalogFixture.rawDeepSky()
         assertEquals(9001, stars.size)
-        assertEquals(693, deepSky.size)
+        assertEquals(2441, deepSky.size)
         assertEquals(stars.size, catalog.renderStars.size)
         assertEquals(88, catalog.constellations.size)
         assertEquals(5, catalog.milkyWay.levels.size)
@@ -373,7 +375,8 @@ class CatalogLoadingTests {
                 assertNull(record.m)
                 continue
             }
-            assertTrue(obj.isListed)
+            assertEquals((record.p ?: 3) <= 3, obj.isListed, record.id)
+            assertEquals(record.p ?: 3, obj.prominence.rawValue, record.id)
             assertEquals(
                 obj.category == ObjectCategory.OTHER || obj.category == ObjectCategory.MILKY_WAY,
                 obj.group == ObjectGroup.SPECIAL,
@@ -412,29 +415,34 @@ class CatalogLoadingTests {
     fun testOtherCatalogDesignationsAreSpelledOut() {
         val catalog = CatalogFixture.catalog()
         assertEquals(listOf("Caldwell 14"), catalog.objectWithID("dso.C14")?.designations)
-        assertEquals(listOf("Caldwell 41"), catalog.objectWithID("dso.C41")?.designations)
+        assertEquals(listOf("Caldwell 9", "Sh2-155"), catalog.objectWithID("dso.C9")?.designations)
+        assertEquals(listOf("Caldwell 41", "Melotte 25", "Collinder 50"), catalog.objectWithID("dso.C41")?.designations)
         assertEquals(listOf("Melotte 111"), catalog.objectWithID("dso.Mel111")?.designations)
         assertEquals(listOf("Barnard 33"), catalog.objectWithID("dso.B33")?.designations)
         assertEquals(listOf("ESO 56-115"), catalog.objectWithID("dso.ESO56-115")?.designations)
         assertEquals(listOf("Collinder 399"), catalog.objectWithID("dso.Cl399")?.designations)
-        assertEquals(listOf("Harvard 5"), catalog.objectWithID("dso.H5")?.designations)
+        assertEquals(listOf("Harvard 5", "Collinder 258"), catalog.objectWithID("dso.H5")?.designations)
         assertEquals(listOf("IC 359A"), catalog.objectWithID("dso.IC359A")?.designations)
         assertEquals(listOf("IC 2431 NED02"), catalog.objectWithID("dso.IC2431_NED02")?.designations)
         assertEquals(listOf("HCG 92"), catalog.objectWithID("dso.HCG92")?.designations)
         assertEquals(listOf("PGC 143"), catalog.objectWithID("dso.PGC143")?.designations)
         assertEquals(listOf("UGC 5373"), catalog.objectWithID("dso.UGC5373")?.designations)
         assertEquals(listOf("MWSC 3171"), catalog.objectWithID("dso.MWSC3171")?.designations)
-        assertEquals(listOf("NGC 2239", "NGC 2244"), catalog.objectWithID("dso.NGC2239")?.designations)
-        assertEquals(listOf("NGC 281", "IC 11"), catalog.objectWithID("dso.NGC281")?.designations)
-        assertEquals(listOf("M 8", "NGC 6523", "NGC 6533"), catalog.objectWithID("dso.M8")?.designations)
+        assertEquals(listOf("NGC 2239", "NGC 2244", "Caldwell 50"), catalog.objectWithID("dso.NGC2239")?.designations)
+        assertEquals(listOf("NGC 281", "IC 11", "Sh2-184"), catalog.objectWithID("dso.NGC281")?.designations)
+        assertEquals(listOf("M 8", "NGC 6523", "NGC 6533", "Sh2-25"), catalog.objectWithID("dso.M8")?.designations)
     }
 
     @Test
     fun testListingRulesForEveryKindOfObject() {
         val catalog = CatalogFixture.catalog()
-        for (obj in catalog.objects.filter { !it.id.startsWith("star.") }) {
-            assertTrue(obj.isListed, "${obj.id} is a solar-system, special or deep-sky object")
+        for (obj in catalog.objects.filter { !it.id.startsWith("star.") && !it.isDeepSky }) {
+            assertTrue(obj.isListed, "${obj.id} is a solar-system or special object")
         }
+        for (obj in catalog.deepSkyObjects) {
+            assertEquals(obj.prominence <= Prominence.NOTABLE, obj.isListed, "${obj.id} is listed unless it is obscure")
+        }
+        assertTrue(catalog.deepSkyObjects.any { !it.isListed }, "the obscure deep-sky objects are not listed")
         val stars = CatalogFixture.rawStars()
 
         fun objectOf(star: CatalogFixture.RawStar): CelestialObject =
@@ -451,7 +459,7 @@ class CatalogLoadingTests {
         val listedStars = catalog.listedObjects.filter { it.id.startsWith("star.") }
         assertEquals(stars.count { it.n != null || it.m <= 3.5 }, listedStars.size)
         assertEquals(
-            9 + 3 + (catalog.objects.size - 12 - catalog.renderStars.size) + listedStars.size,
+            9 + 3 + catalog.deepSkyObjects.count { it.isListed } + listedStars.size,
             catalog.listedObjects.size,
         )
     }

@@ -1,0 +1,537 @@
+{
+  "schema_version": 1,
+  "generator": "Tools/make_fixtures.py",
+  "skyfield_version": "1.55",
+  "ephemeris": "JPL DE440s (de440s.bsp, SHA-256 c1c7feeab882263fc493a9d5a5b2ddd71b54826cdf65d8d17a76126b260a49f2)",
+  "description": "Rise, set, transit and twilight times for 5 sites x 6 dates x 6 objects.",
+  "notes": [
+    "Time: every instant is its calendar value read as UT1 (DUT1 = 0, the same assumption as LodestarKit's JulianDate(date:)); TT = UT1 + DeltaT with DeltaT from Skyfield's builtin tables (IERS daily values 1973-01-02..2027-01-23, Stephenson/Morrison/Hohenkerk splines and parabola elsewhere). No IERS download, no polar motion.",
+    "Window: local noon of 'date' to the next local noon, where local noon is 12:00:00 UT minus longitude/15 hours (rounded to whole seconds). Events are searched strictly inside the window.",
+    "Altitude: topocentric, geometric (no refraction) altitude of the body's centre (Skyfield apparent place, WGS84 vertical). A crossing is an instant where altitude - h0 changes sign: kind 'rise' = upward, 'set' = downward; the same kinds are used for dawn (rise) and dusk (set) at the twilight thresholds.",
+    "h0 (degrees): stars and planets -0.5667; Sun -0.8333; Sun twilights -6 (civil), -12 (nautical), -18 (astronomical). Crossings are resolved to 1 ms.",
+    "WARNING (Moon): DESIGN.md section 4.1 prescribes h0 = 0.7275*pi - 0.5667 deg for the Moon. That is Meeus' threshold for the GEOCENTRIC altitude of the Moon's centre; applied to the topocentric altitude, as for every other body here, it puts rise and set about pi (~0.95 deg) too high: about 4 minutes off at the equator, 5-10 minutes at 34-52 degrees latitude, up to 16 minutes at 70 degrees, as JPL Horizons and the US Naval Observatory confirm (see README.md).",
+    "moon.horizon implements the DESIGN.md text literally: topocentric centre altitude vs h0 = 0.7275*pi - 0.5667 deg, pi = asin(6378.14 km / geocentric distance) at the crossing instant (h0 is recorded per crossing).",
+    "moon.horizon_upper_limb is the real event: topocentric centre altitude vs h0 = -0.5667 deg - asin(1737.4 km / topocentric distance), i.e. the upper limb on the horizon after 34 arcminutes of refraction (USNO and JPL Horizons definition). Meeus' geocentric formulation (geocentric altitude vs 0.7275*pi - 0.5667 deg) gives the same instants to within 3 seconds.",
+    "A list with no crossings carries always_up or always_down (the altitude stays at least 0.05 deg from h0 for the whole window).",
+    "transits: upper culminations, i.e. local maxima of the topocentric geometric altitude, with that altitude in degrees; culminations below the horizon are listed too. For the Sun, Moon and planets the time can differ from the meridian passage by seconds (Sun, planets) to many minutes (Moon at high latitude). A window can hold zero (Moon) or, rarely, two transits."
+  ],
+  "sites": [
+    {"site":"boulder","lat":40.0,"lon":-105.27,"elevation_m":1650.0,"name":"Boulder, Colorado, USA"},
+    {"site":"greenwich","lat":51.48,"lon":0.0,"elevation_m":0.0,"name":"Royal Observatory, Greenwich, UK"},
+    {"site":"sydney","lat":-33.87,"lon":151.21,"elevation_m":0.0,"name":"Sydney, Australia"},
+    {"site":"tromso","lat":69.65,"lon":18.96,"elevation_m":0.0,"name":"Tromso, Norway (above the Arctic Circle)"},
+    {"site":"quito","lat":0.0,"lon":-78.5,"elevation_m":2800.0,"name":"Equatorial Andes near Quito, Ecuador"}
+  ],
+  "cases": [
+    {
+      "site": "boulder",
+      "lat": 40.0,
+      "lon": -105.27,
+      "elevation_m": 1650.0,
+      "date": "2026-01-15",
+      "window_start_utc": "2026-01-15T19:01:05Z",
+      "window_end_utc": "2026-01-16T19:01:05Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-01-16T00:00:28.767Z","unix":1768521628.767},{"kind":"rise","utc":"2026-01-16T14:20:33.709Z","unix":1768573233.709}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-01-16T00:30:12.862Z","unix":1768523412.862},{"kind":"rise","utc":"2026-01-16T13:50:53.557Z","unix":1768571453.557}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-01-16T01:03:34.203Z","unix":1768525414.203},{"kind":"rise","utc":"2026-01-16T13:17:35.790Z","unix":1768569455.79}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-01-16T01:36:02.291Z","unix":1768527362.291},{"kind":"rise","utc":"2026-01-16T12:45:10.520Z","unix":1768567510.52}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T19:10:43.421Z","unix":1768504243.421,"altitude_deg":28.985230021}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T20:52:09.096Z","unix":1768510329.096,"h0_deg":0.092387},{"kind":"rise","utc":"2026-01-16T13:14:13.828Z","unix":1768569253.828,"h0_deg":0.09477}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T20:58:25.365Z","unix":1768510705.365,"h0_deg":-0.813462},{"kind":"rise","utc":"2026-01-16T13:07:55.956Z","unix":1768568875.956,"h0_deg":-0.814343}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T17:30:05.891Z","unix":1768584605.891,"altitude_deg":21.026383911}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T23:19:22.964Z","unix":1768519162.964},{"kind":"set","utc":"2026-01-16T14:04:37.806Z","unix":1768572277.806}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T06:41:59.104Z","unix":1768545719.104,"altitude_deg":72.318972687}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-01-16T00:06:52.450Z","unix":1768522012.45},{"kind":"rise","utc":"2026-01-16T14:35:06.346Z","unix":1768574106.346}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T19:20:45.392Z","unix":1768504845.392,"altitude_deg":28.422253433}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-16T01:00:47.012Z","unix":1768525247.012},{"kind":"set","utc":"2026-01-16T11:08:27.046Z","unix":1768561707.046}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T06:04:37.041Z","unix":1768543477.041,"altitude_deg":33.247079817}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-01-16T02:51:34.027Z","unix":1768531894.027},{"kind":"rise","utc":"2026-01-16T09:00:39.433Z","unix":1768554039.433}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T17:54:08.798Z","unix":1768586048.798,"altitude_deg":88.805466684}]}
+      }
+    },
+    {
+      "site": "boulder",
+      "lat": 40.0,
+      "lon": -105.27,
+      "elevation_m": 1650.0,
+      "date": "2026-03-20",
+      "window_start_utc": "2026-03-20T19:01:05Z",
+      "window_end_utc": "2026-03-21T19:01:05Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-03-21T01:13:16.256Z","unix":1774055596.256},{"kind":"rise","utc":"2026-03-21T13:02:38.247Z","unix":1774098158.247}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-03-21T01:40:18.914Z","unix":1774057218.914},{"kind":"rise","utc":"2026-03-21T12:35:38.197Z","unix":1774096538.197}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-03-21T02:11:58.766Z","unix":1774059118.766},{"kind":"rise","utc":"2026-03-21T12:04:00.862Z","unix":1774094640.862}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-03-21T02:44:12.546Z","unix":1774061052.546},{"kind":"rise","utc":"2026-03-21T11:31:49.165Z","unix":1774092709.165}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T19:08:38.389Z","unix":1774033718.389,"altitude_deg":50.070611636}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-21T03:28:56.128Z","unix":1774063736.128,"h0_deg":0.1561},{"kind":"rise","utc":"2026-03-21T14:14:25.938Z","unix":1774102465.938,"h0_deg":0.15716}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-21T03:34:41.723Z","unix":1774064081.723,"h0_deg":-0.837298},{"kind":"rise","utc":"2026-03-21T14:08:42.447Z","unix":1774102122.447,"h0_deg":-0.837687}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T20:33:13.761Z","unix":1774038793.761,"altitude_deg":62.288118254}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-21T09:38:23.177Z","unix":1774085903.177},{"kind":"rise","utc":"2026-03-21T18:43:45.722Z","unix":1774118625.722}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-21T02:12:57.972Z","unix":1774059177.972,"altitude_deg":72.927522319}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-21T02:39:22.679Z","unix":1774060762.679},{"kind":"rise","utc":"2026-03-21T13:50:03.626Z","unix":1774101003.626}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T20:15:02.827Z","unix":1774037702.827,"altitude_deg":56.21080198}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T20:49:08.678Z","unix":1774039748.678},{"kind":"set","utc":"2026-03-21T06:56:47.655Z","unix":1774076207.655}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-21T01:52:58.179Z","unix":1774057978.179,"altitude_deg":33.244740307}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-20T22:39:56.003Z","unix":1774046396.003},{"kind":"rise","utc":"2026-03-21T04:49:04.569Z","unix":1774068544.569}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-21T13:42:32.372Z","unix":1774100552.372,"altitude_deg":88.802101033}]}
+      }
+    },
+    {
+      "site": "boulder",
+      "lat": 40.0,
+      "lon": -105.27,
+      "elevation_m": 1650.0,
+      "date": "2026-06-21",
+      "window_start_utc": "2026-06-21T19:01:05Z",
+      "window_end_utc": "2026-06-22T19:01:05Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-06-22T02:33:26.855Z","unix":1782095606.855},{"kind":"rise","utc":"2026-06-22T11:32:42.210Z","unix":1782127962.21}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-06-22T03:06:19.713Z","unix":1782097579.713},{"kind":"rise","utc":"2026-06-22T10:59:49.346Z","unix":1782125989.346}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-06-22T03:48:05.001Z","unix":1782100085.001},{"kind":"rise","utc":"2026-06-22T10:18:04.052Z","unix":1782123484.052}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-06-22T04:36:50.825Z","unix":1782103010.825},{"kind":"rise","utc":"2026-06-22T09:29:18.223Z","unix":1782120558.223}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T19:02:57.654Z","unix":1782068577.654,"altitude_deg":73.436564273}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-06-21T19:05:13.369Z","unix":1782068713.369,"h0_deg":0.118897},{"kind":"set","utc":"2026-06-22T06:52:52.931Z","unix":1782111172.931,"h0_deg":0.114164}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-22T06:57:52.510Z","unix":1782111472.51,"h0_deg":-0.82159}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-22T01:00:32.981Z","unix":1782090032.981,"altitude_deg":46.120832956}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-22T04:19:46.148Z","unix":1782101986.148},{"kind":"rise","utc":"2026-06-22T13:42:14.651Z","unix":1782135734.651}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T21:02:29.516Z","unix":1782075749.516,"altitude_deg":70.935144453}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-22T05:04:55.852Z","unix":1782104695.852},{"kind":"rise","utc":"2026-06-22T14:40:06.472Z","unix":1782139206.472}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T21:51:47.211Z","unix":1782078707.211,"altitude_deg":69.696011858}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-22T00:51:07.672Z","unix":1782089467.672},{"kind":"rise","utc":"2026-06-22T14:39:31.620Z","unix":1782139171.62}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T19:47:17.617Z","unix":1782071237.617,"altitude_deg":33.247298834}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-06-21T22:43:25.084Z","unix":1782081805.084},{"kind":"set","utc":"2026-06-22T16:30:25.401Z","unix":1782145825.401}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-22T07:36:55.248Z","unix":1782113815.248,"altitude_deg":88.807261645}]}
+      }
+    },
+    {
+      "site": "boulder",
+      "lat": 40.0,
+      "lon": -105.27,
+      "elevation_m": 1650.0,
+      "date": "2026-10-17",
+      "window_start_utc": "2026-10-17T19:01:05Z",
+      "window_end_utc": "2026-10-18T19:01:05Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-10-18T00:18:19.345Z","unix":1792282699.345},{"kind":"rise","utc":"2026-10-18T13:14:55.616Z","unix":1792329295.616}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-10-18T00:45:39.896Z","unix":1792284339.896},{"kind":"rise","utc":"2026-10-18T12:47:31.009Z","unix":1792327651.009}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-10-18T01:17:05.543Z","unix":1792286225.543},{"kind":"rise","utc":"2026-10-18T12:16:01.516Z","unix":1792325761.516}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-10-18T01:48:24.133Z","unix":1792288104.133},{"kind":"rise","utc":"2026-10-18T11:44:39.781Z","unix":1792323879.781}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T18:45:57.353Z","unix":1792349157.353,"altitude_deg":40.171599772}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-10-17T20:07:10.599Z","unix":1792267630.599,"h0_deg":0.091088},{"kind":"set","utc":"2026-10-18T05:02:57.415Z","unix":1792299777.415,"h0_deg":0.091917}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-10-17T20:01:13.385Z","unix":1792267273.385,"h0_deg":-0.812967},{"kind":"set","utc":"2026-10-18T05:08:54.905Z","unix":1792300134.905,"h0_deg":-0.813285}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T00:35:07.528Z","unix":1792283707.528,"altitude_deg":23.596667722}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T21:49:09.253Z","unix":1792273749.253},{"kind":"rise","utc":"2026-10-18T08:00:06.926Z","unix":1792310406.926}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T14:52:54.631Z","unix":1792335174.631,"altitude_deg":64.623504077}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-18T00:05:44.346Z","unix":1792281944.346},{"kind":"rise","utc":"2026-10-18T14:16:01.809Z","unix":1792332961.809}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T19:14:20.706Z","unix":1792264460.706,"altitude_deg":30.108962526}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-10-18T06:55:36.157Z","unix":1792306536.157},{"kind":"set","utc":"2026-10-18T17:03:17.798Z","unix":1792342997.798}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T11:59:26.990Z","unix":1792324766.99,"altitude_deg":33.250626373}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-18T08:46:29.046Z","unix":1792313189.046},{"kind":"rise","utc":"2026-10-18T14:55:27.708Z","unix":1792335327.708}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T23:52:56.363Z","unix":1792281176.363,"altitude_deg":88.812807169}]}
+      }
+    },
+    {
+      "site": "boulder",
+      "lat": 40.0,
+      "lon": -105.27,
+      "elevation_m": 1650.0,
+      "date": "2026-12-21",
+      "window_start_utc": "2026-12-21T19:01:05Z",
+      "window_end_utc": "2026-12-22T19:01:05Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-12-21T23:39:06.860Z","unix":1797896346.86},{"kind":"rise","utc":"2026-12-22T14:19:57.026Z","unix":1797949197.026}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-12-22T00:09:42.619Z","unix":1797898182.619},{"kind":"rise","utc":"2026-12-22T13:49:21.343Z","unix":1797947361.343}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-12-22T00:43:48.603Z","unix":1797900228.603},{"kind":"rise","utc":"2026-12-22T13:15:15.426Z","unix":1797945315.426}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-12-22T01:16:49.165Z","unix":1797902209.165},{"kind":"rise","utc":"2026-12-22T12:42:14.915Z","unix":1797943334.915}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T18:59:47.435Z","unix":1797965987.435,"altitude_deg":26.563714704}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T21:18:09.797Z","unix":1797887889.797,"h0_deg":0.16664},{"kind":"set","utc":"2026-12-22T12:54:32.911Z","unix":1797944072.911,"h0_deg":0.171967}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T21:11:41.994Z","unix":1797887501.994,"h0_deg":-0.841221},{"kind":"set","utc":"2026-12-22T13:01:22.197Z","unix":1797944482.197,"h0_deg":-0.843241}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T05:02:55.032Z","unix":1797915775.032,"altitude_deg":75.62104568}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-22T04:06:37.207Z","unix":1797912397.207},{"kind":"set","utc":"2026-12-22T17:42:42.657Z","unix":1797961362.657}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T10:54:39.422Z","unix":1797936879.422,"altitude_deg":63.38974298}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T21:07:06.795Z","unix":1797887226.795},{"kind":"rise","utc":"2026-12-22T10:30:18.018Z","unix":1797935418.018}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T15:48:09.391Z","unix":1797954489.391,"altitude_deg":36.860293819}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-22T02:40:04.393Z","unix":1797907204.393},{"kind":"set","utc":"2026-12-22T12:47:44.328Z","unix":1797943664.328}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T07:43:54.372Z","unix":1797925434.372,"altitude_deg":33.246848037}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-22T04:30:52.339Z","unix":1797913852.339},{"kind":"rise","utc":"2026-12-22T10:39:54.398Z","unix":1797935994.398}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T19:37:21.342Z","unix":1797881841.342,"altitude_deg":88.809158126}]}
+      }
+    },
+    {
+      "site": "boulder",
+      "lat": 40.0,
+      "lon": -105.27,
+      "elevation_m": 1650.0,
+      "date": "2030-08-01",
+      "window_start_utc": "2030-08-01T19:01:05Z",
+      "window_end_utc": "2030-08-02T19:01:05Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2030-08-02T02:14:33.702Z","unix":1911867273.702},{"kind":"rise","utc":"2030-08-02T12:00:38.167Z","unix":1911902438.167}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2030-08-02T02:44:45.248Z","unix":1911869085.248},{"kind":"rise","utc":"2030-08-02T11:30:26.187Z","unix":1911900626.187}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2030-08-02T03:21:53.395Z","unix":1911871313.395},{"kind":"rise","utc":"2030-08-02T10:53:17.640Z","unix":1911898397.64}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2030-08-02T04:02:36.431Z","unix":1911873756.431},{"kind":"rise","utc":"2030-08-02T10:12:34.287Z","unix":1911895954.287}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T19:07:20.784Z","unix":1911841640.784,"altitude_deg":67.846811659}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-02T03:05:44.697Z","unix":1911870344.697,"h0_deg":0.124938},{"kind":"rise","utc":"2030-08-02T15:33:00.017Z","unix":1911915180.017,"h0_deg":0.12804}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-02T03:10:48.743Z","unix":1911870648.743,"h0_deg":-0.825641},{"kind":"rise","utc":"2030-08-02T15:27:47.262Z","unix":1911914867.262,"h0_deg":-0.826787}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T20:48:58.877Z","unix":1911847738.877,"altitude_deg":53.15888605}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2030-08-01T20:17:13.677Z","unix":1911845833.677},{"kind":"set","utc":"2030-08-02T06:27:43.478Z","unix":1911882463.478}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T01:22:28.655Z","unix":1911864148.655,"altitude_deg":33.614574176}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-02T01:03:07.452Z","unix":1911862987.452},{"kind":"rise","utc":"2030-08-02T10:17:11.670Z","unix":1911896231.67}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T17:40:39.826Z","unix":1911922839.826,"altitude_deg":72.066149939}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T22:09:57.473Z","unix":1911852597.473},{"kind":"rise","utc":"2030-08-02T11:58:24.419Z","unix":1911902304.419}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T17:02:13.019Z","unix":1911920533.019,"altitude_deg":33.240698933}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2030-08-01T20:02:08.612Z","unix":1911844928.612},{"kind":"set","utc":"2030-08-02T13:49:18.489Z","unix":1911908958.489}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T04:55:43.561Z","unix":1911876943.561,"altitude_deg":88.817616022}]}
+      }
+    },
+    {
+      "site": "greenwich",
+      "lat": 51.48,
+      "lon": 0.0,
+      "elevation_m": 0.0,
+      "date": "2026-01-15",
+      "window_start_utc": "2026-01-15T12:00:00Z",
+      "window_end_utc": "2026-01-16T12:00:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-01-15T16:20:22.809Z","unix":1768494022.809},{"kind":"rise","utc":"2026-01-16T07:57:57.814Z","unix":1768550277.814}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-01-15T16:58:51.303Z","unix":1768496331.303},{"kind":"rise","utc":"2026-01-16T07:19:37.835Z","unix":1768547977.835}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-01-15T17:40:41.378Z","unix":1768498841.378},{"kind":"rise","utc":"2026-01-16T06:37:54.630Z","unix":1768545474.63}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-01-15T18:20:39.951Z","unix":1768501239.951},{"kind":"rise","utc":"2026-01-16T05:58:01.030Z","unix":1768543081.03}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T12:09:35.365Z","unix":1768478975.365,"altitude_deg":17.450367429}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T12:29:58.117Z","unix":1768480198.117,"h0_deg":0.091388},{"kind":"rise","utc":"2026-01-16T07:06:45.512Z","unix":1768547205.512,"h0_deg":0.093817}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T12:39:15.818Z","unix":1768480755.818,"h0_deg":-0.813091},{"kind":"rise","utc":"2026-01-16T06:57:13.845Z","unix":1768546633.845,"h0_deg":-0.813985}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T10:13:17.510Z","unix":1768558397.51,"altitude_deg":9.350913066}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T15:35:02.032Z","unix":1768491302.032},{"kind":"set","utc":"2026-01-16T07:49:29.644Z","unix":1768549769.644}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T23:42:13.546Z","unix":1768520533.546,"altitude_deg":60.832716658}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-01-15T16:24:28.387Z","unix":1768494268.387},{"kind":"rise","utc":"2026-01-16T08:14:07.361Z","unix":1768551247.361}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T12:19:19.644Z","unix":1768479559.644,"altitude_deg":16.877410344}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T18:30:13.629Z","unix":1768501813.629},{"kind":"set","utc":"2026-01-16T03:39:08.794Z","unix":1768534748.794}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T23:04:41.220Z","unix":1768518281.22,"altitude_deg":21.767098995}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-01-16T10:54:12.976Z","unix":1768560852.976,"altitude_deg":77.325491323}]}
+      }
+    },
+    {
+      "site": "greenwich",
+      "lat": 51.48,
+      "lon": 0.0,
+      "elevation_m": 0.0,
+      "date": "2026-03-20",
+      "window_start_utc": "2026-03-20T12:00:00Z",
+      "window_end_utc": "2026-03-21T12:00:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-03-20T18:12:58.974Z","unix":1774030378.974},{"kind":"rise","utc":"2026-03-21T06:00:36.936Z","unix":1774072836.936}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-03-20T18:46:19.399Z","unix":1774032379.399},{"kind":"rise","utc":"2026-03-21T05:27:21.230Z","unix":1774070841.23}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-03-20T19:25:44.849Z","unix":1774034744.849},{"kind":"rise","utc":"2026-03-21T04:48:00.180Z","unix":1774068480.18}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-03-20T20:06:49.346Z","unix":1774037209.346},{"kind":"rise","utc":"2026-03-21T04:06:59.222Z","unix":1774066019.222}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T12:07:45.087Z","unix":1774008465.087,"altitude_deg":38.474685406}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-20T20:27:33.421Z","unix":1774038453.421,"h0_deg":0.155167},{"kind":"rise","utc":"2026-03-21T06:38:18.259Z","unix":1774075098.259,"h0_deg":0.156457}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-20T20:34:44.929Z","unix":1774038884.929,"h0_deg":-0.836951},{"kind":"rise","utc":"2026-03-21T06:31:13.451Z","unix":1774074673.451,"h0_deg":-0.837421}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T13:19:24.437Z","unix":1774012764.437,"altitude_deg":48.715951247}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-21T03:24:47.019Z","unix":1774063487.019},{"kind":"rise","utc":"2026-03-21T10:57:25.322Z","unix":1774090645.322}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T19:12:59.724Z","unix":1774033979.724,"altitude_deg":61.448250485}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-20T19:48:48.038Z","unix":1774036128.038},{"kind":"rise","utc":"2026-03-21T06:37:45.139Z","unix":1774075065.139}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T13:13:55.418Z","unix":1774012435.418,"altitude_deg":44.583466076}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T14:18:35.600Z","unix":1774016315.6},{"kind":"set","utc":"2026-03-20T23:27:29.110Z","unix":1774049249.11}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T18:53:02.363Z","unix":1774032782.363,"altitude_deg":21.764746638}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-03-21T06:42:36.545Z","unix":1774075356.545,"altitude_deg":77.322098187}]}
+      }
+    },
+    {
+      "site": "greenwich",
+      "lat": 51.48,
+      "lon": 0.0,
+      "elevation_m": 0.0,
+      "date": "2026-06-21",
+      "window_start_utc": "2026-06-21T12:00:00Z",
+      "window_end_utc": "2026-06-22T12:00:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-06-21T20:20:53.326Z","unix":1782073253.326},{"kind":"rise","utc":"2026-06-22T03:42:58.472Z","unix":1782099778.472}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-06-21T21:08:35.726Z","unix":1782076115.726},{"kind":"rise","utc":"2026-06-22T02:55:16.057Z","unix":1782096916.057}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-06-21T22:23:02.574Z","unix":1782080582.574},{"kind":"rise","utc":"2026-06-22T01:40:49.194Z","unix":1782092449.194}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-06-21T12:01:49.038Z","unix":1782043309.038,"altitude_deg":61.956728936}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-21T23:39:18.138Z","unix":1782085158.138,"h0_deg":0.117023}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-21T23:45:24.754Z","unix":1782085524.754,"h0_deg":-0.822657}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T17:45:22.538Z","unix":1782063922.538,"altitude_deg":36.345059364}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-21T22:00:39.265Z","unix":1782079239.265},{"kind":"rise","utc":"2026-06-22T06:01:00.813Z","unix":1782108060.813}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T14:02:17.768Z","unix":1782050537.768,"altitude_deg":59.467044303}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-21T22:41:59.839Z","unix":1782081719.839},{"kind":"rise","utc":"2026-06-22T07:00:39.036Z","unix":1782111639.036}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T14:50:24.115Z","unix":1782053424.115,"altitude_deg":58.310306327}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-21T17:21:49.437Z","unix":1782062509.437},{"kind":"rise","utc":"2026-06-22T08:08:58.216Z","unix":1782115738.216}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T12:47:21.796Z","unix":1782046041.796,"altitude_deg":21.767282146}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-06-22T00:36:59.430Z","unix":1782088619.43,"altitude_deg":77.327235764}]}
+      }
+    },
+    {
+      "site": "greenwich",
+      "lat": 51.48,
+      "lon": 0.0,
+      "elevation_m": 0.0,
+      "date": "2026-10-17",
+      "window_start_utc": "2026-10-17T12:00:00Z",
+      "window_end_utc": "2026-10-18T12:00:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-10-17T17:02:37.467Z","unix":1792256557.467},{"kind":"rise","utc":"2026-10-18T06:28:58.135Z","unix":1792304938.135}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-10-17T17:36:23.365Z","unix":1792258583.365},{"kind":"rise","utc":"2026-10-18T05:55:04.750Z","unix":1792302904.75}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-10-17T18:14:59.335Z","unix":1792260899.335},{"kind":"rise","utc":"2026-10-18T05:16:22.070Z","unix":1792300582.07}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-10-17T18:53:34.713Z","unix":1792263214.713},{"kind":"rise","utc":"2026-10-18T04:37:41.458Z","unix":1792298261.458}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T11:44:50.119Z","unix":1792323890.119,"altitude_deg":28.797283995}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-10-17T13:55:13.422Z","unix":1792245313.422,"h0_deg":0.090684},{"kind":"set","utc":"2026-10-17T20:44:34.690Z","unix":1792269874.69,"h0_deg":0.091136}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-10-17T13:46:32.850Z","unix":1792244792.85,"h0_deg":-0.812818},{"kind":"set","utc":"2026-10-17T20:53:16.180Z","unix":1792270396.18,"h0_deg":-0.812994}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T17:19:51.804Z","unix":1792257591.804,"altitude_deg":11.396232395}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T15:15:55.995Z","unix":1792250155.995},{"kind":"rise","utc":"2026-10-18T00:33:09.627Z","unix":1792283589.627}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T07:52:47.769Z","unix":1792309967.769,"altitude_deg":53.15686179}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T16:29:43.174Z","unix":1792254583.174},{"kind":"rise","utc":"2026-10-18T07:52:54.326Z","unix":1792309974.326}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T12:15:02.528Z","unix":1792239302.528,"altitude_deg":18.55355056}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-10-18T00:25:02.325Z","unix":1792283102.325},{"kind":"set","utc":"2026-10-18T09:33:59.979Z","unix":1792316039.979}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T04:59:31.161Z","unix":1792299571.161,"altitude_deg":21.77063296}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-10-17T16:53:00.553Z","unix":1792255980.553,"altitude_deg":77.332814644}]}
+      }
+    },
+    {
+      "site": "greenwich",
+      "lat": 51.48,
+      "lon": 0.0,
+      "elevation_m": 0.0,
+      "date": "2026-12-21",
+      "window_start_utc": "2026-12-21T12:00:00Z",
+      "window_end_utc": "2026-12-22T12:00:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-12-21T15:53:01.317Z","unix":1797868381.317},{"kind":"rise","utc":"2026-12-22T08:03:35.800Z","unix":1797926615.8}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-12-21T16:33:19.648Z","unix":1797870799.648},{"kind":"rise","utc":"2026-12-22T07:23:17.522Z","unix":1797924197.522}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-12-21T17:16:30.176Z","unix":1797873390.176},{"kind":"rise","utc":"2026-12-22T06:40:07.034Z","unix":1797921607.034}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-12-21T17:57:17.935Z","unix":1797875837.935},{"kind":"rise","utc":"2026-12-22T05:59:19.301Z","unix":1797919159.301}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T11:58:33.900Z","unix":1797940713.9,"altitude_deg":15.081757287}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T13:17:02.944Z","unix":1797859022.944,"h0_deg":0.163456},{"kind":"set","utc":"2026-12-22T06:25:31.689Z","unix":1797920731.689,"h0_deg":0.169908}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T13:08:31.714Z","unix":1797858511.714,"h0_deg":-0.84002},{"kind":"set","utc":"2026-12-22T06:35:02.676Z","unix":1797921302.676,"h0_deg":-0.842476}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T21:44:23.129Z","unix":1797889463.129,"altitude_deg":63.062006253}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-21T20:42:29.066Z","unix":1797885749.066},{"kind":"set","utc":"2026-12-22T11:07:04.088Z","unix":1797937624.088}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T03:54:45.755Z","unix":1797911685.755,"altitude_deg":51.905513809}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T13:44:38.878Z","unix":1797860678.878},{"kind":"rise","utc":"2026-12-22T03:51:04.988Z","unix":1797911464.988}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T08:47:06.436Z","unix":1797929226.436,"altitude_deg":25.447744633}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-21T20:09:31.033Z","unix":1797883771.033},{"kind":"set","utc":"2026-12-22T05:18:26.045Z","unix":1797916706.045}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T00:43:58.548Z","unix":1797900238.548,"altitude_deg":21.766873375}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-12-21T12:37:25.525Z","unix":1797856645.525,"altitude_deg":77.32917736}]}
+      }
+    },
+    {
+      "site": "greenwich",
+      "lat": 51.48,
+      "lon": 0.0,
+      "elevation_m": 0.0,
+      "date": "2030-08-01",
+      "window_start_utc": "2030-08-01T12:00:00Z",
+      "window_end_utc": "2030-08-02T12:00:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2030-08-01T19:47:54.621Z","unix":1911844074.621},{"kind":"rise","utc":"2030-08-02T04:25:19.682Z","unix":1911875119.682}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2030-08-01T20:28:15.551Z","unix":1911846495.551},{"kind":"rise","utc":"2030-08-02T03:44:57.693Z","unix":1911872697.693}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2030-08-01T21:22:16.755Z","unix":1911849736.755},{"kind":"rise","utc":"2030-08-02T02:50:55.488Z","unix":1911869455.488}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2030-08-01T22:36:49.913Z","unix":1911854209.913},{"kind":"rise","utc":"2030-08-02T01:36:21.524Z","unix":1911864981.524}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T12:06:13.121Z","unix":1911816373.121,"altitude_deg":56.440691757}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-01T20:01:41.020Z","unix":1911844901.02,"h0_deg":0.123162},{"kind":"rise","utc":"2030-08-02T08:11:54.299Z","unix":1911888714.299,"h0_deg":0.126213}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-01T20:07:53.176Z","unix":1911845273.176,"h0_deg":-0.824978},{"kind":"rise","utc":"2030-08-02T08:05:28.237Z","unix":1911888328.237,"h0_deg":-0.826101}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T13:33:08.103Z","unix":1911821588.103,"altitude_deg":43.05273523}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2030-08-01T13:45:48.749Z","unix":1911822348.749},{"kind":"set","utc":"2030-08-01T22:59:08.858Z","unix":1911855548.858}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T18:22:28.945Z","unix":1911838948.945,"altitude_deg":22.139931252}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T18:46:16.295Z","unix":1911840376.295},{"kind":"rise","utc":"2030-08-02T02:31:12.280Z","unix":1911868272.28}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T10:39:10.445Z","unix":1911897550.445,"altitude_deg":60.624181541}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T14:40:38.395Z","unix":1911825638.395},{"kind":"rise","utc":"2030-08-02T05:27:51.849Z","unix":1911878871.849}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T10:02:17.194Z","unix":1911895337.194,"altitude_deg":21.76068323}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2030-08-01T21:55:47.748Z","unix":1911851747.748,"altitude_deg":77.337597546}]}
+      }
+    },
+    {
+      "site": "sydney",
+      "lat": -33.87,
+      "lon": 151.21,
+      "elevation_m": 0.0,
+      "date": "2026-01-15",
+      "window_start_utc": "2026-01-15T01:55:10Z",
+      "window_end_utc": "2026-01-16T01:55:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-01-15T09:08:58.578Z","unix":1768468138.578},{"kind":"rise","utc":"2026-01-15T19:00:26.232Z","unix":1768503626.232}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-01-15T09:37:15.364Z","unix":1768469835.364},{"kind":"rise","utc":"2026-01-15T18:32:09.439Z","unix":1768501929.439}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-01-15T10:11:45.535Z","unix":1768471905.535},{"kind":"rise","utc":"2026-01-15T17:57:39.282Z","unix":1768499859.282}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-01-15T10:48:58.524Z","unix":1768474138.524},{"kind":"rise","utc":"2026-01-15T17:20:26.325Z","unix":1768497626.325}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T02:04:22.417Z","unix":1768442662.417,"altitude_deg":77.274265518}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T06:26:42.213Z","unix":1768458402.213,"h0_deg":0.090767},{"kind":"rise","utc":"2026-01-15T16:11:57.277Z","unix":1768493517.277,"h0_deg":0.09181}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T06:32:08.112Z","unix":1768458728.112,"h0_deg":-0.81284},{"kind":"rise","utc":"2026-01-15T16:06:30.442Z","unix":1768493190.442,"h0_deg":-0.813222}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T23:46:04.714Z","unix":1768520764.714,"altitude_deg":84.311715411}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T08:41:03.159Z","unix":1768466463.159},{"kind":"set","utc":"2026-01-15T18:37:26.774Z","unix":1768502246.774}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T13:39:14.953Z","unix":1768484354.953,"altitude_deg":33.82539509}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-01-15T09:18:59.756Z","unix":1768468739.756},{"kind":"rise","utc":"2026-01-15T19:10:01.902Z","unix":1768504201.902}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T02:13:38.052Z","unix":1768443218.052,"altitude_deg":77.862313329}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T06:13:04.473Z","unix":1768457584.473},{"kind":"set","utc":"2026-01-15T19:49:55.342Z","unix":1768506595.342}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T13:01:29.926Z","unix":1768482089.926,"altitude_deg":72.882872729}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-01-15T04:47:47.145Z","unix":1768452467.145},{"kind":"rise","utc":"2026-01-15T20:58:12.016Z","unix":1768510692.016}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T00:51:01.651Z","unix":1768524661.651,"altitude_deg":17.324474101}]}
+      }
+    },
+    {
+      "site": "sydney",
+      "lat": -33.87,
+      "lon": 151.21,
+      "elevation_m": 0.0,
+      "date": "2026-03-20",
+      "window_start_utc": "2026-03-20T01:55:10Z",
+      "window_end_utc": "2026-03-21T01:55:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-03-20T08:06:56.445Z","unix":1773994016.445},{"kind":"rise","utc":"2026-03-20T19:58:43.594Z","unix":1774036723.594}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-03-20T08:31:50.044Z","unix":1773995510.044},{"kind":"rise","utc":"2026-03-20T19:33:48.020Z","unix":1774035228.02}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-03-20T09:00:53.381Z","unix":1773997253.381},{"kind":"rise","utc":"2026-03-20T19:04:42.753Z","unix":1774033482.753}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-03-20T09:30:15.896Z","unix":1773999015.896},{"kind":"rise","utc":"2026-03-20T18:35:18.625Z","unix":1774031718.625}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T02:02:33.036Z","unix":1773972153.036,"altitude_deg":56.338192056}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-20T08:28:48.550Z","unix":1773995328.55,"h0_deg":0.153139},{"kind":"rise","utc":"2026-03-20T22:10:00.976Z","unix":1774044600.976,"h0_deg":0.155411}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-20T08:33:47.101Z","unix":1773995627.101,"h0_deg":-0.8362},{"kind":"rise","utc":"2026-03-20T22:04:47.310Z","unix":1774044287.31,"h0_deg":-0.83704}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T02:45:33.987Z","unix":1773974733.987,"altitude_deg":47.446686826}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T04:13:26.331Z","unix":1773980006.331},{"kind":"set","utc":"2026-03-20T14:06:04.256Z","unix":1774015564.256}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T09:09:45.291Z","unix":1773997785.291,"altitude_deg":33.199975232}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-20T08:55:14.245Z","unix":1773996914.245},{"kind":"rise","utc":"2026-03-20T21:22:59.960Z","unix":1774041779.96}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T03:08:12.665Z","unix":1773976092.665,"altitude_deg":50.27625776}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T02:01:25.195Z","unix":1773972085.195},{"kind":"set","utc":"2026-03-20T15:38:16.910Z","unix":1774021096.91}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T08:49:51.072Z","unix":1773996591.072,"altitude_deg":72.885245237}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T16:46:34.510Z","unix":1774025194.51},{"kind":"set","utc":"2026-03-21T00:32:15.882Z","unix":1774053135.882}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T20:39:25.202Z","unix":1774039165.202,"altitude_deg":17.327904925}]}
+      }
+    },
+    {
+      "site": "sydney",
+      "lat": -33.87,
+      "lon": 151.21,
+      "elevation_m": 0.0,
+      "date": "2026-06-21",
+      "window_start_utc": "2026-06-21T01:55:10Z",
+      "window_end_utc": "2026-06-22T01:55:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-06-21T06:53:48.549Z","unix":1782024828.549},{"kind":"rise","utc":"2026-06-21T21:00:10.656Z","unix":1782075610.656}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-06-21T07:21:32.371Z","unix":1782026492.371},{"kind":"rise","utc":"2026-06-21T20:32:26.859Z","unix":1782073946.859}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-06-21T07:52:47.238Z","unix":1782028367.238},{"kind":"rise","utc":"2026-06-21T20:01:12.015Z","unix":1782072072.015}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-06-21T08:23:16.061Z","unix":1782030196.061},{"kind":"rise","utc":"2026-06-21T19:30:43.209Z","unix":1782070243.209}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T01:56:53.079Z","unix":1782007013.079,"altitude_deg":32.690290919}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-21T13:34:07.990Z","unix":1782048847.99,"h0_deg":0.121225}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-21T13:38:52.815Z","unix":1782049132.815,"h0_deg":-0.824231},{"kind":"rise","utc":"2026-06-22T01:50:53.916Z","unix":1782093053.916,"h0_deg":-0.82234}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T07:30:31.020Z","unix":1782027031.02,"altitude_deg":54.380768181}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-21T09:01:33.253Z","unix":1782032493.253},{"kind":"rise","utc":"2026-06-21T22:52:50.334Z","unix":1782082370.334}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T03:58:47.516Z","unix":1782014327.516,"altitude_deg":35.165297526}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-21T09:52:26.796Z","unix":1782035546.796},{"kind":"rise","utc":"2026-06-21T23:38:35.386Z","unix":1782085115.386}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T04:45:38.142Z","unix":1782017138.142,"altitude_deg":36.202050203}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-21T09:32:35.881Z","unix":1782034355.881},{"kind":"rise","utc":"2026-06-21T19:51:49.162Z","unix":1782071509.162}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T02:44:10.492Z","unix":1782009850.492,"altitude_deg":72.882742832}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-06-21T10:40:58.974Z","unix":1782038458.974},{"kind":"set","utc":"2026-06-21T18:26:37.201Z","unix":1782066397.201}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T14:33:48.093Z","unix":1782052428.093,"altitude_deg":17.322800579}]}
+      }
+    },
+    {
+      "site": "sydney",
+      "lat": -33.87,
+      "lon": 151.21,
+      "elevation_m": 0.0,
+      "date": "2026-10-17",
+      "window_start_utc": "2026-10-17T01:55:10Z",
+      "window_end_utc": "2026-10-18T01:55:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-10-17T08:09:53.087Z","unix":1792224593.087},{"kind":"rise","utc":"2026-10-17T19:10:39.589Z","unix":1792264239.589}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-10-17T08:35:30.845Z","unix":1792226130.845},{"kind":"rise","utc":"2026-10-17T18:45:02.758Z","unix":1792262702.758}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-10-17T09:05:52.957Z","unix":1792227952.957},{"kind":"rise","utc":"2026-10-17T18:14:41.541Z","unix":1792260881.541}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-10-17T09:37:11.843Z","unix":1792229831.843},{"kind":"rise","utc":"2026-10-17T17:43:23.393Z","unix":1792259003.393}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T01:40:31.381Z","unix":1792287631.381,"altitude_deg":65.697094904}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-10-17T14:19:08.984Z","unix":1792246748.984,"h0_deg":0.090706},{"kind":"rise","utc":"2026-10-18T00:17:05.813Z","unix":1792282625.813,"h0_deg":0.091438}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-10-17T14:24:26.340Z","unix":1792247066.34,"h0_deg":-0.812815},{"kind":"rise","utc":"2026-10-18T00:11:48.654Z","unix":1792282308.654,"h0_deg":-0.813085}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T06:51:25.301Z","unix":1792219885.301,"altitude_deg":83.029055961}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T03:14:17.636Z","unix":1792206857.636},{"kind":"rise","utc":"2026-10-17T16:27:44.785Z","unix":1792254464.785}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T21:49:24.969Z","unix":1792273764.969,"altitude_deg":41.473188471}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T09:10:11.002Z","unix":1792228211.002},{"kind":"rise","utc":"2026-10-17T19:09:05.811Z","unix":1792264145.811}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T02:12:20.918Z","unix":1792203140.918,"altitude_deg":76.190151139}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-10-17T12:07:55.021Z","unix":1792238875.021},{"kind":"set","utc":"2026-10-18T01:44:44.640Z","unix":1792287884.64}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T18:56:19.850Z","unix":1792263379.85,"altitude_deg":72.879357181}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-10-17T02:57:01.854Z","unix":1792205821.854},{"kind":"set","utc":"2026-10-17T10:42:36.612Z","unix":1792233756.612}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T06:49:49.239Z","unix":1792219789.239,"altitude_deg":17.317175601}]}
+      }
+    },
+    {
+      "site": "sydney",
+      "lat": -33.87,
+      "lon": 151.21,
+      "elevation_m": 0.0,
+      "date": "2026-12-21",
+      "window_start_utc": "2026-12-21T01:55:10Z",
+      "window_end_utc": "2026-12-22T01:55:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-12-21T09:05:24.100Z","unix":1797843924.1},{"kind":"rise","utc":"2026-12-21T18:41:07.343Z","unix":1797878467.343}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-12-21T09:34:34.120Z","unix":1797845674.12},{"kind":"rise","utc":"2026-12-21T18:11:57.318Z","unix":1797876717.318}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-12-21T10:10:28.355Z","unix":1797847828.355},{"kind":"rise","utc":"2026-12-21T17:36:03.077Z","unix":1797874563.077}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-12-21T10:49:48.376Z","unix":1797850188.376},{"kind":"rise","utc":"2026-12-21T16:56:43.050Z","unix":1797872203.05}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T01:53:30.687Z","unix":1797904410.687,"altitude_deg":79.566797987}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T06:11:34.817Z","unix":1797833494.817,"h0_deg":0.160432},{"kind":"set","utc":"2026-12-21T16:07:12.196Z","unix":1797869232.196,"h0_deg":0.164612}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T06:05:50.447Z","unix":1797833150.447,"h0_deg":-0.838912},{"kind":"set","utc":"2026-12-21T16:12:59.443Z","unix":1797869579.443,"h0_deg":-0.840507}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T11:09:10.936Z","unix":1797851350.936,"altitude_deg":31.807562063}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-21T12:26:25.496Z","unix":1797855985.496},{"kind":"set","utc":"2026-12-21T23:16:46.523Z","unix":1797895006.523}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T17:51:36.098Z","unix":1797875496.098,"altitude_deg":42.749580377}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T05:20:47.871Z","unix":1797830447.871},{"kind":"rise","utc":"2026-12-21T16:04:30.618Z","unix":1797869070.618}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T22:42:41.406Z","unix":1797892961.406,"altitude_deg":69.09987613}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-21T07:52:21.757Z","unix":1797839541.757},{"kind":"set","utc":"2026-12-21T21:29:12.710Z","unix":1797888552.71}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T14:40:47.251Z","unix":1797864047.251,"altitude_deg":72.883089789}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T06:27:02.692Z","unix":1797834422.692},{"kind":"rise","utc":"2026-12-21T22:37:29.771Z","unix":1797892649.771}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T02:34:14.204Z","unix":1797820454.204,"altitude_deg":17.320795318}]}
+      }
+    },
+    {
+      "site": "sydney",
+      "lat": -33.87,
+      "lon": 151.21,
+      "elevation_m": 0.0,
+      "date": "2030-08-01",
+      "window_start_utc": "2030-08-01T01:55:10Z",
+      "window_end_utc": "2030-08-02T01:55:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2030-08-01T07:15:32.310Z","unix":1911798932.31},{"kind":"rise","utc":"2030-08-01T20:47:04.743Z","unix":1911847624.743}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2030-08-01T07:41:56.823Z","unix":1911800516.823},{"kind":"rise","utc":"2030-08-01T20:20:43.484Z","unix":1911846043.484}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2030-08-01T08:11:59.206Z","unix":1911802319.206},{"kind":"rise","utc":"2030-08-01T19:50:44.186Z","unix":1911844244.186}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2030-08-01T08:41:32.126Z","unix":1911804092.126},{"kind":"rise","utc":"2030-08-01T19:21:13.788Z","unix":1911842473.788}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T02:01:42.849Z","unix":1911780102.849,"altitude_deg":38.100134252}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-01T09:01:52.481Z","unix":1911805312.481,"h0_deg":0.120386},{"kind":"rise","utc":"2030-08-01T22:02:24.347Z","unix":1911852144.347,"h0_deg":0.123669}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-01T09:06:39.565Z","unix":1911805599.565,"h0_deg":-0.82394},{"kind":"rise","utc":"2030-08-01T21:57:43.057Z","unix":1911851863.057,"h0_deg":-0.825152}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T03:15:20.765Z","unix":1911784520.765,"altitude_deg":48.200094856}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T15:06:34.762Z","unix":1911827194.762},{"kind":"rise","utc":"2030-08-02T01:28:07.311Z","unix":1911864487.311}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T08:19:13.912Z","unix":1911802753.912,"altitude_deg":72.501840644}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T05:32:07.561Z","unix":1911792727.561},{"kind":"rise","utc":"2030-08-01T19:34:04.851Z","unix":1911843244.851}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T00:33:56.913Z","unix":1911861236.913,"altitude_deg":33.970353302}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T06:51:28.367Z","unix":1911797488.367},{"kind":"rise","utc":"2030-08-01T17:10:39.254Z","unix":1911834639.254}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T23:59:05.883Z","unix":1911859145.883,"altitude_deg":72.889340216}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2030-08-01T07:59:50.492Z","unix":1911801590.492},{"kind":"set","utc":"2030-08-01T15:45:22.338Z","unix":1911829522.338}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T11:52:36.421Z","unix":1911815556.421,"altitude_deg":17.3124286}]}
+      }
+    },
+    {
+      "site": "tromso",
+      "lat": 69.65,
+      "lon": 18.96,
+      "elevation_m": 0.0,
+      "date": "2026-01-15",
+      "window_start_utc": "2026-01-15T10:44:10Z",
+      "window_end_utc": "2026-01-16T10:44:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-01-15T11:18:07.958Z","unix":1768475887.958},{"kind":"rise","utc":"2026-01-16T10:13:33.190Z","unix":1768558413.19}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-01-15T13:50:42.347Z","unix":1768485042.347},{"kind":"rise","utc":"2026-01-16T07:54:18.490Z","unix":1768550058.49}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-01-15T15:20:05.550Z","unix":1768490405.55},{"kind":"rise","utc":"2026-01-16T06:25:51.317Z","unix":1768544751.317}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-01-15T16:34:09.584Z","unix":1768494849.584},{"kind":"rise","utc":"2026-01-16T05:12:10.317Z","unix":1768540330.317}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T10:53:54.038Z","unix":1768474434.038,"altitude_deg":-0.729521097}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[],"always_up":false,"always_down":true},"horizon_upper_limb":{"h0_deg":null,"crossings":[],"always_up":false,"always_down":true},"transits":[{"utc":"2026-01-16T08:54:47.230Z","unix":1768553687.23,"altitude_deg":-8.833473428}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-01-15T22:26:38.512Z","unix":1768515998.512,"altitude_deg":42.661463989}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":false,"always_down":true},"transits":[{"utc":"2026-01-15T11:03:36.884Z","unix":1768475016.884,"altitude_deg":-1.304196696}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T19:15:12.566Z","unix":1768504512.566},{"kind":"set","utc":"2026-01-16T00:22:53.898Z","unix":1768522973.898}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T21:49:03.234Z","unix":1768513743.234,"altitude_deg":3.597102519}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-01-16T09:38:34.993Z","unix":1768556314.993,"altitude_deg":59.155495727}]}
+      }
+    },
+    {
+      "site": "tromso",
+      "lat": 69.65,
+      "lon": 18.96,
+      "elevation_m": 0.0,
+      "date": "2026-03-20",
+      "window_start_utc": "2026-03-20T10:44:10Z",
+      "window_end_utc": "2026-03-21T10:44:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-03-20T17:01:29.796Z","unix":1774026089.796},{"kind":"rise","utc":"2026-03-21T04:39:21.672Z","unix":1774067961.672}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-03-20T18:02:04.403Z","unix":1774029724.403},{"kind":"rise","utc":"2026-03-21T03:39:03.462Z","unix":1774064343.462}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-03-20T19:19:21.339Z","unix":1774034361.339},{"kind":"rise","utc":"2026-03-21T02:21:59.982Z","unix":1774059719.982}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-03-20T21:04:41.834Z","unix":1774040681.834},{"kind":"rise","utc":"2026-03-21T00:36:49.282Z","unix":1774053409.282}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T10:52:17.356Z","unix":1774003937.356,"altitude_deg":20.283532527}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-20T20:27:02.784Z","unix":1774038422.784,"h0_deg":0.155166},{"kind":"rise","utc":"2026-03-21T03:48:51.023Z","unix":1774064931.023,"h0_deg":0.156139}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-20T20:42:51.989Z","unix":1774039371.989,"h0_deg":-0.836957},{"kind":"rise","utc":"2026-03-21T03:33:26.865Z","unix":1774064006.865,"h0_deg":-0.837295}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T12:07:15.109Z","unix":1774008435.109,"altitude_deg":30.007834698}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-03-20T17:57:21.172Z","unix":1774029441.172,"altitude_deg":43.278269693}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-20T19:12:44.817Z","unix":1774033964.817},{"kind":"rise","utc":"2026-03-21T04:40:56.233Z","unix":1774068056.233}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T11:58:30.810Z","unix":1774007910.81,"altitude_deg":26.386749192}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T15:03:36.365Z","unix":1774019016.365},{"kind":"set","utc":"2026-03-20T20:11:12.393Z","unix":1774037472.393}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T17:37:24.381Z","unix":1774028244.381,"altitude_deg":3.594747746}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-03-21T05:26:58.566Z","unix":1774070818.566,"altitude_deg":59.152097746}]}
+      }
+    },
+    {
+      "site": "tromso",
+      "lat": 69.65,
+      "lon": 18.96,
+      "elevation_m": 0.0,
+      "date": "2026-06-21",
+      "window_start_utc": "2026-06-21T10:44:10Z",
+      "window_end_utc": "2026-06-22T10:44:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[],"always_up":true,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[],"always_up":true,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[],"always_up":true,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-06-21T10:45:57.916Z","unix":1782038757.916,"altitude_deg":43.786170134}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-21T22:02:51.704Z","unix":1782079371.704,"h0_deg":0.117676}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-21T22:13:37.925Z","unix":1782080017.925,"h0_deg":-0.82289}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T16:21:24.690Z","unix":1782058884.69,"altitude_deg":18.379490876}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-06-21T12:46:34.795Z","unix":1782045994.795,"altitude_deg":41.299100587}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-22T01:07:45.976Z","unix":1782090465.976},{"kind":"rise","utc":"2026-06-22T02:03:40.088Z","unix":1782093820.088}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T13:34:13.605Z","unix":1782048853.605,"altitude_deg":40.156793407}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-21T14:05:34.682Z","unix":1782050734.682},{"kind":"rise","utc":"2026-06-22T08:53:56.983Z","unix":1782118436.983}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T11:31:43.819Z","unix":1782041503.819,"altitude_deg":3.597279103}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-06-21T23:21:21.456Z","unix":1782084081.456,"altitude_deg":59.157231169}]}
+      }
+    },
+    {
+      "site": "tromso",
+      "lat": 69.65,
+      "lon": 18.96,
+      "elevation_m": 0.0,
+      "date": "2026-10-17",
+      "window_start_utc": "2026-10-17T10:44:10Z",
+      "window_end_utc": "2026-10-18T10:44:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-10-17T14:54:06.444Z","unix":1792248846.444},{"kind":"rise","utc":"2026-10-18T06:07:33.471Z","unix":1792303653.471}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-10-17T15:56:39.379Z","unix":1792252599.379},{"kind":"rise","utc":"2026-10-18T05:04:24.013Z","unix":1792299864.013}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-10-17T17:05:47.369Z","unix":1792256747.369},{"kind":"rise","utc":"2026-10-18T03:54:50.956Z","unix":1792295690.956}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-10-17T18:16:52.575Z","unix":1792261012.575},{"kind":"rise","utc":"2026-10-18T02:43:29.457Z","unix":1792291409.457}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T10:28:40.368Z","unix":1792319320.368,"altitude_deg":10.646168281}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[],"always_up":false,"always_down":true},"horizon_upper_limb":{"h0_deg":null,"crossings":[],"always_up":false,"always_down":true},"transits":[{"utc":"2026-10-17T16:03:14.922Z","unix":1792252994.922,"altitude_deg":-6.891920591}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T15:48:29.156Z","unix":1792252109.156},{"kind":"rise","utc":"2026-10-17T21:29:21.820Z","unix":1792272561.82}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T06:37:05.401Z","unix":1792305425.401,"altitude_deg":34.989192382}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T12:12:14.236Z","unix":1792239134.236},{"kind":"rise","utc":"2026-10-18T09:31:51.659Z","unix":1792315911.659}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T10:59:44.290Z","unix":1792234784.29,"altitude_deg":0.369870635}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-10-18T01:09:58.531Z","unix":1792285798.531},{"kind":"set","utc":"2026-10-18T06:17:47.817Z","unix":1792304267.817}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T03:43:53.176Z","unix":1792295033.176,"altitude_deg":3.600634193}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-10-17T15:37:22.575Z","unix":1792251442.575,"altitude_deg":59.162815948}]}
+      }
+    },
+    {
+      "site": "tromso",
+      "lat": 69.65,
+      "lon": 18.96,
+      "elevation_m": 0.0,
+      "date": "2026-12-21",
+      "window_start_utc": "2026-12-21T10:44:10Z",
+      "window_end_utc": "2026-12-22T10:44:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[],"always_up":false,"always_down":true},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-12-21T12:53:07.795Z","unix":1797857587.795},{"kind":"rise","utc":"2026-12-22T08:31:44.987Z","unix":1797928304.987}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-12-21T14:37:40.589Z","unix":1797863860.589},{"kind":"rise","utc":"2026-12-22T06:47:12.535Z","unix":1797922032.535}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-12-21T15:56:03.790Z","unix":1797868563.79},{"kind":"rise","utc":"2026-12-22T05:28:49.432Z","unix":1797917329.432}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T10:42:42.149Z","unix":1797936162.149,"altitude_deg":-3.088574368}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[],"always_up":true,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-12-21T20:28:30.051Z","unix":1797884910.051,"altitude_deg":44.459045106}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T11:30:03.335Z","unix":1797852603.335},{"kind":"rise","utc":"2026-12-21T17:52:10.684Z","unix":1797875530.684}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T02:39:08.879Z","unix":1797907148.879,"altitude_deg":33.734666707}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T11:08:08.117Z","unix":1797851288.117},{"kind":"rise","utc":"2026-12-22T03:57:28.569Z","unix":1797911848.569}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T07:31:04.321Z","unix":1797924664.321,"altitude_deg":7.289588278}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-21T20:54:30.144Z","unix":1797886470.144},{"kind":"set","utc":"2026-12-22T02:02:10.973Z","unix":1797904930.973}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T23:28:20.561Z","unix":1797895700.561,"altitude_deg":3.596877994}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2026-12-21T11:21:47.543Z","unix":1797852107.543,"altitude_deg":59.159180817}]}
+      }
+    },
+    {
+      "site": "tromso",
+      "lat": 69.65,
+      "lon": 18.96,
+      "elevation_m": 0.0,
+      "date": "2030-08-01",
+      "window_start_utc": "2030-08-01T10:44:10Z",
+      "window_end_utc": "2030-08-02T10:44:10Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2030-08-01T21:12:56.609Z","unix":1911849176.609},{"kind":"rise","utc":"2030-08-02T00:29:03.489Z","unix":1911860943.489}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[],"always_up":true,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[],"always_up":true,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2030-08-01T10:50:09.007Z","unix":1911811809.007,"altitude_deg":38.283490336}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-01T19:03:20.131Z","unix":1911841400.131,"h0_deg":0.122917},{"kind":"rise","utc":"2030-08-02T06:47:59.543Z","unix":1911883679.543,"h0_deg":0.125864}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-01T19:14:20.265Z","unix":1911842060.265,"h0_deg":-0.824893},{"kind":"rise","utc":"2030-08-02T06:36:12.512Z","unix":1911882972.512,"h0_deg":-0.825961}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T12:10:06.694Z","unix":1911816606.694,"altitude_deg":24.991126787}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2030-08-01T14:26:05.036Z","unix":1911824765.036},{"kind":"set","utc":"2030-08-01T19:47:33.344Z","unix":1911844053.344}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T17:06:49.317Z","unix":1911834409.317,"altitude_deg":3.970863398}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2030-08-02T09:23:08.896Z","unix":1911892988.896,"altitude_deg":42.460605052}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T11:24:18.477Z","unix":1911813858.477},{"kind":"rise","utc":"2030-08-02T06:12:55.775Z","unix":1911881575.775}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T08:46:39.215Z","unix":1911890799.215,"altitude_deg":3.59068037}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[],"always_up":true,"always_down":false},"transits":[{"utc":"2030-08-01T20:40:09.774Z","unix":1911847209.774,"altitude_deg":59.167594261}]}
+      }
+    },
+    {
+      "site": "quito",
+      "lat": 0.0,
+      "lon": -78.5,
+      "elevation_m": 2800.0,
+      "date": "2026-01-15",
+      "window_start_utc": "2026-01-15T17:14:00Z",
+      "window_end_utc": "2026-01-16T17:14:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-01-15T23:27:07.087Z","unix":1768519627.087},{"kind":"rise","utc":"2026-01-16T11:20:10.308Z","unix":1768562410.308}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-01-15T23:49:15.835Z","unix":1768520955.835},{"kind":"rise","utc":"2026-01-16T10:58:02.343Z","unix":1768561082.343}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-01-16T00:15:01.311Z","unix":1768522501.311},{"kind":"rise","utc":"2026-01-16T10:32:17.666Z","unix":1768559537.666}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-01-16T00:40:52.093Z","unix":1768524052.093},{"kind":"rise","utc":"2026-01-16T10:06:27.582Z","unix":1768557987.582}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T17:23:31.047Z","unix":1768497811.047,"altitude_deg":68.972540911}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T20:54:20.472Z","unix":1768510460.472,"h0_deg":0.092392},{"kind":"rise","utc":"2026-01-16T09:29:59.473Z","unix":1768555799.473,"h0_deg":0.09418}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-01-15T20:58:36.178Z","unix":1768510716.178,"h0_deg":-0.813455},{"kind":"rise","utc":"2026-01-16T09:25:42.845Z","unix":1768555542.845,"h0_deg":-0.814116}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T15:38:39.631Z","unix":1768577919.631,"altitude_deg":61.388171249}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T22:53:55.063Z","unix":1768517635.063},{"kind":"set","utc":"2026-01-16T10:56:32.971Z","unix":1768560992.971}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T04:55:13.698Z","unix":1768539313.698,"altitude_deg":67.68219773}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-01-15T23:36:10.605Z","unix":1768520170.605},{"kind":"rise","utc":"2026-01-16T11:32:00.018Z","unix":1768563120.018}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-15T17:33:27.265Z","unix":1768498407.265,"altitude_deg":68.406420593}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-01-15T22:16:27.103Z","unix":1768515387.103},{"kind":"set","utc":"2026-01-16T10:19:12.446Z","unix":1768558752.446}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T04:17:49.794Z","unix":1768537069.794,"altitude_deg":73.247084614}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-01-15T22:13:12.497Z","unix":1768515192.497},{"kind":"rise","utc":"2026-01-16T10:05:26.436Z","unix":1768557926.436}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-01-16T16:07:21.538Z","unix":1768579641.538,"altitude_deg":51.194527041}]}
+      }
+    },
+    {
+      "site": "quito",
+      "lat": 0.0,
+      "lon": -78.5,
+      "elevation_m": 2800.0,
+      "date": "2026-03-20",
+      "window_start_utc": "2026-03-20T17:14:00Z",
+      "window_end_utc": "2026-03-21T17:14:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-03-20T23:24:37.178Z","unix":1774049077.178},{"kind":"rise","utc":"2026-03-21T11:17:49.576Z","unix":1774091869.576}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-03-20T23:45:16.938Z","unix":1774050316.938},{"kind":"rise","utc":"2026-03-21T10:57:09.797Z","unix":1774090629.797}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-03-21T00:09:16.655Z","unix":1774051756.655},{"kind":"rise","utc":"2026-03-21T10:33:10.059Z","unix":1774089190.059}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-03-21T00:33:16.381Z","unix":1774053196.381},{"kind":"rise","utc":"2026-03-21T10:09:10.315Z","unix":1774087750.315}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T17:21:22.251Z","unix":1774027282.251,"altitude_deg":89.957243019}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-21T00:47:39.505Z","unix":1774054059.505,"h0_deg":0.155765},{"kind":"rise","utc":"2026-03-21T13:23:49.385Z","unix":1774099429.385,"h0_deg":0.157093}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-03-21T00:51:53.749Z","unix":1774054313.749,"h0_deg":-0.837177},{"kind":"rise","utc":"2026-03-21T13:19:30.520Z","unix":1774099170.52,"h0_deg":-0.837668}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T18:38:50.748Z","unix":1774031930.748,"altitude_deg":77.526832397}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T18:24:39.915Z","unix":1774031079.915},{"kind":"set","utc":"2026-03-21T06:27:40.385Z","unix":1774074460.385}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-21T00:26:10.190Z","unix":1774052770.19,"altitude_deg":67.071926837}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-21T00:30:06.946Z","unix":1774053006.946},{"kind":"rise","utc":"2026-03-21T12:25:52.235Z","unix":1774095952.235}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-20T18:27:39.196Z","unix":1774031259.196,"altitude_deg":83.825635427}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-03-20T18:04:48.242Z","unix":1774029888.242},{"kind":"set","utc":"2026-03-21T06:07:33.581Z","unix":1774073253.581}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-21T00:06:10.931Z","unix":1774051570.931,"altitude_deg":73.244741927}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-03-20T18:01:36.042Z","unix":1774029696.042},{"kind":"rise","utc":"2026-03-21T05:53:50.010Z","unix":1774072430.01}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-03-21T11:55:45.106Z","unix":1774094145.106,"altitude_deg":51.197899773}]}
+      }
+    },
+    {
+      "site": "quito",
+      "lat": 0.0,
+      "lon": -78.5,
+      "elevation_m": 2800.0,
+      "date": "2026-06-21",
+      "window_start_utc": "2026-06-21T17:14:00Z",
+      "window_end_utc": "2026-06-22T17:14:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-06-21T23:19:32.557Z","unix":1782083972.557},{"kind":"rise","utc":"2026-06-22T11:12:24.329Z","unix":1782126744.329}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-06-21T23:42:04.808Z","unix":1782085324.808},{"kind":"rise","utc":"2026-06-22T10:49:52.103Z","unix":1782125392.103}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-06-22T00:08:18.395Z","unix":1782086898.395},{"kind":"rise","utc":"2026-06-22T10:23:38.542Z","unix":1782123818.542}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-06-22T00:34:39.003Z","unix":1782088479.003},{"kind":"rise","utc":"2026-06-22T09:57:17.955Z","unix":1782122237.955}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T17:15:51.969Z","unix":1782062151.969,"altitude_deg":66.561591593}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-22T05:20:11.002Z","unix":1782105611.002,"h0_deg":0.114764}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-06-22T05:24:03.083Z","unix":1782105843.083,"h0_deg":-0.821816}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T23:13:42.566Z","unix":1782083622.566,"altitude_deg":87.173076231}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-22T01:17:18.363Z","unix":1782091038.363},{"kind":"rise","utc":"2026-06-22T13:10:56.195Z","unix":1782133856.195}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T19:15:39.681Z","unix":1782069339.681,"altitude_deg":69.061537855}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-22T02:07:20.159Z","unix":1782094040.159},{"kind":"rise","utc":"2026-06-22T14:02:54.595Z","unix":1782136974.595}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T20:04:49.481Z","unix":1782072289.481,"altitude_deg":70.27836948}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-06-22T00:01:53.017Z","unix":1782086513.017},{"kind":"rise","utc":"2026-06-22T11:55:11.767Z","unix":1782129311.767}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-21T18:00:30.366Z","unix":1782064830.366,"altitude_deg":73.247294606}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-06-21T23:48:12.883Z","unix":1782085692.883},{"kind":"set","utc":"2026-06-22T11:52:03.054Z","unix":1782129123.054}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-06-22T05:50:07.982Z","unix":1782107407.982,"altitude_deg":51.192745015}]}
+      }
+    },
+    {
+      "site": "quito",
+      "lat": 0.0,
+      "lon": -78.5,
+      "elevation_m": 2800.0,
+      "date": "2026-10-17",
+      "window_start_utc": "2026-10-17T17:14:00Z",
+      "window_end_utc": "2026-10-18T17:14:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-10-17T23:02:38.269Z","unix":1792278158.269},{"kind":"rise","utc":"2026-10-18T10:55:47.977Z","unix":1792320947.977}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-10-17T23:23:35.550Z","unix":1792279415.55},{"kind":"rise","utc":"2026-10-18T10:34:50.061Z","unix":1792319690.061}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-10-17T23:47:56.115Z","unix":1792280876.115},{"kind":"rise","utc":"2026-10-18T10:10:28.844Z","unix":1792318228.844}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-10-18T00:12:17.711Z","unix":1792282337.711},{"kind":"rise","utc":"2026-10-18T09:46:06.674Z","unix":1792316766.674}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T16:59:05.011Z","unix":1792342745.011,"altitude_deg":80.199946572}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-10-18T04:49:58.376Z","unix":1792298998.376,"h0_deg":0.091894}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2026-10-18T04:54:06.508Z","unix":1792299246.508,"h0_deg":-0.813267}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T22:43:00.480Z","unix":1792276980.48,"altitude_deg":63.844845178}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T19:10:56.290Z","unix":1792264256.29},{"kind":"rise","utc":"2026-10-18T07:04:35.766Z","unix":1792307075.766}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T13:06:06.224Z","unix":1792328766.224,"altitude_deg":75.372794862}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-17T23:28:23.864Z","unix":1792279703.864},{"kind":"rise","utc":"2026-10-18T11:20:43.263Z","unix":1792322443.263}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T17:27:33.843Z","unix":1792258053.843,"altitude_deg":70.094313663}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-10-18T04:11:17.042Z","unix":1792296677.042},{"kind":"set","utc":"2026-10-18T16:14:02.395Z","unix":1792340042.395}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-18T10:12:39.739Z","unix":1792318359.739,"altitude_deg":73.25062799}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-10-18T04:08:04.177Z","unix":1792296484.177},{"kind":"rise","utc":"2026-10-18T16:00:18.062Z","unix":1792339218.062}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-10-17T22:06:09.104Z","unix":1792274769.104,"altitude_deg":51.187190914}]}
+      }
+    },
+    {
+      "site": "quito",
+      "lat": 0.0,
+      "lon": -78.5,
+      "elevation_m": 2800.0,
+      "date": "2026-12-21",
+      "window_start_utc": "2026-12-21T17:14:00Z",
+      "window_end_utc": "2026-12-22T17:14:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2026-12-21T23:15:55.155Z","unix":1797894955.155},{"kind":"rise","utc":"2026-12-22T11:08:55.223Z","unix":1797937735.223}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2026-12-21T23:38:27.675Z","unix":1797896307.675},{"kind":"rise","utc":"2026-12-22T10:46:22.712Z","unix":1797936382.712}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2026-12-22T00:04:41.578Z","unix":1797897881.578},{"kind":"rise","utc":"2026-12-22T10:20:08.818Z","unix":1797934808.818}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2026-12-22T00:31:02.505Z","unix":1797899462.505},{"kind":"rise","utc":"2026-12-22T09:53:47.897Z","unix":1797933227.897}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T17:12:40.190Z","unix":1797959560.19,"altitude_deg":66.564425038}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T21:00:05.446Z","unix":1797886805.446,"h0_deg":0.166526},{"kind":"set","utc":"2026-12-22T09:21:00.190Z","unix":1797931260.19,"h0_deg":0.170865}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"rise","utc":"2026-12-21T20:55:27.212Z","unix":1797886527.212,"h0_deg":-0.841191},{"kind":"set","utc":"2026-12-22T09:25:43.846Z","unix":1797931543.846,"h0_deg":-0.842835}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T03:09:31.792Z","unix":1797908971.792,"altitude_deg":63.895129528}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-22T03:06:33.652Z","unix":1797908793.652},{"kind":"set","utc":"2026-12-22T15:09:10.937Z","unix":1797952150.937}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T09:07:52.208Z","unix":1797930472.208,"altitude_deg":76.6109696}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T20:03:48.675Z","unix":1797883428.675},{"kind":"rise","utc":"2026-12-22T07:59:01.662Z","unix":1797926341.662}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T14:01:13.430Z","unix":1797948073.43,"altitude_deg":76.879957997}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2026-12-21T23:55:44.432Z","unix":1797897344.432},{"kind":"set","utc":"2026-12-22T11:58:29.780Z","unix":1797940709.78}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-22T05:57:07.126Z","unix":1797919027.126,"altitude_deg":73.24685441}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2026-12-21T23:52:29.150Z","unix":1797897149.15},{"kind":"rise","utc":"2026-12-22T11:44:43.064Z","unix":1797939883.064}],"always_up":false,"always_down":false},"transits":[{"utc":"2026-12-21T17:50:34.082Z","unix":1797875434.082,"altitude_deg":51.190836993}]}
+      }
+    },
+    {
+      "site": "quito",
+      "lat": 0.0,
+      "lon": -78.5,
+      "elevation_m": 2800.0,
+      "date": "2030-08-01",
+      "window_start_utc": "2030-08-01T17:14:00Z",
+      "window_end_utc": "2030-08-02T17:14:00Z",
+      "objects": {
+        "sun": {"horizon":{"h0_deg":-0.8333,"crossings":[{"kind":"set","utc":"2030-08-01T23:23:49.723Z","unix":1911857029.723},{"kind":"rise","utc":"2030-08-02T11:16:48.889Z","unix":1911899808.889}],"always_up":false,"always_down":false},"civil":{"h0_deg":-6.0,"crossings":[{"kind":"set","utc":"2030-08-01T23:45:32.284Z","unix":1911858332.284},{"kind":"rise","utc":"2030-08-02T10:55:07.192Z","unix":1911898507.192}],"always_up":false,"always_down":false},"nautical":{"h0_deg":-12.0,"crossings":[{"kind":"set","utc":"2030-08-02T00:10:46.566Z","unix":1911859846.566},{"kind":"rise","utc":"2030-08-02T10:29:53.794Z","unix":1911896993.794}],"always_up":false,"always_down":false},"astronomical":{"h0_deg":-18.0,"crossings":[{"kind":"set","utc":"2030-08-02T00:36:04.455Z","unix":1911861364.455},{"kind":"rise","utc":"2030-08-02T10:04:36.679Z","unix":1911895476.679}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T17:20:24.443Z","unix":1911835224.443,"altitude_deg":72.13262985}]},
+        "moon": {"horizon":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-02T01:08:12.109Z","unix":1911863292.109,"h0_deg":0.124446},{"kind":"rise","utc":"2030-08-02T13:40:19.153Z","unix":1911908419.153,"h0_deg":0.127575}],"always_up":false,"always_down":false},"horizon_upper_limb":{"h0_deg":null,"crossings":[{"kind":"set","utc":"2030-08-02T01:12:07.717Z","unix":1911863527.717,"h0_deg":-0.825456},{"kind":"rise","utc":"2030-08-02T13:36:22.709Z","unix":1911908182.709,"h0_deg":-0.826615}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T19:01:19.685Z","unix":1911841279.685,"altitude_deg":85.829228962}]},
+        "jupiter": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2030-08-01T17:34:15.892Z","unix":1911836055.892},{"kind":"set","utc":"2030-08-02T05:37:06.687Z","unix":1911879426.687}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-01T23:35:41.077Z","unix":1911857741.077,"altitude_deg":73.616214484}]},
+        "venus": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T21:55:00.077Z","unix":1911851700.077},{"kind":"rise","utc":"2030-08-02T09:50:45.635Z","unix":1911894645.635}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T15:53:33.532Z","unix":1911916413.532,"altitude_deg":67.922965582}]},
+        "sirius": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"set","utc":"2030-08-01T21:20:44.317Z","unix":1911849644.317},{"kind":"rise","utc":"2030-08-02T09:14:03.065Z","unix":1911892443.065}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T15:15:25.767Z","unix":1911914125.767,"altitude_deg":73.240694952}]},
+        "vega": {"horizon":{"h0_deg":-0.5667,"crossings":[{"kind":"rise","utc":"2030-08-01T21:07:01.177Z","unix":1911848821.177},{"kind":"set","utc":"2030-08-02T09:10:51.389Z","unix":1911892251.389}],"always_up":false,"always_down":false},"transits":[{"utc":"2030-08-02T03:08:56.297Z","unix":1911870536.297,"altitude_deg":51.182388736}]}
+      }
+    }
+  ]
+}

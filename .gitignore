@@ -1,0 +1,18 @@
+# Build output and local machine state
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+
+# Signing material and API credentials: never commit
+*.jks
+*.keystore
+*.p8
+*.p12
+keystore.properties
+*service-account*.json
+play-*.json

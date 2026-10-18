@@ -1,0 +1,351 @@
+package net.kuecker.lodestar.kit.catalog
+
+/**
+ * A text an object can be found by, and which of the object's displayed texts it stands for.
+ *
+ * @property entry 0 is the object's name, then come its designations, then its alternate names.
+ */
+internal class KeyText(val text: String, val entry: Int)
+
+/** A finished object together with the texts it can be found by. */
+internal class ObjectDraft(val obj: CelestialObject, val keys: List<KeyText>) {
+    companion object {
+        /** A draft whose keys are the object's name, designations and alternate names as displayed (Swift `init(plain:)`). */
+        fun plain(obj: CelestialObject): ObjectDraft {
+            val keys = ArrayList<KeyText>(1 + obj.designations.size + obj.alternateNames.size)
+            keys.add(KeyText(obj.name, 0))
+            for ((index, designation) in obj.designations.withIndex()) {
+                keys.add(KeyText(designation, index + 1))
+            }
+            for ((index, name) in obj.alternateNames.withIndex()) {
+                keys.add(KeyText(name, obj.designations.size + index + 1))
+            }
+            return ObjectDraft(obj, keys)
+        }
+    }
+}
+
+/** The constellations by IAU abbreviation (case-insensitive). */
+internal class ConstellationDirectory(val constellations: List<Constellation>) {
+    private val indexByAbbreviation: Map<String, Int>
+
+    /** The same by the abbreviation as spelled in the data, which the records of the catalog use. */
+    private val indexByExactAbbreviation: Map<String, Int>
+
+    init {
+        val index = HashMap<String, Int>()
+        val exact = HashMap<String, Int>()
+        for ((offset, constellation) in constellations.withIndex()) {
+            index[constellation.abbreviation.lowercase(java.util.Locale.ROOT)] = offset
+            exact[constellation.abbreviation] = offset
+        }
+        indexByAbbreviation = index
+        indexByExactAbbreviation = exact
+    }
+
+    /** The constellation with an IAU abbreviation, ignoring case. */
+    fun constellation(abbreviation: String): Constellation? {
+        // Lower-casing makes a copy; the catalog's own records spell the abbreviations as the file does.
+        val offset = indexByExactAbbreviation[abbreviation] ?: indexByAbbreviation[abbreviation.lowercase(java.util.Locale.ROOT)]
+        return if (offset != null) constellations[offset] else null
+    }
+}
+
+/** How the catalog identifiers of the deep-sky data are written and abbreviated for people. */
+internal object CatalogDesignation {
+    /**
+     * One designation as shown and the other ways people type it.
+     *
+     * @property display The form shown ("Caldwell 14").
+     * @property aliases Other forms people type ("C 14").
+     */
+    class Spelling(val display: String, val aliases: List<String>)
+
+    /** The form shown and the other spellings of an OpenNGC identifier prefix. */
+    private class Names(val display: String, val aliases: List<String>)
+
+    /** Prefix of an OpenNGC identifier → the form shown and the other spellings of the prefix. */
+    private val prefixes: Map<String, Names> = mapOf(
+        "M" to Names("M", listOf("Messier")),
+        "NGC" to Names("NGC", emptyList()),
+        "IC" to Names("IC", emptyList()),
+        "C" to Names("Caldwell", listOf("C")),
+        "Mel" to Names("Melotte", listOf("Mel")),
+        "B" to Names("Barnard", listOf("B")),
+        "H" to Names("Harvard", listOf("H")),
+        "Cl" to Names("Collinder", listOf("Cl", "Cr")),
+        "ESO" to Names("ESO", emptyList()),
+        "HCG" to Names("HCG", listOf("Hickson")),
+        "MWSC" to Names("MWSC", emptyList()),
+        "PGC" to Names("PGC", emptyList()),
+        "UGC" to Names("UGC", emptyList()),
+    )
+
+    /** The spelling of an OpenNGC identifier such as `M31`, `C14`, `ESO56-115` or `IC2431_NED02`. */
+    fun spelling(id: String): Spelling {
+        var prefixLength = 0
+        while (prefixLength < id.length && isAsciiLetter(id[prefixLength])) prefixLength += 1
+        val prefix = id.substring(0, prefixLength)
+        val number = id.substring(prefixLength).replace('_', ' ')
+        if (prefix.isEmpty() || number.isEmpty()) {
+            return Spelling(id.replace('_', ' '), emptyList())
+        }
+        val known = prefixes[prefix]
+        val display = known?.display ?: prefix
+        val aliases = known?.aliases ?: emptyList()
+        return Spelling("$display $number", aliases.map { "$it $number" })
+    }
+
+    private fun isAsciiLetter(character: Char): Boolean = character in 'a'..'z' || character in 'A'..'Z'
+}
+
+/** Turns validated records into catalog objects and the texts they are found by. */
+internal object CatalogFactory {
+    const val lightYearsPerParsec: Double = 3.261_563_777_167_433
+
+    /** Stars without a proper name that are brighter than this appear in browse lists. */
+    const val maximumListedStarMagnitude: Double = 3.5
+
+    /** Popular names of a few stars that the star data does not have, by Hipparcos number. */
+    val popularNames: Map<Int, List<String>> = mapOf(
+        11767 to listOf("North Star", "Pole Star", "Lodestar"), // Polaris
+        32349 to listOf("Dog Star"), // Sirius
+    )
+
+    /** The Hipparcos number of 3C 273, the one entry of the star data that is a quasar and not a star. */
+    const val quasarHipparcosNumber: Int = 60936
+
+    private const val quasarNote = "A quasar: the glowing core of a distant galaxy, about 2.4 billion light-years away, " +
+        "and not a star. It is among the brightest quasars in the sky but still needs a telescope to be seen."
+
+    private val NO_SUFFIX = listOf("")
+
+    /** A Bayer designation split into its Greek letter and superscript digits ("α¹" → "α" and "¹"). */
+    private class BayerLabel(val glyph: String, val suffix: String, val letter: GreekAlphabet.Letter?) {
+        companion object {
+            fun create(text: String): BayerLabel? {
+                if (text.isEmpty()) return null
+                val first = text.codePointAt(0)
+                return BayerLabel(
+                    glyph = String(Character.toChars(first)),
+                    suffix = text.substring(Character.charCount(first)),
+                    letter = GreekAlphabet.letter(first),
+                )
+            }
+        }
+    }
+
+    /**
+     * Creates a star. [duplicates] are deep-sky records that describe the same star; their
+     * designations and names are added to it, and so are the popular names the star may have. The
+     * quasar 3C 273 that the star data contains is created as an object of category `OTHER` with an
+     * explanatory note.
+     */
+    fun star(
+        entry: StarEntry,
+        constellations: ConstellationDirectory,
+        duplicates: List<DeepSkyEntry> = emptyList(),
+    ): ObjectDraft {
+        val constellation = entry.constellation?.let { constellations.constellation(it) }
+        val abbreviation = constellation?.abbreviation ?: entry.constellation
+        val genitive = constellation?.genitive
+
+        val designations = ArrayList<String>()
+        // Spelling variants of designations; the entry refers to the designation they stand for.
+        val variants = ArrayList<KeyText>()
+
+        var bayerName: String? = null
+        val label = if (abbreviation != null) entry.bayer?.let { BayerLabel.create(it) } else null
+        if (abbreviation != null && label != null) {
+            val short = "${label.glyph}${label.suffix} $abbreviation"
+            designations.add(short)
+            bayerName = short
+            val shortEntry = designations.size
+            var longEntry = shortEntry
+            val letter = label.letter
+            if (letter != null && genitive != null) {
+                designations.add("${letter.capitalizedName}${label.suffix} $genitive")
+                longEntry = designations.size
+            }
+            // "alpha", "alp" and "α", with and without the superscript digits, followed by the
+            // constellation as abbreviation or genitive.
+            val letterForms = if (letter != null) letter.forms else listOf(label.glyph)
+            val suffixes = if (label.suffix.isEmpty()) NO_SUFFIX else listOf(label.suffix, "")
+            for (form in letterForms) {
+                for (suffix in suffixes) {
+                    variants.add(KeyText("$form$suffix $abbreviation", shortEntry))
+                    if (genitive != null) {
+                        variants.add(KeyText("$form$suffix $genitive", longEntry))
+                    }
+                }
+            }
+        }
+
+        var flamsteedName: String? = null
+        val flamsteedNumber = entry.flamsteed
+        if (flamsteedNumber != null && abbreviation != null) {
+            designations.add("$flamsteedNumber $abbreviation")
+            flamsteedName = designations.last()
+            if (genitive != null) {
+                variants.add(KeyText("$flamsteedNumber $genitive", designations.size))
+            }
+        }
+
+        var catalogName: String? = null
+        val harvard = entry.harvard
+        if (harvard != null) {
+            designations.add("HR $harvard")
+            catalogName = catalogName ?: designations.last()
+        }
+        val henryDraper = entry.henryDraper
+        if (henryDraper != null) {
+            designations.add("HD $henryDraper")
+            catalogName = catalogName ?: designations.last()
+        }
+        val hipparcos = entry.hipparcos
+        val hygRow = entry.hygRow
+        if (hipparcos != null) {
+            designations.add("HIP $hipparcos")
+            catalogName = catalogName ?: designations.last()
+        } else if (harvard == null && henryDraper == null && hygRow != null) {
+            designations.add("HYG $hygRow")
+            catalogName = catalogName ?: designations.last()
+        }
+
+        for (duplicate in duplicates) {
+            for (spelling in spellings(duplicate)) {
+                designations.add(spelling.display)
+                for (alias in spelling.aliases) {
+                    variants.add(KeyText(alias, designations.size))
+                }
+            }
+        }
+
+        val objectID = entry.objectID
+        val name = entry.properName ?: bayerName ?: flamsteedName ?: catalogName ?: objectID
+        val keys = ArrayList<KeyText>(1 + designations.size + variants.size + 2)
+        keys.add(KeyText(name, 0))
+        for ((index, designation) in designations.withIndex()) {
+            keys.add(KeyText(designation, index + 1))
+        }
+        keys.addAll(variants)
+
+        // Popular names of the star, and names of the duplicates, that the star does not already answer to.
+        val alternateNames = ArrayList<String>()
+        val otherNames = ArrayList<String>()
+        if (hipparcos != null) popularNames[hipparcos]?.let { otherNames.addAll(it) }
+        for (duplicate in duplicates) otherNames.addAll(duplicate.names)
+        if (otherNames.isNotEmpty()) {
+            val knownKeys = HashSet<String>()
+            for (key in keys) knownKeys.add(keyIdentity(key.text))
+            for (alternate in otherNames) {
+                if (knownKeys.add(keyIdentity(alternate))) {
+                    alternateNames.add(alternate)
+                    keys.add(KeyText(alternate, designations.size + alternateNames.size))
+                }
+            }
+        }
+
+        val isQuasar = hipparcos == quasarHipparcosNumber
+        val obj = CelestialObject(
+            id = objectID, name = name, designations = designations, alternateNames = alternateNames,
+            category = if (isQuasar) ObjectCategory.OTHER else ObjectCategory.STAR,
+            constellation = abbreviation, constellationName = constellation?.name,
+            magnitude = entry.magnitude, position = ObjectPosition.Fixed(entry.position, entry.properMotion),
+            colorIndex = entry.colorIndex, spectralType = entry.spectralType,
+            distanceLightYears = entry.distanceParsecs?.let { it * lightYearsPerParsec },
+            isListed = entry.properName != null || entry.magnitude <= maximumListedStarMagnitude,
+            notes = if (isQuasar) quasarNote else null,
+        )
+        return ObjectDraft(obj, keys)
+    }
+
+    fun deepSkyObject(entry: DeepSkyEntry, constellations: ConstellationDirectory): ObjectDraft {
+        val constellation = entry.constellation?.let { constellations.constellation(it) }
+        val spellings = spellings(entry)
+        val designations = spellings.map { it.display }
+        val name = entry.names.firstOrNull() ?: designations[0]
+        val alternateNames = entry.names.drop(1)
+
+        val keys = ArrayList<KeyText>()
+        keys.add(KeyText(name, 0))
+        for ((index, spelling) in spellings.withIndex()) {
+            keys.add(KeyText(spelling.display, index + 1))
+            for (alias in spelling.aliases) {
+                keys.add(KeyText(alias, index + 1))
+            }
+        }
+        for ((index, alternate) in alternateNames.withIndex()) {
+            keys.add(KeyText(alternate, designations.size + index + 1))
+        }
+
+        val noteSentences = ArrayList<String>()
+        val hubbleType = entry.hubbleType
+        if (hubbleType != null) {
+            noteSentences.add("Hubble type $hubbleType.")
+        }
+        val brightness = entry.surfaceBrightness
+        if (brightness != null) {
+            noteSentences.add("Surface brightness ${CatalogFormat.oneDecimal(brightness)} mag/arcsec².")
+        }
+
+        val majorAxis = entry.majorAxis
+        val obj = CelestialObject(
+            id = "dso.${entry.id}", name = name, designations = designations, alternateNames = alternateNames,
+            category = ObjectCategory.fromOpenNGCType(entry.typeCode),
+            constellation = constellation?.abbreviation ?: entry.constellation,
+            constellationName = constellation?.name,
+            magnitude = entry.visualMagnitude ?: entry.blueMagnitude,
+            angularSize = if (majorAxis != null) {
+                AngularSize.create(majorAxis, entry.minorAxis, entry.positionAngle)
+            } else {
+                null
+            },
+            position = ObjectPosition.Fixed(entry.position, null), isListed = true,
+            notes = if (noteSentences.isEmpty()) null else noteSentences.joinToString(separator = " "),
+        )
+        return ObjectDraft(obj, keys)
+    }
+
+    /**
+     * The designations of a deep-sky record: Messier, NGC and IC numbers, then the identifier of
+     * the data file when it is from another catalog.
+     */
+    fun spellings(entry: DeepSkyEntry): List<CatalogDesignation.Spelling> {
+        val spellings = ArrayList<CatalogDesignation.Spelling>()
+        val messier = entry.messier
+        if (messier != null) {
+            spellings.add(CatalogDesignation.Spelling("M $messier", listOf("Messier $messier")))
+        }
+        for (number in entry.ngc) {
+            spellings.add(CatalogDesignation.Spelling("NGC $number", emptyList()))
+        }
+        for (number in entry.ic) {
+            spellings.add(CatalogDesignation.Spelling("IC $number", emptyList()))
+        }
+        val own = CatalogDesignation.spelling(entry.id)
+        val ownKey = SearchText.key(own.display).bytes
+        if (spellings.none { SearchText.key(it.display).bytes.contentEquals(ownKey) }) {
+            spellings.add(own)
+        }
+        return spellings
+    }
+
+    /** The identifier under which a deep-sky object with an acronym for a name ("LMC") also answers. */
+    fun acronymAlias(alternateName: String): String? {
+        // Two to five characters, upper-case ASCII letters and digits, at least one of them a letter.
+        if (alternateName.length !in 2..5) return null
+        var hasLetter = false
+        for (character in alternateName) {
+            if (character in 'A'..'Z') {
+                hasLetter = true
+            } else if (character !in '0'..'9') {
+                return null
+            }
+        }
+        return if (hasLetter) "dso.$alternateName" else null
+    }
+
+    /** The search key of [text] as a string (its bytes are ASCII), to tell whether two texts are found alike. */
+    private fun keyIdentity(text: String): String = String(SearchText.key(text).bytes, Charsets.ISO_8859_1)
+}

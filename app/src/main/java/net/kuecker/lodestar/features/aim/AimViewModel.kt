@@ -1,0 +1,272 @@
+package net.kuecker.lodestar.features.aim
+
+import android.content.SharedPreferences
+import androidx.compose.runtime.MutableDoubleState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.content.edit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.app.AppModel
+import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.foundation.AstroMath
+import net.kuecker.lodestar.kit.foundation.Vector3
+import net.kuecker.lodestar.kit.pointing.GuidanceState
+import net.kuecker.lodestar.model.NightModeSetting
+import net.kuecker.lodestar.services.CameraGeometry
+import net.kuecker.lodestar.services.CatalogService
+import net.kuecker.lodestar.shared.ScreenAxes
+
+/**
+ * The state and background work behind the Aim screen. A screen makes one with `remember { AimViewModel(app) }`
+ * (pass the device-local `SharedPreferences` as [preferences] to remember the zoom across launches; without them
+ * it is remembered for the process) and then, on every composition: builds `AimConfiguration(app)` and hands it to
+ * [apply] (idempotent, so calling it from a `SideEffect` is fine); calls [syncTarget] whenever
+ * `guidanceTarget?.id` changes; and runs the three suspending loops from `LaunchedEffect`s while the tab is showing
+ * and the app is in front: `LaunchedEffect(skyInputs, isActive) { model.keepSkyCurrent(skyInputs) }` and
+ * `keepRiseInfoCurrent(skyInputs)` with `skyInputs = model.skyInputs(configuration)`, and
+ * `LaunchedEffect(isActive) { model.runLoop() }` (call [stopFeedback] when inactive and on disposal). Only low-rate
+ * values are Compose state ([configuration], [skyContent], [riseInfo], [hudRotation], [virtualFieldOfView],
+ * [alignmentTarget]); what changes with every sensor sample is not published: the overlay and the readouts call
+ * `engine.frame()` when they draw (or in a per-frame loop of their own), so the composition is not invalidated 60
+ * times a second. [SkyOverlayView] publishes the display rotation in [screenAxes]. Pinch gestures call
+ * [updatePinch]/[endPinch] while [cameraGeometry] is `null`. Main thread only.
+ */
+class AimViewModel(val app: AppModel, private val preferences: SharedPreferences? = null) {
+    private companion object {
+        /** Milliseconds between sky rebuilds. The sky moves 15″ per second, far below what the screen can show. */
+        const val SKY_REFRESH_INTERVAL_MS = 2_000L
+
+        /** Milliseconds between searches for the target's next rise. */
+        const val RISE_REFRESH_INTERVAL_MS = 60_000L
+        const val LOOP_INTERVAL_MS = 33L
+
+        /**
+         * Where the zoom of the virtual sky is remembered, so it survives the screen being rebuilt (night mode
+         * starting at dusk rebuilds the tabs) and, with preferences, relaunches.
+         */
+        const val FIELD_OF_VIEW_KEY = "lodestar.aim.virtualFieldOfView"
+    }
+
+    /** Preferences and calibration in effect; the screen refreshes them whenever the app model changes. */
+    var configuration: AimConfiguration by mutableStateOf(AimConfiguration(app))
+        private set
+
+    val engine = AimFrameEngine(app.motion, configuration)
+
+    var skyContent: AimSkyContent? by mutableStateOf(null)
+        private set
+    var riseInfo: AimRiseInfo? by mutableStateOf(null)
+        private set
+    var hudRotation: AimHUDRotation by mutableStateOf(AimHUDRotation.UPRIGHT)
+        private set
+
+    /** An object the alignment sheet asks to be guided to; it replaces the app's target while it is set. */
+    var alignmentTarget: CelestialObject? by mutableStateOf(null)
+
+    /**
+     * The screen's right and up in device coordinates. Phones stay in portrait (the default); on large screens the
+     * display can rotate. [SkyOverlayView] keeps it current; [runLoop] needs it for the HUD rotation, and anything
+     * that expresses a direction on the screen from device or mount axes (the guidance arrow) can use it too.
+     */
+    var screenAxes: ScreenAxes = ScreenAxes.natural
+
+    private val fieldOfViewState: MutableDoubleState = app.retained.getOrPut(FIELD_OF_VIEW_KEY) {
+        mutableDoubleStateOf(storedFieldOfView())
+    }
+
+    /** The field of view along the screen's long side without a camera picture, in degrees. */
+    var virtualFieldOfView: Double
+        get() = fieldOfViewState.doubleValue
+        private set(value) {
+            fieldOfViewState.doubleValue = value
+        }
+
+    private var hasHUDRotation = false
+    private var pinchStartFieldOfView: Double? = null
+    private var wasOnTarget: Boolean? = null
+
+    // Derived state
+
+    /** The object guidance leads to: the alignment sheet's choice, else the app's target. */
+    val guidanceTarget: CelestialObject? get() = alignmentTarget ?: app.target
+
+    /**
+     * The optics of the camera picture behind the sky, or `null` when the virtual lens is in use: whenever the
+     * picture is not wanted or not running.
+     */
+    val cameraGeometry: CameraGeometry?
+        get() = if (configuration.wantsCameraPreview && app.camera.isRunning) app.camera.geometry else null
+
+    /** What the sky snapshot depends on, or `null` while it cannot be built (no location, catalog not loaded). */
+    fun skyInputs(configuration: AimConfiguration): AimSkyInputs? {
+        val context = app.observerContext ?: return null
+        if (app.catalog.loadState != CatalogService.LoadState.Loaded) return null
+        return AimSkyInputs(context.observer, configuration.skyOptions, guidanceTarget)
+    }
+
+    // Configuration
+
+    /** Takes over new preferences and calibration; nothing happens while they are unchanged. */
+    fun apply(configuration: AimConfiguration) {
+        if (configuration == this.configuration) return
+        this.configuration = configuration
+        engine.configure(configuration)
+    }
+
+    /** Points the engine at the current guidance target. */
+    fun syncTarget() {
+        engine.setTarget(guidanceTarget?.id)
+        wasOnTarget = null
+    }
+
+    // Background work
+
+    /**
+     * Rebuilds the sky for [inputs] now and then every few seconds until cancelled. Restart it (`LaunchedEffect`
+     * keyed on the inputs) whenever they change; a build still running for older inputs is discarded.
+     */
+    suspend fun keepSkyCurrent(inputs: AimSkyInputs?) {
+        if (inputs == null) return
+        val catalog = app.catalog.catalog ?: return
+        while (currentCoroutineContext().isActive) {
+            val date = app.clock.now
+            val content = withContext(Dispatchers.Default) { AimSkyContent.build(catalog, inputs, date) }
+            skyContent = content
+            engine.update(content.snapshot.target)
+            delay(SKY_REFRESH_INTERVAL_MS)
+        }
+    }
+
+    /** Keeps [riseInfo] (when the target next rises) current while there is a target. */
+    suspend fun keepRiseInfoCurrent(inputs: AimSkyInputs?) {
+        val target = inputs?.target
+        if (inputs == null || target == null) {
+            riseInfo = null
+            return
+        }
+        val observer = inputs.observer
+        while (currentCoroutineContext().isActive) {
+            val date = app.clock.now
+            val info = withContext(Dispatchers.Default) { AimRiseInfo.compute(target, observer, date) }
+            riseInfo = info
+            delay(RISE_REFRESH_INTERVAL_MS)
+        }
+    }
+
+    /**
+     * Runs the aiming logic about 30 times a second until cancelled: the HUD rotation, the audio ticks and the
+     * haptics for reaching and leaving the target.
+     */
+    suspend fun runLoop() {
+        while (currentCoroutineContext().isActive) {
+            step()
+            delay(LOOP_INTERVAL_MS)
+        }
+    }
+
+    private fun step() {
+        val frame = engine.frame() ?: return
+        updateHUDRotation(frame.sample.gravity)
+        val guidance = frame.guidance
+        if (guidance == null) {
+            if (wasOnTarget != null) stopFeedback()
+            return
+        }
+        app.feedback.guidanceTick(guidance.separation)
+        val isOnTarget = guidance.state == GuidanceState.ON_TARGET
+        val previously = wasOnTarget
+        if (previously != null && previously != isOnTarget) {
+            if (isOnTarget) app.feedback.targetAcquired() else app.feedback.targetLost()
+        }
+        wasOnTarget = isOnTarget
+    }
+
+    /** [gravity] arrives in device coordinates; the HUD turns with the gravity seen on the screen. */
+    private fun updateHUDRotation(gravity: Vector3) {
+        val axes = screenAxes
+        val onScreen = Vector3(gravity.dot(axes.right), gravity.dot(axes.up), gravity.dot(axes.right.cross(axes.up)))
+        val rotation = AimHUDRotation.updated(
+            if (hasHUDRotation) hudRotation else null, onScreen, configuration.mount,
+        )
+        hasHUDRotation = true
+        if (rotation != hudRotation) hudRotation = rotation
+    }
+
+    /** Silences the guidance audio; call when the screen goes away. */
+    fun stopFeedback() {
+        app.feedback.stopGuidanceAudio()
+        wasOnTarget = null
+    }
+
+    // Zoom
+
+    /**
+     * Zooms the virtual sky by a pinch's [magnification], counted from the field of view when the pinch began (a zoom
+     * factor above 1 narrows the view).
+     */
+    fun updatePinch(magnification: Double) {
+        if (!magnification.isFinite() || magnification <= 0) return
+        val start = pinchStartFieldOfView ?: virtualFieldOfView
+        pinchStartFieldOfView = start
+        zoomTo(start / magnification)
+    }
+
+    fun endPinch() {
+        pinchStartFieldOfView = null
+        val degrees = virtualFieldOfView
+        preferences?.edit { putFloat(FIELD_OF_VIEW_KEY, degrees.toFloat()) }
+    }
+
+    /** Returns the virtual sky to its default field of view. */
+    fun resetFieldOfView() {
+        zoomTo(AimProjectionFactory.defaultVirtualFieldOfView)
+        preferences?.edit { remove(FIELD_OF_VIEW_KEY) }
+    }
+
+    private fun zoomTo(degrees: Double) {
+        val range = AimProjectionFactory.virtualFieldOfViewRange
+        virtualFieldOfView = AstroMath.clamp(degrees, range.start, range.endInclusive)
+    }
+
+    private fun storedFieldOfView(): Double {
+        val stored = preferences?.getFloat(FIELD_OF_VIEW_KEY, 0f)?.toDouble() ?: 0.0
+        return if (stored in AimProjectionFactory.virtualFieldOfViewRange) {
+            stored
+        } else {
+            AimProjectionFactory.defaultVirtualFieldOfView
+        }
+    }
+
+    // Controls
+
+    /**
+     * Turns the camera picture on or off. At night the separate "camera at night" preference decides, so
+     * switching it off does not change the daytime choice.
+     */
+    fun toggleCameraPreview() {
+        val wanted = configuration.wantsCameraPreview
+        app.settingsStore.update { settings ->
+            when {
+                !app.isNightModeActive -> settings.copy(cameraPreviewEnabled = !wanted)
+                wanted -> settings.copy(cameraPreviewAtNight = false)
+                else -> settings.copy(cameraPreviewEnabled = true, cameraPreviewAtNight = true)
+            }
+        }
+    }
+
+    /** Cycles night mode: off, on, after sunset. */
+    fun cycleNightMode() {
+        val next = when (app.settings.nightMode) {
+            NightModeSetting.OFF -> NightModeSetting.ON
+            NightModeSetting.ON -> NightModeSetting.AUTOMATIC
+            NightModeSetting.AUTOMATIC -> NightModeSetting.OFF
+        }
+        app.settingsStore.update { it.copy(nightMode = next) }
+    }
+}

@@ -1,0 +1,31 @@
+Lodestar turns the phone on your camera into a smart finder for night photography. Pick a planet, nebula, galaxy or star, and on-screen arrows tell you which way to pan and tilt the tripod head until it sits in your frame.
+
+GUIDED AIMING
+• A live finder with a virtual sky or the camera view, the target marker and an arrow pointing the shortest way
+• "Pan right 12.6° · Tilt up 12.9°" read-outs for pan-tilt heads, the distance to go and a clear on-target signal with haptics
+• The outline of your own camera's frame, from its sensor size and focal length
+• Optional audio ticks that speed up as you get closer, and a level gauge
+
+ACCURACY BEYOND THE COMPASS
+• Star alignment: centre a bright star in your camera once and Lodestar corrects the compass and the bracket
+• Gyro Lock keeps the heading on the gyroscope, safe from the magnetism of camera bodies and tripods
+• Works with the phone mounted in portrait, in landscape, upside down or flat on top of the camera
+
+FIND YOUR TARGET
+• Search and browse 9,000+ stars, 690+ galaxies, nebulae and clusters including all 110 Messier objects, the planets, the Moon and the Milky Way core
+• Sort by name, brightness, altitude or rise time; favourites, recents and custom coordinates
+• Each object shows where it is now, when it rises and sets, an altitude chart for the night, how it fits your frame and the longest exposure before stars trail
+
+PLAN THE NIGHT
+• Tonight: sunset, twilight and darkness windows, the Moon's phase and hours, when the Milky Way core is up, the visible planets and the best targets
+• An all-sky chart with constellations and the Milky Way, with time travel
+• A polar-scope clock for aligning star trackers
+
+MADE FOR THE DARK
+• A pure red night-vision mode, automatic after sunset, with screen dimming
+• Everything works offline at remote dark-sky sites
+
+PRIVATE BY DESIGN
+No accounts, analytics, ads or tracking. Your location and camera picture stay on your phone.
+
+Star data: HYG Database v4.1 (CC BY-SA 4.0). Deep-sky data: OpenNGC (CC BY-SA 4.0). Constellation figures and Milky Way outlines: d3-celestial (BSD-3-Clause). Geomagnetic model: NOAA/BGS WMM2025. Maps: OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors.

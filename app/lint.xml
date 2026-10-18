@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- The adaptive icon must stay in mipmap-anydpi-v26 even with minSdk 26: aapt2 does not link
+         <adaptive-icon> resources from the unversioned mipmap-anydpi folder. -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="src/main/res/mipmap-anydpi-v26" />
+    </issue>
+</lint>

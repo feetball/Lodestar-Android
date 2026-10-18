@@ -55,6 +55,7 @@ import net.kuecker.lodestar.kit.mount.MountSlewOutcome
 import net.kuecker.lodestar.services.MountConnectionState
 import net.kuecker.lodestar.services.MountNotice
 import net.kuecker.lodestar.services.MountService
+import net.kuecker.lodestar.services.MountSkyWatcherInfo
 import net.kuecker.lodestar.services.MountSnapshot
 import net.kuecker.lodestar.services.MountTargeting
 import net.kuecker.lodestar.shared.AppFormat
@@ -178,8 +179,8 @@ private fun MountConnectedCard(
         }
     }
     val isIdle = status.phase == MountPhase.IDLE
-    val needsAlignment = capabilities?.gotoNeedsAlignment == true && status.isAligned == false
-    val canGoto = target != null && isIdle && capabilities?.canSlew == true && !needsAlignment
+    val alignmentBanner = MountText.notAlignedBanner(snapshot)
+    val canGoto = target != null && isIdle && capabilities?.canSlew == true && alignmentBanner == null
     val canSync = target != null && isIdle && capabilities?.canSync == true
     val canNudge = capabilities?.canNudge == true && status.phase != MountPhase.SLEWING
 
@@ -227,9 +228,9 @@ private fun MountConnectedCard(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (needsAlignment) {
-            MountNote("The mount is not aligned. Align it on the hand controller, then continue.", palette.warning)
-        }
+        snapshot.skyWatcher?.let { info -> MountSkyWatcherLines(snapshot, info) }
+        alignmentBanner?.let { MountNote(it, palette.warning) }
+        MountText.trackingStopLine(snapshot)?.let { MountNote(it, palette.warning) }
         snapshot.linkProblem?.let { MountNote(it, palette.warning) }
         snapshot.notice?.let { MountNoticeLine(it, service) }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -257,6 +258,21 @@ private fun phaseColor(snapshot: MountSnapshot): Color {
         status.outcome is MountSlewOutcome.Arrived -> palette.positive
         status.outcome is MountSlewOutcome.Failed -> palette.warning
         else -> palette.secondaryText
+    }
+}
+
+/** The alignment, the tracking state and (equatorial mounts) the pier side of a Sky-Watcher Wi-Fi mount. */
+@Composable
+private fun MountSkyWatcherLines(snapshot: MountSnapshot, info: MountSkyWatcherInfo) {
+    val palette = LocalPalette.current
+    Text(
+        MountText.alignmentLine(info),
+        color = if (info.isAligned) palette.secondaryText else palette.warning,
+        style = MaterialTheme.typography.labelMedium,
+    )
+    val state = listOfNotNull(MountText.trackingLine(snapshot), info.pierSide?.let(MountText::pierSideLine)).joinToString(" · ")
+    if (state.isNotEmpty()) {
+        Text(state, color = palette.secondaryText, style = MaterialTheme.typography.labelMedium)
     }
 }
 

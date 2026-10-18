@@ -8,6 +8,7 @@ import androidx.core.content.edit
 import net.kuecker.lodestar.kit.mount.MountEpoch
 import net.kuecker.lodestar.kit.mount.MountNudgeRate
 import net.kuecker.lodestar.kit.mount.MountProtocol
+import net.kuecker.lodestar.kit.mount.SkyWatcherMountMode
 
 /** A few named values that survive restarts; backed by shared preferences in the app, by a map in tests. */
 interface MountStore {
@@ -107,6 +108,9 @@ class MountPreferences(private val store: MountStore) {
         store.putString(KEY_EPOCH, next.advanced.epoch?.rawValue ?: AUTOMATIC)
         store.putString(KEY_SWAP_EAST_WEST, if (next.advanced.swapEastWest) "1" else "0")
         store.putString(KEY_SWAP_NORTH_SOUTH, if (next.advanced.swapNorthSouth) "1" else "0")
+        store.putString(KEY_ARRANGEMENT, next.advanced.skyWatcherMode?.rawValue ?: AUTOMATIC)
+        store.putString(KEY_REVERSE_AXIS_1, if (next.advanced.reverseAxis1) "1" else "0")
+        store.putString(KEY_REVERSE_AXIS_2, if (next.advanced.reverseAxis2) "1" else "0")
     }
 
     private fun loadSettings(): MountSettingsValues {
@@ -121,6 +125,9 @@ class MountPreferences(private val store: MountStore) {
                     epoch = MountEpoch.entries.firstOrNull { it.rawValue == store.getString(KEY_EPOCH) },
                     swapEastWest = store.getString(KEY_SWAP_EAST_WEST) == "1",
                     swapNorthSouth = store.getString(KEY_SWAP_NORTH_SOUTH) == "1",
+                    skyWatcherMode = SkyWatcherMountMode.entries.firstOrNull { it.rawValue == store.getString(KEY_ARRANGEMENT) },
+                    reverseAxis1 = store.getString(KEY_REVERSE_AXIS_1) == "1",
+                    reverseAxis2 = store.getString(KEY_REVERSE_AXIS_2) == "1",
                 ),
             ),
         )
@@ -156,6 +163,9 @@ class MountPreferences(private val store: MountStore) {
         const val KEY_EPOCH = "epoch"
         const val KEY_SWAP_EAST_WEST = "swapEastWest"
         const val KEY_SWAP_NORTH_SOUTH = "swapNorthSouth"
+        const val KEY_ARRANGEMENT = "skyWatcherArrangement"
+        const val KEY_REVERSE_AXIS_1 = "skyWatcherReverseAxis1"
+        const val KEY_REVERSE_AXIS_2 = "skyWatcherReverseAxis2"
         const val AUTOMATIC = "automatic"
         const val MAXIMUM_HOST_LENGTH = 253
     }

@@ -1,13 +1,19 @@
 package net.kuecker.lodestar.features.mount
 
+import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
 import net.kuecker.lodestar.kit.mount.MountCapabilities
+import net.kuecker.lodestar.kit.mount.MountError
 import net.kuecker.lodestar.kit.mount.MountNudgeDirection
 import net.kuecker.lodestar.kit.mount.MountNudgeRate
 import net.kuecker.lodestar.kit.mount.MountPhase
 import net.kuecker.lodestar.kit.mount.MountSlewOutcome
+import net.kuecker.lodestar.kit.mount.SkyWatcherMountMode
+import net.kuecker.lodestar.kit.mount.SkyWatcherPierSide
 import net.kuecker.lodestar.model.CoordinateStyle
 import net.kuecker.lodestar.services.MountConnectionState
+import net.kuecker.lodestar.services.MountHints
+import net.kuecker.lodestar.services.MountSkyWatcherInfo
 import net.kuecker.lodestar.services.MountSlewSummary
 import net.kuecker.lodestar.services.MountSnapshot
 import net.kuecker.lodestar.shared.AppFormat
@@ -102,6 +108,70 @@ internal object MountText {
     fun rateDescription(rate: MountNudgeRate): String =
         "${rateName(rate)}: ${rate.siderealMultiple.roundToInt()}× sidereal, about ${AppFormat.separation(rate.degreesPerSecond)} per second"
 
+    // Sky-Watcher Wi-Fi mounts
+
+    /** "Aligned on 3 stars, 0.02° residual, ≈ 0.2° accuracy", or what to do first. */
+    fun alignmentLine(info: MountSkyWatcherInfo): String {
+        val count = info.stars.size
+        if (count == 0) return "Not aligned: centre a star and tap Sync"
+        val accuracy = info.predictedErrorDegrees?.let { ", ≈ ${accuracyText(it)} accuracy" }.orEmpty()
+        val residual = if (count > 1) info.maximumResidualDegrees?.let { ", ${AngleFormatter.formatDegrees(it, 2)} residual" }.orEmpty() else ""
+        return "Aligned on $count star${if (count == 1) "" else "s"}$residual$accuracy"
+    }
+
+    /** An angle with the digits that mean something: 0.05°, 0.2°, 1.0°, 12°. */
+    fun accuracyText(degrees: Double): String = when {
+        degrees < SMALL_ACCURACY -> AngleFormatter.formatDegrees(degrees, 2)
+        degrees < LARGE_ACCURACY -> AngleFormatter.formatDegrees(degrees, 1)
+        else -> AngleFormatter.formatDegrees(degrees, 0)
+    }
+
+    /** "Telescope east of the pier" (looking west) or "west of the pier" (looking east). */
+    fun pierSideLine(side: SkyWatcherPierSide): String =
+        if (side == SkyWatcherPierSide.EAST) "Telescope east of the pier" else "Telescope west of the pier"
+
+    /** "Tracking", "Tracking is off", or null when the mount does not say. */
+    fun trackingLine(snapshot: MountSnapshot): String? = when (snapshot.status.isTracking) {
+        true -> "Tracking"
+        false -> "Tracking is off"
+        null -> null
+    }
+
+    /** Why tracking stopped by itself, with what to do; null while it has not. */
+    fun trackingStopLine(snapshot: MountSnapshot): String? {
+        val info = snapshot.skyWatcher ?: return null
+        val reason = info.trackingStopReason ?: return null
+        if (snapshot.status.isTracking == true) return null
+        return when {
+            reason is MountError.OutsideMountLimits && info.mode == SkyWatcherMountMode.EQUATORIAL ->
+                "Tracking stopped at the meridian. Tap Go to to flip the mount"
+            reason is MountError.OutsideMountLimits ->
+                "Tracking stopped at a limit of the mount (cable wrap or near the zenith). Tap Go to to start again"
+            reason is MountError.MountOverheadLimit ->
+                "Tracking stopped near the zenith, where this mount cannot follow"
+            else -> "Tracking stopped: ${reason.userMessage}"
+        }
+    }
+
+    /** What stands in the way of Go to because the mount is not aligned; null when it is. */
+    fun notAlignedBanner(snapshot: MountSnapshot): String? {
+        val capabilities = snapshot.capabilities ?: return null
+        if (!capabilities.gotoNeedsAlignment || snapshot.isAligned != false) return null
+        return if (snapshot.skyWatcher != null) MountHints.SKYWATCHER_NOT_ALIGNED else HAND_CONTROLLER_NOT_ALIGNED
+    }
+
+    /** The start-position check after connecting. */
+    fun startPositionLine(info: MountSkyWatcherInfo): String =
+        if (info.startsAwayFromHome) {
+            "The mount is not at its home position. Switch it off and on at the home position, or move it there " +
+                "with the arrows and tap This is home."
+        } else {
+            "The mount started at its home position."
+        }
+
+    fun axisAngles(info: MountSkyWatcherInfo): String =
+        "${AngleFormatter.formatSignedDegrees(info.startAxis1Degrees, 1)} / ${AngleFormatter.formatSignedDegrees(info.startAxis2Degrees, 1)}"
+
     private fun elapsed(seconds: Double): String {
         val whole = seconds.coerceAtLeast(0.0).toInt()
         return if (whole < SECONDS_PER_MINUTE) "$whole s" else "${whole / SECONDS_PER_MINUTE} min ${whole % SECONDS_PER_MINUTE} s"
@@ -109,6 +179,11 @@ internal object MountText {
 
     private fun degrees(value: Double): String = AppFormat.separation(value)
 
+    /** Said when a hand-controller mount (LX200, NexStar, Alpaca) reports that it is not aligned. */
+    const val HAND_CONTROLLER_NOT_ALIGNED = "The mount is not aligned. Align it on the hand controller, then continue."
+
+    private const val SMALL_ACCURACY = 0.095
+    private const val LARGE_ACCURACY = 9.5
     private const val SMALL_TURN = 0.5
     private const val SECONDS_PER_MINUTE = 60
 }

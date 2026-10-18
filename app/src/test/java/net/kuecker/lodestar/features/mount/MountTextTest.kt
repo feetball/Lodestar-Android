@@ -8,12 +8,18 @@ import net.kuecker.lodestar.kit.mount.MountPhase
 import net.kuecker.lodestar.kit.mount.MountProtocol
 import net.kuecker.lodestar.kit.mount.MountSlewOutcome
 import net.kuecker.lodestar.kit.mount.MountStatus
+import net.kuecker.lodestar.kit.mount.SkyWatcherMountMode
+import net.kuecker.lodestar.kit.mount.SkyWatcherPierSide
 import net.kuecker.lodestar.model.CoordinateStyle
+import net.kuecker.lodestar.services.MountAlignmentStar
 import net.kuecker.lodestar.services.MountConnectionState
+import net.kuecker.lodestar.services.MountSkyWatcherInfo
+import net.kuecker.lodestar.services.MountHints
 import net.kuecker.lodestar.services.MountSlewSummary
 import net.kuecker.lodestar.services.MountSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MountTextTest {
@@ -89,5 +95,86 @@ class MountTextTest {
         val position = EquatorialCoordinate.fromRightAscensionHours(12.5, 45.0)
         assertTrue(MountText.position(position, CoordinateStyle.DECIMAL).contains("187.5"))
         assertTrue(MountText.position(position, CoordinateStyle.SEXAGESIMAL).contains("12"))
+    }
+}
+
+class MountSkyWatcherTextTest {
+    private fun info(
+        stars: List<MountAlignmentStar> = emptyList(),
+        predicted: Double? = null,
+        maximum: Double? = null,
+        pier: SkyWatcherPierSide? = null,
+        stop: MountError? = null,
+        mode: SkyWatcherMountMode = SkyWatcherMountMode.ALT_AZIMUTH,
+        away: Boolean = false,
+    ) = MountSkyWatcherInfo(mode, if (away) 31.2 else 0.0, if (away) -4.0 else 0.0, away, pier, stop, stars, predicted, maximum, null)
+
+    private fun star(name: String, residual: Double) = MountAlignmentStar(name, null, residual)
+
+    @Test
+    fun theAlignmentLineSaysHowManyStarsAndHowWell() {
+        assertEquals("Not aligned: centre a star and tap Sync", MountText.alignmentLine(info()))
+        assertEquals(
+            "Aligned on 3 stars, 0.02° residual, ≈ 0.2° accuracy",
+            MountText.alignmentLine(info(listOf(star("A", 0.0), star("B", 0.01), star("C", 0.02)), predicted = 0.2, maximum = 0.02)),
+        )
+        // One star cannot have a residual worth showing.
+        assertEquals("Aligned on 1 star, ≈ 1.0° accuracy", MountText.alignmentLine(info(listOf(star("A", 0.0)), predicted = 1.0, maximum = 0.0)))
+        assertEquals("0.05°", MountText.accuracyText(0.05))
+        assertEquals("0.3°", MountText.accuracyText(0.3))
+        assertEquals("12°", MountText.accuracyText(12.0))
+    }
+
+    @Test
+    fun thePierSideIsNamedFromTheTelescopesPointOfView() {
+        assertEquals("Telescope east of the pier", MountText.pierSideLine(SkyWatcherPierSide.EAST))
+        assertEquals("Telescope west of the pier", MountText.pierSideLine(SkyWatcherPierSide.WEST))
+    }
+
+    private fun snapshot(info: MountSkyWatcherInfo, tracking: Boolean?) = MountSnapshot(
+        state = MountConnectionState.CONNECTED,
+        status = MountStatus.disconnected.copy(phase = MountPhase.IDLE, isTracking = tracking),
+        skyWatcher = info,
+    )
+
+    @Test
+    fun aStopAtTheMeridianTellsTheUserToFlip() {
+        val equatorial = info(mode = SkyWatcherMountMode.EQUATORIAL, stop = MountError.OutsideMountLimits)
+        assertEquals("Tracking stopped at the meridian. Tap Go to to flip the mount", MountText.trackingStopLine(snapshot(equatorial, false)))
+        // While tracking runs again (after the flip) the message is gone.
+        assertNull(MountText.trackingStopLine(snapshot(equatorial, true)))
+        assertNull(MountText.trackingStopLine(snapshot(info(), false)))
+        val altAz = info(stop = MountError.OutsideMountLimits)
+        assertTrue(MountText.trackingStopLine(snapshot(altAz, false))!!.startsWith("Tracking stopped at a limit of the mount"))
+        assertTrue(MountText.trackingStopLine(snapshot(info(stop = MountError.MountOverheadLimit), false))!!.contains("zenith"))
+        assertEquals("Tracking", MountText.trackingLine(snapshot(altAz, true)))
+        assertEquals("Tracking is off", MountText.trackingLine(snapshot(altAz, false)))
+        assertNull(MountText.trackingLine(snapshot(altAz, null)))
+    }
+
+    @Test
+    fun theStartPositionCheckHasTwoOutcomes() {
+        assertEquals("The mount started at its home position.", MountText.startPositionLine(info()))
+        val away = MountText.startPositionLine(info(away = true))
+        assertTrue(away.contains("not at its home position") && away.contains("This is home"), away)
+        assertEquals("+31.2° / −4.0°", MountText.axisAngles(info(away = true)).replace("-4.0", "−4.0"))
+    }
+
+    @Test
+    fun theBannerBeforeTheFirstSyncDependsOnTheMount() {
+        val capabilities = MountCapabilities(
+            MountProtocol.SKYWATCHER, "Sky-Watcher AZ-GTi 3.22", "3.22", canSlew = true, canSync = true, canAbort = true,
+            canSetTracking = true, canNudge = true, canSetSiteAndTime = true, gotoNeedsAlignment = true, isAligned = false,
+        )
+        val unaligned = snapshot(info(), null).copy(capabilities = capabilities)
+        assertEquals("Not aligned yet. Centre a star with the nudge pad, then tap Sync.", MountText.notAlignedBanner(unaligned))
+        val aligned = unaligned.copy(skyWatcher = info(listOf(star("Vega", 0.0))))
+        assertNull(MountText.notAlignedBanner(aligned))
+        val handController = MountSnapshot(
+            state = MountConnectionState.CONNECTED,
+            status = MountStatus.disconnected.copy(isAligned = false),
+            capabilities = capabilities.copy(kind = MountProtocol.NEXSTAR),
+        )
+        assertEquals(MountText.HAND_CONTROLLER_NOT_ALIGNED, MountText.notAlignedBanner(handController))
     }
 }

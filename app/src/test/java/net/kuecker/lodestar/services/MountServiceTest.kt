@@ -40,7 +40,7 @@ class MountServiceTest {
             session = MountSession(factory, observerProvider = observer),
             preferences = MountPreferences(store),
             observerProvider = observer,
-            demoFactory = MountDemoLinkFactory(observer),
+            demoFactory = { kind -> MountDemoLinkFactory(kind, observer) },
             pollMillis = 5,
             nudgePollMillis = 5,
         )
@@ -275,7 +275,7 @@ class MountServiceTest {
     @Test
     fun theSimulatedMountWorksWithoutHardware() {
         val (service, _) = service()
-        service.connect(MountTestSky.connection, demo = true)
+        service.connect(MountTestSky.connection, demo = MountDemoKind.LX200)
         val snapshot = awaitState(service, MountConnectionState.CONNECTED)
         assertTrue(snapshot.isDemo)
         assertTrue(snapshot.capabilities!!.name.isNotEmpty())

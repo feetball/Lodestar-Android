@@ -192,6 +192,8 @@ data class AppSettings(
     val showConstellationNames: Boolean = true,
     val showDeepSkyObjects: Boolean = true,
     val showMilkyWay: Boolean = true,
+    /** Deep-sky objects drawn in the sky views, up to this `Prominence` level (1 showpieces … 4 everything). */
+    val deepSkyProminence: Int = 2,
     val starMagnitudeLimit: Double = 5.0,
     val coordinateStyle: CoordinateStyle = CoordinateStyle.SEXAGESIMAL,
 
@@ -220,6 +222,7 @@ data class AppSettings(
             nightIntensity = clamp(nightIntensity, 0.25..1.0, 0.7),
             nightBrightness = clamp(nightBrightness, 0.01..1.0, 0.2),
             starMagnitudeLimit = clamp(starMagnitudeLimit, 1.0..6.5, 5.0),
+            deepSkyProminence = deepSkyProminence.coerceIn(1, 4),
             temperatureCelsius = clamp(temperatureCelsius, -60.0..60.0, 10.0),
             pressureMillibars = clamp(pressureMillibars, 300.0..1100.0, 1010.0),
             locationSource = if (source is LocationSource.Site && savedSites.none { it.id == source.id }) {
@@ -269,6 +272,7 @@ data class AppSettings(
                 put("showConstellationNames", JsonPrimitive(s.showConstellationNames))
                 put("showDeepSkyObjects", JsonPrimitive(s.showDeepSkyObjects))
                 put("showMilkyWay", JsonPrimitive(s.showMilkyWay))
+                put("deepSkyProminence", JsonPrimitive(s.deepSkyProminence))
                 put("starMagnitudeLimit", JsonPrimitive(s.starMagnitudeLimit))
                 put("coordinateStyle", json.encodeToJsonElement(CoordinateStyle.serializer(), s.coordinateStyle))
                 put("temperatureCelsius", JsonPrimitive(s.temperatureCelsius))
@@ -314,6 +318,7 @@ data class AppSettings(
                 showConstellationNames = value("showConstellationNames", Boolean.serializer(), d.showConstellationNames),
                 showDeepSkyObjects = value("showDeepSkyObjects", Boolean.serializer(), d.showDeepSkyObjects),
                 showMilkyWay = value("showMilkyWay", Boolean.serializer(), d.showMilkyWay),
+                deepSkyProminence = value("deepSkyProminence", Int.serializer(), d.deepSkyProminence),
                 starMagnitudeLimit = value("starMagnitudeLimit", Double.serializer(), d.starMagnitudeLimit),
                 coordinateStyle = value("coordinateStyle", CoordinateStyle.serializer(), d.coordinateStyle),
                 temperatureCelsius = value("temperatureCelsius", Double.serializer(), d.temperatureCelsius),

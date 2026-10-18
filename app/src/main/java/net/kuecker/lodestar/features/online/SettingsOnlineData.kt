@@ -46,6 +46,7 @@ fun SettingsOnlineDataSection() {
     val app = LocalAppModel.current
     val online = app.online
     var pending by remember { mutableStateOf<OnlineFeed?>(null) }
+    OnlineFirstTimeScreenshotEffect { pending = OnlineFeed.SATELLITE_PASSES }
     SettingsSection(title = OnlineText.SECTION_TITLE, footer = OnlineText.FOOTER) {
         SettingsRow { SettingsCaption(OnlineText.INTRO) }
         for (feed in OnlineFeed.entries) {

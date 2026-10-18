@@ -131,7 +131,8 @@ internal class StreakMonitor {
             state = StreakState.Hidden
             return
         }
-        val now = Instant.now()
+        // The app's clock, which a screenshot can stop; it is the instant the rest of Aim draws the sky at.
+        val now = app.clock.now
         if (!group.isFresh(now)) {
             state = StreakState.TooOld
             return

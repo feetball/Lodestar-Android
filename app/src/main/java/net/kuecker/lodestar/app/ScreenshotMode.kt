@@ -7,6 +7,7 @@ import net.kuecker.lodestar.features.mosaic.MosaicSource
 import net.kuecker.lodestar.kit.events.EventKind
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.services.OnlineFeed
 import java.time.Instant
 import kotlin.math.PI
 import kotlin.math.abs
@@ -57,6 +58,30 @@ enum class ScreenshotScreen(val id: String) {
     /** Settings, the screen that records the skyline of the site (with a partial sweep played into it). */
     SKYLINE("skyline"),
 
+    /** Settings, Online Data, and the explanation that comes before the first feed is switched on. */
+    ONLINE_FIRST_TIME("online-first-time"),
+
+    /** Tonight, the lists of bright comets and asteroids. */
+    SMALL_BODIES("small-bodies"),
+
+    /** Tonight, the detail screen of the target (a comet, say: the tail card). */
+    OBJECT_DETAIL("object-detail"),
+
+    /** Tonight, the satellite passes screen. */
+    SATELLITES("satellite-passes"),
+
+    /** Tonight, the satellite passes screen and the detail of its first pass (the sky path). */
+    SATELLITE_DETAIL("satellite-detail"),
+
+    /** Aim following the first satellite pass (the ISS), the camera a little off it. */
+    AIM_SATELLITE("aim-satellite"),
+
+    /** Settings, scrolled to the end (Online Data, Tools and About are there). */
+    SETTINGS_BOTTOM("settings-bottom"),
+
+    /** Aim with the Starlink streak warning's list of crossings open. */
+    AIM_STREAK_SHEET("aim-streak-sheet"),
+
     /** Settings, the editor of the observing site, with its Horizon section. */
     SITE_EDITOR("site-editor"),
 
@@ -80,8 +105,10 @@ enum class ScreenshotScreen(val id: String) {
  *
  * Optional keys for reviewing sub-screens: `screen=<id>` ([ScreenshotScreen]) opens a sub-screen or sheet after launch,
  * `event=<kind>` picks the event of `screen=event-detail`, `mosaic=target|milkyWay|custom` the source of the mosaic
- * plan, `skyline=1` gives the site a made-up skyline, `camera=1` turns the camera picture on and `focal=<mm>` sets the
- * focal length of the lens (24 mm without it). Unknown keys are
+ * plan, `skyline=1` gives the site a made-up skyline, `camera=1` turns the camera picture on, `focal=<mm>` sets the
+ * focal length of the lens (24 mm without it) and `online=satellites,starlink,comets,clouds` switches those feeds of
+ * Settings ▸ Online Data on and fills them from the fixtures of the debug build, without any network (every launch
+ * starts with all feeds off). In `target=`, an underscore stands for a space. Unknown keys are
  * ignored; a known key with a value that does not exist makes the whole argument invalid, so a typo shows at once.
  */
 data class ScreenshotMode(
@@ -101,6 +128,8 @@ data class ScreenshotMode(
     val hasSkyline: Boolean = false,
     val showsCamera: Boolean = false,
     val focalLength: Double? = null,
+    /** The online feeds that are switched on and filled from the fixtures of the debug build; the others are off. */
+    val onlineFeeds: Set<OnlineFeed> = emptySet(),
 ) {
     companion object {
         const val EXTRA = "lodestarScreenshot"
@@ -140,6 +169,9 @@ data class ScreenshotMode(
             val focalLength = values["focal"]?.let { text ->
                 text.toDoubleOrNull()?.takeIf { it in FOCAL_LENGTHS } ?: return null
             }
+            val onlineFeeds = values["online"]?.split(",")?.map { key ->
+                OnlineFeed.fromKey(key) ?: return null
+            }.orEmpty().toSet()
             return ScreenshotMode(
                 tab = AppTab.entries.firstOrNull { it.name.equals(values["tab"], ignoreCase = true) } ?: AppTab.AIM,
                 date = date,
@@ -148,7 +180,7 @@ data class ScreenshotMode(
                 elevation = values["elevation"]?.toDoubleOrNull() ?: 0.0,
                 siteName = values["site"]?.replace('_', ' ') ?: "Demo Site",
                 timeZoneIdentifier = values["tz"],
-                targetID = values["target"],
+                targetID = values["target"]?.replace('_', ' '),
                 pointing = pointing,
                 nightMode = values["night"] == "1",
                 screen = screen,
@@ -157,6 +189,7 @@ data class ScreenshotMode(
                 hasSkyline = values["skyline"] == "1",
                 showsCamera = values["camera"] == "1",
                 focalLength = focalLength,
+                onlineFeeds = onlineFeeds,
             )
         }
 

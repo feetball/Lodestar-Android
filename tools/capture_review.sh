@@ -30,6 +30,9 @@ demo clock -e hhmm 2230
 demo battery -e level 100 -e plugged false
 demo network -e wifi show -e level 4 -e mobile show -e datatype none -e level 4
 demo notifications -e visible false
+# No network: the online feeds of the app are filled from fixtures (online=...), and nothing may go to a real server.
+adb shell svc wifi disable || true
+adb shell svc data disable || true
 # The debug widget host binds widgets with this permission, which the shell can give.
 adb shell appwidget grantbind --package $package --user 0 || echo "grantbind failed: the widgets will not bind"
 adb logcat -c
@@ -68,9 +71,14 @@ launch() {
     adb shell "am start -W -n $1 --es lodestarScreenshot '$2'" >/dev/null || echo "could not start $1"
 }
 
-# One finger drags the content up by half the screen: the next page of a long screen.
+# One finger drags the content up by half the screen: the next page of a long screen. With UP set, it drags down: the
+# page before (for a screen that was scrolled to its end).
 page_down() {
-    adb shell input swipe $((width / 2)) $((height * 7 / 10)) $((width / 2)) $((height * 2 / 10)) 1200
+    if [ -n "${UP:-}" ]; then
+        adb shell input swipe $((width / 2)) $((height * 2 / 10)) $((width / 2)) $((height * 7 / 10)) 1200
+    else
+        adb shell input swipe $((width / 2)) $((height * 7 / 10)) $((width / 2)) $((height * 2 / 10)) 1200
+    fi
 }
 
 # shot <name> <extra pages> <screenshot arguments...>: the first page, then each further page after a swipe.
@@ -172,6 +180,44 @@ MIN_WAIT=24 shot mo-07-running-sky 0 tab=sky target=dso.NGC6960 pointing=84,50 f
 MIN_WAIT=24 shot mo-08-running-sky-night 0 tab=sky target=dso.NGC6960 pointing=84,50 focal=600 screen=mosaic-running night=1
 MIN_WAIT=24 shot mo-09-running-milkyway-aim 0 tab=aim target=special.galacticCenter pointing=179,25 focal=24 screen=mosaic-running mosaic=milkyWay
 MIN_WAIT=24 shot mo-10-running-milkyway-sky 0 tab=sky target=special.galacticCenter pointing=179,25 focal=24 screen=mosaic-running mosaic=milkyWay
+
+# 7. Settings > Online Data (all feeds off, then all on with the fixtures of the debug build) and its first-time sheet.
+all="online=satellites,starlink,comets,clouds date=2026-10-19T01:05:00Z"
+UP=1 MIN_WAIT=12 shot od-01-online-off 2 tab=settings screen=settings-bottom
+UP=1 MIN_WAIT=14 shot od-02-online-on 2 tab=settings screen=settings-bottom $all
+UP=1 MIN_WAIT=14 shot od-03-online-on-night 2 tab=settings screen=settings-bottom $all night=1
+MIN_WAIT=10 shot od-04-first-time 0 tab=settings screen=online-first-time
+MIN_WAIT=10 shot od-05-first-time-night 0 tab=settings screen=online-first-time night=1
+
+# 8. Comets and asteroids: the Objects sections, Tonight's card and Best Targets, the lists, the detail with the tail card
+# (and the one of a comet too faint to see), and Aim and the Sky chart with a comet.
+comets="online=comets date=2026-10-19T05:00:00Z"
+MIN_WAIT=14 shot sb-01-objects 2 tab=objects $comets
+MIN_WAIT=14 shot sb-02-tonight 9 tab=tonight $comets
+MIN_WAIT=14 shot sb-03-list 2 tab=tonight screen=small-bodies $comets
+MIN_WAIT=14 shot sb-04-detail 4 tab=tonight screen=object-detail target=comet.901P $comets
+MIN_WAIT=14 shot sb-05-detail-faint 2 tab=tonight screen=object-detail target=comet.1P $comets
+MIN_WAIT=22 shot sb-06-aim 0 tab=aim target=comet.901P pointing=277,41 $comets
+MIN_WAIT=22 shot sb-07-sky 0 tab=sky target=comet.901P pointing=277,41 $comets
+MIN_WAIT=14 shot sb-08-list-night 1 tab=tonight screen=small-bodies $comets night=1
+MIN_WAIT=14 shot sb-09-detail-night 3 tab=tonight screen=object-detail target=comet.901P $comets night=1
+MIN_WAIT=22 shot sb-10-aim-night 0 tab=aim target=comet.901P pointing=277,41 $comets night=1
+MIN_WAIT=14 shot sb-11-objects-night 1 tab=objects $comets night=1
+
+# 9. Satellites and clouds: the Tonight cards, the passes screen and a pass, Aim following the ISS, and the Starlink streak
+# warning with its list. The element sets are those of 2026-10-18, so the nights are around then.
+sat="date=2026-10-19T01:05:00Z"
+MIN_WAIT=16 shot sa-01-tonight 9 tab=tonight online=satellites,clouds $sat
+MIN_WAIT=16 shot sa-02-passes 1 tab=tonight screen=satellite-passes online=satellites $sat
+MIN_WAIT=18 shot sa-03-detail 2 tab=tonight screen=satellite-detail online=satellites $sat
+MIN_WAIT=24 shot sa-04-aim-iss 0 tab=aim target=dso.M8 screen=aim-satellite online=satellites date=2026-10-19T12:16:20Z
+MIN_WAIT=24 shot sa-05-streak 0 tab=aim target=dso.M8 pointing=305,31 online=starlink $sat
+MIN_WAIT=24 shot sa-06-streak-sheet 1 tab=aim target=dso.M8 pointing=305,31 screen=aim-streak-sheet online=starlink $sat
+MIN_WAIT=16 shot sa-07-passes-night 1 tab=tonight screen=satellite-passes online=satellites $sat night=1
+MIN_WAIT=18 shot sa-08-detail-night 2 tab=tonight screen=satellite-detail online=satellites $sat night=1
+MIN_WAIT=24 shot sa-09-aim-iss-night 0 tab=aim target=dso.M8 screen=aim-satellite online=satellites date=2026-10-19T12:16:20Z night=1
+MIN_WAIT=24 shot sa-10-streak-night 0 tab=aim target=dso.M8 pointing=305,31 online=starlink $sat night=1
+MIN_WAIT=16 shot sa-11-tonight-night 9 tab=tonight online=satellites,clouds $sat night=1
 
 # 6. The Tonight widgets, at the sizes of the widget picker and resized, in the day and the night palette.
 widgets wg-01-nominal-day sizes=110x110,146x146,250x110

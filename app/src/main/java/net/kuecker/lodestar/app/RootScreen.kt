@@ -23,6 +23,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import net.kuecker.lodestar.features.aim.AimScreen
 import net.kuecker.lodestar.features.mosaic.MosaicScreenshotEffect
 import net.kuecker.lodestar.features.objects.ObjectsScreen
+import net.kuecker.lodestar.features.online.OnlineScreenshotEffect
 import net.kuecker.lodestar.features.onboarding.OnboardingScreen
 import net.kuecker.lodestar.features.settings.SettingsScreen
 import net.kuecker.lodestar.features.skychart.SkyChartScreen
@@ -42,6 +43,7 @@ fun RootScreen(app: AppModel) {
     val palette = app.palette
     CompositionLocalProvider(LocalAppModel provides app) {
         MosaicScreenshotEffect()
+        OnlineScreenshotEffect()
         // Aim is full screen; at night every screen is (the bars are white). Onboarding keeps the bars, as on iOS.
         val hideBars = palette.isNight || (app.settings.hasCompletedOnboarding && app.selectedTab == AppTab.AIM)
         LodestarTheme(palette, redFilter = app.settings.redFilterOverlay) {

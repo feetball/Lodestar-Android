@@ -2,6 +2,7 @@ package net.kuecker.lodestar.app
 
 import net.kuecker.lodestar.features.mosaic.MosaicSource
 import net.kuecker.lodestar.kit.events.EventKind
+import net.kuecker.lodestar.services.OnlineFeed
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -34,6 +35,15 @@ class ScreenshotModeTest {
         assertTrue(mode.hasSkyline)
         assertTrue(mode.showsCamera)
         assertEquals(600.0, mode.focalLength)
+    }
+
+    @Test
+    fun readsTheOnlineFeedsAndTheSpacesOfATarget() {
+        val mode = assertNotNull(ScreenshotMode.parse("$base online=satellites,comets target=comet.C/2026_T1"))
+        assertEquals(setOf(OnlineFeed.SATELLITE_PASSES, OnlineFeed.COMETS), mode.onlineFeeds)
+        assertEquals("comet.C/2026 T1", mode.targetID)
+        assertTrue(assertNotNull(ScreenshotMode.parse(base)).onlineFeeds.isEmpty())
+        assertNull(ScreenshotMode.parse("$base online=satellites,weather"))
     }
 
     @Test

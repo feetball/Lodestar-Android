@@ -34,6 +34,7 @@ import net.kuecker.lodestar.features.satellites.SatelliteNavigationEffect
 import net.kuecker.lodestar.features.satellites.SatelliteRouteScreen
 import net.kuecker.lodestar.features.satellites.SatelliteScreen
 import net.kuecker.lodestar.features.smallbodies.SmallBodyListScreen
+import net.kuecker.lodestar.features.smallbodies.awaitScreenshotTarget
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
@@ -88,6 +89,13 @@ fun TonightScreen() {
     ScreenshotScreenEffect(ScreenshotScreen.EVENTS, ScreenshotScreen.EVENT_DETAIL) { screen ->
         stack.push(TonightRoute.EventsCalendar)
         if (screen == ScreenshotScreen.EVENT_DETAIL) events.screenshotEvent(app)?.let { stack.push(TonightRoute.EventDetail(it)) }
+    }
+    ScreenshotScreenEffect(ScreenshotScreen.SMALL_BODIES, ScreenshotScreen.OBJECT_DETAIL) { screen ->
+        if (screen == ScreenshotScreen.SMALL_BODIES) {
+            stack.push(TonightRoute.SmallBodies)
+        } else {
+            stack.push(TonightRoute.ObjectDetail(awaitScreenshotTarget(app)))
+        }
     }
     // The satellite cards open their screens on this tab's stack.
     SatelliteNavigationEffect { screen ->

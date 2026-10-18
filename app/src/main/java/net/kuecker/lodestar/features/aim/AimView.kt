@@ -26,6 +26,8 @@ import net.kuecker.lodestar.app.ScreenshotScreen
 import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.features.mosaic.MosaicPlanSheet
 import net.kuecker.lodestar.features.mosaic.awaitScreenshotAim
+import net.kuecker.lodestar.features.satellites.SatelliteAimScreenshotEffect
+import net.kuecker.lodestar.features.satellites.StreakScreenshotEffect
 import net.kuecker.lodestar.features.mount.MountAimSheets
 import net.kuecker.lodestar.services.MotionStatus
 import net.kuecker.lodestar.shared.EmptyStateView
@@ -100,6 +102,8 @@ fun AimScreen() {
         }
     }
     MountAimSheets(target = model.guidanceTarget)
+    SatelliteAimScreenshotEffect(model)
+    StreakScreenshotEffect()
     ScreenshotScreenEffect(ScreenshotScreen.MOSAIC) {
         awaitScreenshotAim(app)
         sheet = AimSheet.MOSAIC

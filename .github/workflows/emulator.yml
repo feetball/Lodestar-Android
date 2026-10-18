@@ -59,7 +59,7 @@ jobs:
     if: ${{ inputs.set == 'review' }}
     name: review (${{ matrix.device }})
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:

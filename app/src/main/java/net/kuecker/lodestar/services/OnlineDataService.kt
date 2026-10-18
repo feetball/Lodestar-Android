@@ -147,6 +147,23 @@ class OnlineDataService(
     }
 
     /**
+     * Switches every feed off, forgets the first-time note and deletes every saved download and every request time, as
+     * on a fresh installation. For the screenshot harness: call it before anything is read (the first use of the service),
+     * on the main thread.
+     */
+    fun resetForScreenshots() {
+        for (feed in OnlineFeed.entries) {
+            store.putBoolean(OnlineStoreKeys.enabled(feed), false)
+            for (resource in feed.resources) {
+                cache.delete(resource.key)
+                store.putBoolean(OnlineStoreKeys.attemptFailed(resource), false)
+                store.putLong(OnlineStoreKeys.attempt(resource), 0L)
+            }
+        }
+        store.putBoolean(OnlineStoreKeys.explained, false)
+    }
+
+    /**
      * Takes [bytes] as if [resource] had just been downloaded: validates them, saves them and publishes the data, without
      * a request. The feed must be on. For the screenshot harness and tests; returns whether the bytes were usable.
      */
@@ -158,6 +175,7 @@ class OnlineDataService(
             val meta = OnlineCacheMeta(savedAtMillis = now, dataEpochMillis = parsed.dataEpochMillis, key = key)
             withContext(Dispatchers.IO) { cache.write(resource.key, bytes, meta) }
             publish(resource, parsed.value)
+            update(resource.feed) { it.copy(error = null) }
             publishStatus(resource.feed)
             true
         } catch (_: OnlineDataException) {

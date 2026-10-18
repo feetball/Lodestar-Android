@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.mosaic.MosaicSession
+import net.kuecker.lodestar.features.satellites.SatelliteAimText
 import net.kuecker.lodestar.shared.SkylineSummary
 
 /**
@@ -28,6 +29,7 @@ private fun summary(model: AimViewModel, frame: AimFrame?): String {
     val skyline = model.skyContent?.snapshot?.horizon?.takeUnless { it.isFlat }
         ?.let { " ${SkylineSummary.describe(it)} It is drawn as a line, with the ground below it shaded." }.orEmpty()
     if (model.mosaic.isActive) return mosaicSummary(model.mosaic, frame) + skyline
+    model.satellite.source?.let { return SatelliteAimText.spoken(it, frame) + skyline }
     val target = model.guidanceTarget ?: return "No target. Use the Target button to choose one.$skyline"
     val guidance = frame.guidance ?: return "Locating ${target.name}.$skyline"
     val summary = AimGuidanceSummary(guidance)

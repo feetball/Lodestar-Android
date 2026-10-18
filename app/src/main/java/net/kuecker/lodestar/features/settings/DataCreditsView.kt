@@ -164,6 +164,40 @@ internal data class DataCredit(
                     "information button.",
             ),
             DataCredit(
+                id = "celestrak", name = "CelesTrak orbital data",
+                usedFor = "Satellite passes and Starlink streak warnings (optional download)",
+                author = "Dr. T. S. Kelso, CelesTrak",
+                license = "Free to use with credit", licenseURL = null,
+                sourceURL = "https://celestrak.org",
+                notice = "Orbital data: CelesTrak, T. S. Kelso. General-perturbations element sets derived from the US " +
+                    "Space Force's public tracking data, downloaded only if you switch on Satellite passes or " +
+                    "Starlink streak warnings in Settings ▸ Online Data. Positions are computed on the phone with SGP4, " +
+                    "a port of the reference implementation by D. A. Vallado, P. Crawford, R. Hujsak and T. S. Kelso " +
+                    "(AIAA 2006-6753).",
+            ),
+            DataCredit(
+                id = "mpc", name = "IAU Minor Planet Center comet elements",
+                usedFor = "Comets (optional download)",
+                author = "IAU Minor Planet Center, Smithsonian Astrophysical Observatory",
+                license = "Free to use with credit", licenseURL = null,
+                sourceURL = "https://minorplanetcenter.net",
+                notice = "Orbital elements: IAU Minor Planet Center. The comet orbit file (CometEls.txt) is downloaded " +
+                    "only if you switch on Comets in Settings ▸ Online Data. Lodestar computes the positions on the " +
+                    "phone from the elements; the magnitudes are the observers' estimates published with them.",
+            ),
+            DataCredit(
+                id = "met-norway", name = "MET Norway weather forecast",
+                usedFor = "Cloud forecast (optional download)",
+                author = "The Norwegian Meteorological Institute (MET Norway)",
+                license = "CC BY 4.0", licenseURL = "https://creativecommons.org/licenses/by/4.0/",
+                sourceURL = "https://api.met.no/",
+                notice = "Weather forecast from MET Norway (Locationforecast 2.0), downloaded only if you switch on " +
+                    "Cloud forecast in Settings ▸ Online Data, for your location rounded to about 10 km. MET Norway " +
+                    "licenses its data under CC BY 4.0 and the Norwegian Licence for Open Government Data 2.0. " +
+                    "Lodestar shows the cloud-cover values as forecast; the clear-spell summary is its own, and MET " +
+                    "Norway does not endorse Lodestar.",
+            ),
+            DataCredit(
                 id = "android-libraries", name = "AndroidX and Kotlin", usedFor = "App framework",
                 author = "Google and JetBrains",
                 license = "Apache 2.0", licenseURL = "https://www.apache.org/licenses/LICENSE-2.0",
@@ -190,7 +224,9 @@ private const val CREDIT_LINE =
         "Milky Way Outline Catalog. Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey " +
         "(public domain). Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); lunar theory after J. Meeus. " +
         "Maps: tiles and styles by OpenFreeMap, © OpenMapTiles, data © OpenStreetMap contributors (ODbL), drawn " +
-        "with MapLibre Native (BSD-2-Clause). Software: AndroidX and Kotlin (Apache-2.0)."
+        "with MapLibre Native (BSD-2-Clause). Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital " +
+        "elements: IAU Minor Planet Center; weather forecast from MET Norway (CC BY 4.0). Software: AndroidX and " +
+        "Kotlin (Apache-2.0)."
 
 private val bsdLicense = listOf(
     "Copyright (c) 2015, Olaf Frohn\nAll rights reserved.",

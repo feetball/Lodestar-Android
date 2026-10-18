@@ -31,6 +31,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.kuecker.lodestar.features.satellites.SatelliteAimReadout
+import net.kuecker.lodestar.features.smallbodies.SmallBodyAimNotes
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
+import net.kuecker.lodestar.features.smallbodies.rememberSmallBodyLive
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
@@ -54,6 +58,10 @@ internal fun AimReadout(
 ) {
     if (model.mosaic.isActive) {
         AimMosaicReadout(model, isActive, modifier)
+        return
+    }
+    if (model.satellite.source != null) {
+        SatelliteAimReadout(model, isActive, modifier)
         return
     }
     val target = model.guidanceTarget
@@ -89,7 +97,9 @@ private fun belowHorizonNote(model: AimViewModel, target: CelestialObject, frame
 @Composable
 private fun AimTargetCard(obj: CelestialObject, horizontal: HorizontalCoordinate?, belowHorizonNote: String?) {
     val palette = LocalPalette.current
-    val subtitle = listOfNotNull(obj.category.displayName, obj.constellationName).joinToString(" · ")
+    val smallBody = rememberSmallBodyLive(obj)
+    val subtitle = smallBody?.subtitle(obj)
+        ?: listOfNotNull(obj.category.displayName, obj.constellationName).joinToString(" · ")
     Column(
         Modifier.fillMaxWidth().aimPanel(palette).semantics(mergeDescendants = true) {},
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -98,7 +108,7 @@ private fun AimTargetCard(obj: CelestialObject, horizontal: HorizontalCoordinate
             ObjectIcon(obj.category, size = 16.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 AimFittingText(
-                    obj.name,
+                    SmallBodyText.displayName(obj),
                     MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     palette.primaryText,
                     minimumScale = 0.8f,
@@ -122,6 +132,7 @@ private fun AimTargetCard(obj: CelestialObject, horizontal: HorizontalCoordinate
         if (belowHorizonNote != null) {
             CardNote(belowHorizonNote, Icons.Outlined.VerticalAlignBottom, palette.warning)
         }
+        SmallBodyAimNotes(smallBody)
         if (obj.category == ObjectCategory.SUN) {
             CardNote("Never point at the Sun without a certified solar filter", Icons.Filled.Warning, palette.critical)
         }

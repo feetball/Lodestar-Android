@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.objects
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodyDetail
 import net.kuecker.lodestar.kit.catalog.AngularSize
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
@@ -77,6 +78,11 @@ internal object ObjectDetailCalculator {
             illuminatedFraction = state.illuminatedFraction
             moonPhase = if (isMoon) MoonPhaseCalculator.info(date) else null
         }
+        // A comet or an asteroid: distances from the Earth and the Sun, elongation, phase, brightness and tail.
+        val smallBody = obj.smallBody?.let { SmallBodyDetail.compute(it, frame) }
+        if (obj.smallBody != null) {
+            distance = smallBody?.let { ObjectDetailDistance.AstronomicalUnits(it.info.earthDistanceAU) }
+        }
         val horizontal = frame.horizontal(obj, true)
         return ObjectDetailCurrent(
             date = date,
@@ -90,6 +96,8 @@ internal object ObjectDetailCalculator {
             isUp = skyline?.let { HorizonVisibility(it).isVisible(horizontal.altitude, horizontal.azimuth, refracted = true) }
                 ?: (horizontal.altitude > 0),
             skylineAltitude = skyline?.altitude(horizontal.azimuth),
+            isSmallBody = obj.smallBody != null,
+            smallBody = smallBody,
         )
     }
 

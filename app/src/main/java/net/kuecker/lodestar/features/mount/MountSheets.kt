@@ -193,7 +193,6 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
     val title = if (action == MountAction.GOTO) "Go to ${target?.name.orEmpty()}" else "Sync mount to ${target?.name.orEmpty()}"
     var isWorking by remember { mutableStateOf(false) }
     var failure by remember { mutableStateOf<String?>(null) }
-    var hasSolarFilter by remember { mutableStateOf(false) }
     var alignsPhone by remember { mutableStateOf(true) }
 
     Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
@@ -225,8 +224,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
         } else {
             null
         }
-        val needsFilter = action == MountAction.GOTO && resolved.isSun
-        val canConfirm = !isWorking && problem == null && (!needsFilter || hasSolarFilter)
+        val canConfirm = !isWorking && problem == null && !resolved.isSun
 
         // The sections bring a margin of their own; everything else is given the same one.
         val inset = Modifier.padding(horizontal = 16.dp)
@@ -238,16 +236,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
                 SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), inset)
             }
             problem?.let { Box(inset) { MountMessage(it.userMessage, isError = true) } }
-            if (needsFilter) {
-                SettingsSection(title = "Sun") {
-                    SettingsToggleRow(
-                        title = "A certified solar filter covers the lens",
-                        checked = hasSolarFilter,
-                        onCheckedChange = { hasSolarFilter = it },
-                        caption = "Pointing a camera or telescope at the Sun without a filter can damage it and your eyes.",
-                    )
-                }
-            }
+            if (resolved.isSun) Box(inset) { MountMessage(MountTargeting.SUN_REFUSAL, isError = true) }
             if (action == MountAction.SYNC && !resolved.isSun) {
                 SettingsSection(title = "Phone alignment") {
                     SettingsToggleRow(
@@ -279,7 +268,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
                         when (result) {
                             is MountResult.Failure -> failure = result.message
                             is MountResult.Success -> {
-                                if (action == MountAction.SYNC && alignsPhone && !resolved.isSun) alignPhone(app, service, target)
+                                if (action == MountAction.SYNC && alignsPhone) alignPhone(app, service, target)
                                 onDone()
                             }
                         }

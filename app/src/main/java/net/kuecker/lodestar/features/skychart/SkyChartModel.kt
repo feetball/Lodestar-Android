@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.features.smallbodies.SmallBodyInfo
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.currentMagnitude
@@ -47,6 +48,8 @@ internal data class SkyChartSelection(
     val horizontal: HorizontalCoordinate,
     /** The current magnitude, when known (the Sun, Moon and planets change theirs). */
     val magnitude: Double?,
+    /** Distance, elongation and warnings of a selected comet or asteroid; `null` for any other object. */
+    val smallBody: SmallBodyInfo? = null,
 )
 
 /**
@@ -142,7 +145,8 @@ internal class SkyChartModel {
 
     private fun selectionFor(obj: CelestialObject, scene: SkyChartScene): SkyChartSelection {
         val frame = SkyFrame(scene.date, scene.observer)
-        return SkyChartSelection(obj, frame.horizontal(obj, true), frame.currentMagnitude(obj))
+        val smallBody = obj.smallBody?.let { SmallBodyInfo.compute(it, frame) }
+        return SkyChartSelection(obj, frame.horizontal(obj, true), frame.currentMagnitude(obj), smallBody)
     }
 
     // Zoom and pan

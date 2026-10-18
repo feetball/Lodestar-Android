@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.objects
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodyDetail
 import net.kuecker.lodestar.kit.catalog.AngularSize
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.ephemeris.MoonPhaseInfo
@@ -66,6 +67,10 @@ internal data class ObjectDetailCurrent(
     val isUp: Boolean = horizontal.altitude > 0,
     /** The apparent altitude of the recorded skyline at the object's azimuth; `null` without a skyline. */
     val skylineAltitude: Double? = null,
+    /** `true` for a comet or an asteroid, whose distances and warnings are in [smallBody]. */
+    val isSmallBody: Boolean = false,
+    /** A comet's or asteroid's distances, elongation, phase, magnitude estimate, warnings and tail; `null` when its orbit cannot be evaluated. */
+    val smallBody: SmallBodyDetail? = null,
 ) {
     /** `true` when the object is above the horizon but behind the recorded skyline. */
     val isBehindSkyline: Boolean get() = skylineAltitude != null && horizontal.altitude > 0 && !isUp

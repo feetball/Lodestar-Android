@@ -21,9 +21,11 @@ import net.kuecker.lodestar.theme.LocalPalette
 
 private const val PRIVACY_STATEMENT =
     "Everything Lodestar does happens on your phone. There are no accounts, no analytics and no tracking, and " +
-        "Lodestar never collects your location, sites or settings. The only network use is OpenFreeMap, which " +
-        "loads map tiles when you open the site map, and your phone's geocoding service (usually Google's), " +
-        "which receives a site's coordinates to look up its country and time zone while you add or edit it."
+        "Lodestar never collects your location, sites or settings. The network is used by OpenFreeMap, which " +
+        "loads map tiles when you open the site map, by your phone's geocoding service (usually Google's), " +
+        "which receives a site's coordinates to look up its country and time zone while you add or edit it, and " +
+        "by the optional downloads in Online Data, which are off until you switch them on: CelesTrak, the Minor " +
+        "Planet Center and MET Norway see your IP address, and MET Norway also your location rounded to about 10 km."
 
 /**
  * Settings ▸ About: version, accuracy notes, the privacy statement, data credits and licences, and the sensor

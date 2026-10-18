@@ -30,6 +30,10 @@ import net.kuecker.lodestar.features.events.EventsCalendarScreen
 import net.kuecker.lodestar.features.events.rememberEventsModel
 import net.kuecker.lodestar.features.events.screenshotEvent
 import net.kuecker.lodestar.features.objects.ObjectDetailScreen
+import net.kuecker.lodestar.features.satellites.SatelliteNavigationEffect
+import net.kuecker.lodestar.features.satellites.SatelliteRouteScreen
+import net.kuecker.lodestar.features.satellites.SatelliteScreen
+import net.kuecker.lodestar.features.smallbodies.SmallBodyListScreen
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
@@ -57,6 +61,12 @@ private sealed interface TonightRoute {
 
     /** The detail screen of one astronomical event. */
     data class EventDetail(val event: AstronomicalEvent) : TonightRoute
+
+    /** The satellite passes and the detail of one pass. */
+    data class Satellites(val screen: SatelliteScreen) : TonightRoute
+
+    /** The lists of bright comets and asteroids. */
+    data object SmallBodies : TonightRoute
 }
 
 /**
@@ -79,6 +89,10 @@ fun TonightScreen() {
         stack.push(TonightRoute.EventsCalendar)
         if (screen == ScreenshotScreen.EVENT_DETAIL) events.screenshotEvent(app)?.let { stack.push(TonightRoute.EventDetail(it)) }
     }
+    // The satellite cards open their screens on this tab's stack.
+    SatelliteNavigationEffect { screen ->
+        if (stack.top == TonightRoute.Root || stack.top is TonightRoute.Satellites) stack.push(TonightRoute.Satellites(screen))
+    }
     NavStackHost(stack, Modifier.fillMaxSize()) { route ->
         Box(Modifier.fillMaxSize().screenBackground(palette)) {
             when (route) {
@@ -88,6 +102,7 @@ fun TonightScreen() {
                     onOpenPolarAlignment = { if (stack.top == TonightRoute.Root) stack.push(TonightRoute.PolarAlignment) },
                     onOpenEvent = { event -> if (stack.top == TonightRoute.Root) stack.push(TonightRoute.EventDetail(event)) },
                     onOpenCalendar = { if (stack.top == TonightRoute.Root) stack.push(TonightRoute.EventsCalendar) },
+                    onOpenSmallBodies = { if (stack.top == TonightRoute.Root) stack.push(TonightRoute.SmallBodies) },
                 )
                 is TonightRoute.ObjectDetail -> ObjectDetailScreen(route.obj, onBack = { stack.pop() })
                 TonightRoute.PolarAlignment -> PolarAlignmentScreen(onBack = { stack.pop() })
@@ -96,6 +111,11 @@ fun TonightScreen() {
                     onOpenEvent = { event -> if (stack.top == TonightRoute.EventsCalendar) stack.push(TonightRoute.EventDetail(event)) },
                 )
                 is TonightRoute.EventDetail -> EventDetailScreen(route.event, onBack = { stack.pop() })
+                is TonightRoute.Satellites -> SatelliteRouteScreen(route.screen, onBack = { stack.pop() })
+                TonightRoute.SmallBodies -> SmallBodyListScreen(
+                    onBack = { stack.pop() },
+                    onOpenObject = { obj -> if (stack.top == TonightRoute.SmallBodies) stack.push(TonightRoute.ObjectDetail(obj)) },
+                )
             }
         }
     }
@@ -108,10 +128,11 @@ private fun TonightRoot(
     onOpenPolarAlignment: () -> Unit,
     onOpenEvent: (AstronomicalEvent) -> Unit,
     onOpenCalendar: () -> Unit,
+    onOpenSmallBodies: () -> Unit,
 ) {
     val context = LocalAppModel.current.observerContext
     if (context != null) {
-        TonightContent(context, onOpenObject, onOpenPolarAlignment, onOpenEvent, onOpenCalendar)
+        TonightContent(context, onOpenObject, onOpenPolarAlignment, onOpenEvent, onOpenCalendar, onOpenSmallBodies)
     } else {
         Column(Modifier.fillMaxSize()) {
             TonightTopBar()

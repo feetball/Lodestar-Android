@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
+import net.kuecker.lodestar.features.smallbodies.SmallBodyChartPainter
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
 import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.theme.Palette
@@ -129,6 +130,7 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
             drawStars()
             if (layers.deepSkyObjects) drawDeepSky()
             drawBodies()
+            SmallBodyChartPainter.draw(this, scene.smallBodies, viewport, palette, dp, occupied)
             drawSkyline()
             drawMosaic(mosaicStep)
             drawTarget()
@@ -533,7 +535,7 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
     }
 
     /** Axis-aligned screen rectangles (left, top, right, bottom) that labels must keep clear of. */
-    private class RectList {
+    internal class RectList {
         private var values = FloatArray(4 * INITIAL_CAPACITY)
         private var count = 0
 

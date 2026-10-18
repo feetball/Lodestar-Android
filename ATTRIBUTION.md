@@ -111,17 +111,33 @@ in the code. Radiant drift rates are least-squares fits to the calendar's radian
 
 ### Satellite data and SGP4
 
-Satellite orbital elements are downloaded at run time from **CelesTrak** (Dr. T. S. Kelso, https://celestrak.org),
-free to use with credit. The SGP4/SDP4 propagator is a port of the reference implementation by D. A. Vallado,
-P. Crawford, R. Hujsak and T. S. Kelso ("Revisiting Spacetrack Report #3", AIAA 2006-6753), distributed by CelesTrak.
-Intrinsic magnitudes of the ISS, Tiangong and Hubble are from Heavens-Above.
+Satellite orbital elements are downloaded at run time from **CelesTrak** (Dr. T. S. Kelso, <https://celestrak.org>), only when
+the user switches on *Satellite passes* or *Starlink streak warnings* in Settings ▸ Online Data. They are free to use with
+credit: *"Orbital data: CelesTrak, T. S. Kelso"*. The groups used are `stations` and `visual` (OMM JSON, about 75 KB) and
+`starlink` (about 4.7 MB); Lodestar never requests a group more than once per two hours, as CelesTrak asks. The SGP4/SDP4
+propagator is a port of the reference implementation by D. A. Vallado, P. Crawford, R. Hujsak and T. S. Kelso ("Revisiting
+Spacetrack Report #3", AIAA 2006-6753), distributed by CelesTrak. Intrinsic magnitudes of the ISS, Tiangong and Hubble are
+from Heavens-Above.
 
 ### Comet and asteroid orbits
 
-Comet orbital elements are downloaded at run time from the **IAU Minor Planet Center** (`CometEls.txt`, credit the
-MPC; the file's header is kept). Single-object elements and the test reference positions come from **NASA/JPL**
-(SBDB and Horizons, public domain; credit requested). Test fixtures contain small extracts of both. The bundled `asteroids.txt` (bright asteroids, osculating epoch 2026-06-09) is an extract of the
+Comet orbital elements are downloaded at run time from the **IAU Minor Planet Center** (`CometEls.txt`, at most once a day,
+with `If-Modified-Since`), only when the user switches on *Comets* in Settings ▸ Online Data. Credit: *"Orbital elements: IAU
+Minor Planet Center"* (<https://minorplanetcenter.net>); the file's header is kept. Single-object elements and the test
+reference positions come from **NASA/JPL** (SBDB and Horizons, public domain; credit requested). Test fixtures contain small
+extracts of both. The bundled `asteroids.txt` (bright asteroids, osculating epoch 2026-06-09) is an extract of the
 MPC orbit file and keeps the MPC header verbatim.
+
+### Weather forecast
+
+The cloud forecast is downloaded at run time from **MET Norway** (the Norwegian Meteorological Institute), Locationforecast 2.0
+`complete` (<https://api.met.no/weatherapi/locationforecast/2.0/documentation>), only when the user switches on *Cloud forecast*
+in Settings ▸ Online Data. MET Norway licenses its data under the **Creative Commons Attribution 4.0 International** licence
+(<https://creativecommons.org/licenses/by/4.0/>) and the Norwegian Licence for Open Government Data 2.0. Credit:
+*"Weather forecast from MET Norway"* (the card also shows *"Forecast: MET Norway"*). Lodestar shows the forecast's cloud-cover
+values unchanged; the clear-spell sentence is its own summary and does not imply endorsement by MET Norway. The request carries
+the location rounded to 0.1° (at most four decimals are allowed), an identifying User-Agent, honours `Expires` and
+`If-Modified-Since`, and is made only while the app is in use.
 
 ### d3-celestial — `constellations.json` and `milkyway.json`
 
@@ -233,6 +249,9 @@ the app.
 > the latter after Jose R. Vieira's Milky Way Outline Catalog.
 > Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey (public domain).
 > Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); lunar theory after J. Meeus.
+>
+> Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital elements: IAU Minor Planet Center; weather forecast from
+> MET Norway (CC BY 4.0).
 
 ## Reproducing and updating
 

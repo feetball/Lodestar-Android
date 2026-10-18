@@ -27,6 +27,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import net.kuecker.lodestar.features.online.TonightCloudCard
+import net.kuecker.lodestar.features.satellites.TonightSatelliteCard
+import net.kuecker.lodestar.features.smallbodies.SmallBodyTonightCard
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.theme.LocalPalette
@@ -35,14 +38,17 @@ import java.time.Instant
 
 /** The cards that describe one night, from the darkness timeline to the best targets. */
 @Composable
-internal fun TonightReportCards(report: TonightReport, onOpenObject: (CelestialObject) -> Unit) {
+internal fun TonightReportCards(report: TonightReport, onOpenObject: (CelestialObject) -> Unit, onOpenSmallBodies: () -> Unit) {
     TonightTimelineCard(report)
+    TonightCloudCard(report.summary.observer.location, report.timeline.range, report.timeZone)
     TonightSunCard(report.summary, report.timeZone)
     val isSkylineApplied = report.skyline != null
     TonightMoonCard(report.summary, report.timeZone, isSkylineApplied)
     TonightMilkyWayCard(report.summary, report.timeZone, isSkylineApplied)
     TonightPlanetsCard(report.summary, report.timeZone, isSkylineApplied, onOpenObject)
+    report.smallBodies?.let { SmallBodyTonightCard(it, report.timeZone, onOpenObject, onOpenSmallBodies) }
     TonightTargetsCard(report.targets, report.timeZone, isSkylineApplied, onOpenObject)
+    TonightSatelliteCard(report.summary.observer, report.timeline.range, report.timeZone)
 }
 
 /** How a [TonightNote] reads. */

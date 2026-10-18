@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.tonight
 
+import net.kuecker.lodestar.features.smallbodies.SmallBodyTonightPlanner
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
@@ -53,14 +54,17 @@ internal object TonightCalculator {
             tonightStart.atZone(zone).toLocalDate(),
             summary.night.start.atZone(zone).toLocalDate(),
         ).toInt()
+        // Comets and asteroids are not deep-sky objects: they get their own card, and the clearly good ones join the targets.
+        val smallBodies = input.catalog?.let { SmallBodyTonightPlanner.plan(it, summary, skyline) }
         return TonightReport(
             summary = summary,
             timeZone = zone,
             timeline = TonightTimelineModel(summary, zone),
-            targets = targets(summary, input.catalog, skyline),
+            targets = targets(summary, input.catalog, skyline, smallBodies?.targets.orEmpty()),
             tonightStart = tonightStart,
             nightsFromTonight = nights,
             skyline = skyline,
+            smallBodies = smallBodies?.bright,
         )
     }
 
@@ -85,10 +89,15 @@ internal object TonightCalculator {
 
     // Best targets
 
-    private fun targets(summary: NightSummary, catalog: Catalog?, skyline: HorizonProfile?): TonightTargetsOutcome {
+    private fun targets(
+        summary: NightSummary,
+        catalog: Catalog?,
+        skyline: HorizonProfile?,
+        movingTargets: List<TonightTarget>,
+    ): TonightTargetsOutcome {
         if (!summary.hasAstronomicalDarkness) return TonightTargetsOutcome.NoDarkness
         if (catalog == null) return TonightTargetsOutcome.CatalogPending
-        return TonightTargetsOutcome.Ranked(rankedTargets(catalog, summary, skyline))
+        return TonightTargetsOutcome.Ranked(movingTargets + rankedTargets(catalog, summary, skyline))
     }
 
     private class Candidate(val obj: CelestialObject, val visibility: TargetVisibility, val peak: Double, val score: Double)

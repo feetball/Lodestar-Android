@@ -72,7 +72,7 @@ internal fun AimControlsBar(
         { slot ->
             AimControl(
                 title = "Target", icon = Icons.Outlined.GpsFixed, minHeight = buttonHeight,
-                label = "Choose target", value = model.guidanceTarget?.name ?: "None",
+                label = "Choose target", value = model.satellite.source?.title ?: model.guidanceTarget?.name ?: "None",
                 modifier = slot, onClick = { onSheet(AimSheet.TARGET_PICKER) },
             )
         },

@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.satellites.SatelliteStreakChip
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
 import net.kuecker.lodestar.model.HeadingSource
@@ -79,6 +80,7 @@ internal fun AimStatusChips(model: AimViewModel, modifier: Modifier = Modifier) 
             }
         }
     }
+    SatelliteStreakChip(model)
 }
 
 // Sensors and heading

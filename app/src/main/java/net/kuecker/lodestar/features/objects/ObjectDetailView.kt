@@ -38,6 +38,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.features.smallbodies.SmallBodyTailCard
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.model.AppSettings
@@ -94,7 +96,7 @@ private fun ObjectDetailContent(obj: CelestialObject, onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().screenBackground(palette)) {
-        ObjectsTopBar(obj.name, onBack = onBack)
+        ObjectsTopBar(SmallBodyText.displayName(obj), onBack = onBack)
         Column(
             Modifier
                 .weight(1f)
@@ -110,6 +112,7 @@ private fun ObjectDetailContent(obj: CelestialObject, onBack: () -> Unit) {
             } else {
                 NeedsLocationView(Modifier.fillMaxWidth().card(palette).heightIn(min = 300.dp))
             }
+            SmallBodyTailCard(snapshot?.current?.smallBody)
             ObjectDetailPhotographyCard(obj, snapshot, app.lensSetup, context?.timeZone ?: ZoneId.systemDefault())
             if (hasAboutContent(obj)) ObjectDetailAboutCard(obj)
         }
@@ -157,7 +160,7 @@ internal fun ObjectDetailHeader(obj: CelestialObject, modifier: Modifier = Modif
             LodestarButton(onClick = { app.aim(obj) }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Outlined.GpsFixed, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(
-                    "Aim at ${obj.name}",
+                    "Aim at ${SmallBodyText.displayName(obj)}",
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,

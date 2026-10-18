@@ -1,6 +1,9 @@
 package net.kuecker.lodestar.shared
 
 import android.text.format.DateFormat
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
 import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
 import net.kuecker.lodestar.kit.formatting.*
@@ -20,9 +23,8 @@ object AppFormat {
     /** Placeholder for unknown values. */
     const val MISSING = "—"
 
-    /** The user's 12/24-hour preference; refreshed by the activity when it starts. */
-    @Volatile
-    var use24HourClock = true
+    /** The user's 12/24-hour preference; refreshed by the activity when it starts. Compose state, so times redraw. */
+    var use24HourClock by mutableStateOf(true)
 
     // Time
 

@@ -44,6 +44,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.mosaic.MosaicSession
+import net.kuecker.lodestar.features.smallbodies.SmallBodyAccessibleMarkers
+import net.kuecker.lodestar.features.smallbodies.SmallBodyChartMarkers
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
@@ -133,6 +135,7 @@ internal fun SkyChartSurface(
             if (layers.cameraView) PlanisphereLiveCanvas(model, live, palette, rotatesToHeading)
             StatusChips(model, live, layers.cameraView, rotatesToHeading, mosaic)
             AccessibleBodies(visibleBodies, model::select)
+            SmallBodyAccessibleMarkers(content.scene.smallBodies, model::select)
         }
 
         AnimatedContent(
@@ -237,6 +240,7 @@ private fun accessibilitySummary(scene: SkyChartScene, timeZone: ZoneId, mosaicS
     val visible = scene.bodies.filter { it.isAboveHorizon }
     if (visible.isEmpty()) parts.add("The Sun, Moon and planets are all below the horizon.")
     visible.mapTo(parts, ::description)
+    SmallBodyChartMarkers.spokenSummary(scene.smallBodies)?.let(parts::add)
     scene.skyline?.let {
         parts.add("${SkylineSummary.describe(it.profile)} It is drawn as a darker band around the edge of the chart.")
     }

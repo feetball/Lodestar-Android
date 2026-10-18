@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +64,6 @@ import net.kuecker.lodestar.shared.LodestarButton
 import net.kuecker.lodestar.shared.LodestarButtonKind
 import net.kuecker.lodestar.shared.monospacedDigits
 import net.kuecker.lodestar.theme.LocalPalette
-import java.time.Instant
 
 /** Milliseconds a notice stays in the mount card. */
 private const val NOTICE_SHOWN_MS = 7_000L
@@ -174,7 +174,7 @@ private fun MountConnectedCard(
         if (target == null || observer == null || position == null) {
             null
         } else {
-            position.angularSeparation(MountTargeting.target(target, observer, Instant.now()).j2000)
+            position.angularSeparation(MountTargeting.target(target, observer, Snapshot.withoutReadObservation { app.clock.now }).j2000)
         }
     }
     val isIdle = status.phase == MountPhase.IDLE

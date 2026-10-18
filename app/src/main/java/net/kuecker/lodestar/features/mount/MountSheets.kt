@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -57,7 +58,6 @@ import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.shared.SettingsToggleRow
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
-import java.time.Instant
 
 /** Share of the screen the nudge sheet fills: little, so the sky and the target stay in view while centring. */
 private const val NUDGE_SHEET_HEIGHT = 0.5f
@@ -75,6 +75,7 @@ private const val REFRESH_MS = 2_000L
 @Composable
 fun MountAimSheets(target: CelestialObject?) {
     val sheets = rememberMountAimState()
+    MountScreenshotEffect(sheets, target)
     // A sheet does not wait for the Aim screen to come back: leaving the screen closes it.
     DisposableEffect(sheets) { onDispose { sheets.close() } }
     when (sheets.sheet) {
@@ -159,11 +160,11 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
     val scope = rememberCoroutineScope()
     val snapshot = service.snapshot
     val observer = app.observerContext?.observer
-    var now by remember { mutableStateOf(Instant.now()) }
+    var now by remember { mutableStateOf(Snapshot.withoutReadObservation { app.clock.now }) }
     LaunchedEffect(Unit) {
         while (true) {
             delay(REFRESH_MS)
-            now = Instant.now()
+            now = app.clock.now
         }
     }
     val resolved = remember(target?.id, observer, now) {
@@ -329,7 +330,7 @@ private fun alignPhone(app: AppModel, service: MountService, target: CelestialOb
         service.postNotice("The mount is synced. The phone could not be aligned: its sensors are not delivering data.", true)
         return
     }
-    val date = Instant.now()
+    val date = app.clock.now
     val apparent = SkyFrame(date, observer).horizontal(target, refraction = true)
     val point = AlignmentPoint(sample.rawAttitude, apparent, date, target.name)
     try {

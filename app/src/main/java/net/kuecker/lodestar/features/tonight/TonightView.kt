@@ -23,8 +23,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.app.ScreenshotScreen
+import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.features.events.EventDetailScreen
 import net.kuecker.lodestar.features.events.EventsCalendarScreen
+import net.kuecker.lodestar.features.events.rememberEventsModel
+import net.kuecker.lodestar.features.events.screenshotEvent
 import net.kuecker.lodestar.features.objects.ObjectDetailScreen
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.kit.catalog.CelestialObject
@@ -70,6 +74,11 @@ fun TonightScreen() {
     val palette = LocalPalette.current
     val stack = rememberRetained("tonight.nav") { NavStack<TonightRoute>(TonightRoute.Root) }
     LaunchedEffect(Unit) { app.catalog.load() }
+    val events = rememberEventsModel()
+    ScreenshotScreenEffect(ScreenshotScreen.EVENTS, ScreenshotScreen.EVENT_DETAIL) { screen ->
+        stack.push(TonightRoute.EventsCalendar)
+        if (screen == ScreenshotScreen.EVENT_DETAIL) events.screenshotEvent(app)?.let { stack.push(TonightRoute.EventDetail(it)) }
+    }
     NavStackHost(stack, Modifier.fillMaxSize()) { route ->
         Box(Modifier.fillMaxSize().screenBackground(palette)) {
             when (route) {

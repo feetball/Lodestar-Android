@@ -22,7 +22,10 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import net.kuecker.lodestar.app.AppTab
+import net.kuecker.lodestar.app.ScreenshotScreen
+import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.features.mosaic.MosaicPlanSheet
+import net.kuecker.lodestar.features.mosaic.awaitScreenshotAim
 import net.kuecker.lodestar.features.mount.MountAimSheets
 import net.kuecker.lodestar.services.MotionStatus
 import net.kuecker.lodestar.shared.EmptyStateView
@@ -96,6 +99,10 @@ fun AimScreen() {
         }
     }
     MountAimSheets(target = model.guidanceTarget)
+    ScreenshotScreenEffect(ScreenshotScreen.MOSAIC) {
+        awaitScreenshotAim(app)
+        sheet = AimSheet.MOSAIC
+    }
     when (sheet) {
         AimSheet.TARGET_PICKER -> AimTargetPickerSheet(model, onDismiss = { sheet = null })
         AimSheet.ALIGNMENT -> AlignmentSheet(model, onDismiss = { sheet = null })

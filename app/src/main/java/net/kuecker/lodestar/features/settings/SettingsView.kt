@@ -74,6 +74,7 @@ internal sealed interface SettingsRoute {
 fun SettingsScreen() {
     val stack = rememberRetained("settings.nav") { NavStack<SettingsRoute>(SettingsRoute.Root) }
     val back: () -> Unit = { stack.pop() }
+    SettingsScreenshotEffect(stack)
     NavStackHost(stack, Modifier.fillMaxSize()) { route ->
         when (route) {
             SettingsRoute.Root -> SettingsRoot(onOpen = stack::push)

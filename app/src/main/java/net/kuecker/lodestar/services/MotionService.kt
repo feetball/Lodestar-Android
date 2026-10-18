@@ -203,8 +203,11 @@ class MotionService(context: Context, private val scope: CoroutineScope) {
         publish()
     }
 
-    /** Replaces the sensors with a level, portrait back-camera pointing at [boresight] (debug screenshot mode). */
-    fun useScreenshotPointing(boresight: HorizontalCoordinate) {
+    /**
+     * Replaces the sensors with a level, portrait back-camera pointing at [boresight] (debug screenshot mode). Later
+     * calls move the pointing on; [timestamp] is the sensor clock of the sample, in seconds.
+     */
+    fun useScreenshotPointing(boresight: HorizontalCoordinate, timestamp: Double = 1.0) {
         if (!BuildConfig.DEBUG) return
         val forward = boresight.unitVector
         val up = (Vector3(0.0, 0.0, 1.0) - forward * forward.z).normalized
@@ -216,7 +219,8 @@ class MotionService(context: Context, private val scope: CoroutineScope) {
         val attitude = DeviceAttitude.create(matrix, 0.0, 1.0) ?: return
         screenshotSample = MotionSample(
             attitude = attitude, rawAttitude = attitude, gravity = matrix * Vector3(0.0, 0.0, -1.0),
-            angularSpeed = 0.0, magneticFieldMicrotesla = null, compassQuality = CompassQuality.HIGH, timestamp = 1.0,
+            angularSpeed = 0.0, magneticFieldMicrotesla = null, compassQuality = CompassQuality.HIGH,
+            timestamp = timestamp,
         )
         status = MotionStatus.Running
         compassQuality = CompassQuality.HIGH

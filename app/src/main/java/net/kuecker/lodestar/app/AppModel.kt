@@ -357,11 +357,13 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     private fun applyScreenshotMode(demo: ScreenshotMode) {
         val site = net.kuecker.lodestar.model.SavedSite.create(
             demo.siteName, demo.latitude, demo.longitude, demo.elevation, demo.timeZoneIdentifier,
+            horizon = if (demo.hasSkyline) ScreenshotMode.demoSkyline() else null,
         )
         settingsStore.update { s ->
             s.copy(
                 hasCompletedOnboarding = true,
-                cameraPreviewEnabled = false,
+                cameraPreviewEnabled = demo.showsCamera,
+                focalLength = demo.focalLength ?: AppSettings().focalLength,
                 nightMode = if (demo.nightMode) NightModeSetting.ON else NightModeSetting.OFF,
                 savedSites = site?.let(::listOf) ?: s.savedSites,
                 locationSource = site?.let { LocationSource.Site(it.id) } ?: s.locationSource,

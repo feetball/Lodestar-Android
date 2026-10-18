@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.model
 
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -53,5 +54,19 @@ class AppSettingsTest {
             """{"savedSites":[{"id":"${site.id}","name":"Ok","latitude":1,"longitude":2},{"id":"x","name":"Bad","latitude":200,"longitude":0}]}""",
         )
         assertEquals(listOf("Ok"), decoded.savedSites.map { it.name })
+    }
+
+    @Test
+    fun aSitesSkylineIsStoredAndADamagedOneIsDroppedWithoutLosingTheSite() {
+        val skyline = assertNotNull(HorizonProfile.create(List(360) { if (it in 80..120) 12.0 else 0.0 }))
+        val site = assertNotNull(SavedSite.create("Ridge", 40.0, -105.0, horizon = skyline))
+        val decoded = AppSettings.decode(AppSettings.encode(AppSettings(savedSites = listOf(site))))
+        assertEquals(skyline, decoded.savedSites.single().horizon)
+        val damaged = AppSettings.decode(
+            """{"savedSites":[{"id":"${site.id}","name":"Ridge","latitude":40,"longitude":-105,"horizon":{"version":1,"altitudeTenths":[1,2]}}]}""",
+        )
+        assertEquals("Ridge", damaged.savedSites.single().name)
+        assertNull(damaged.savedSites.single().horizon)
+        assertNull(assertNotNull(SavedSite.create("Open", 0.0, 0.0, horizon = HorizonProfile.flat)).horizon)
     }
 }

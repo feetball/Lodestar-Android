@@ -140,6 +140,7 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
                     ObserverContext(
                         observer = Observer(site.location, atmosphere),
                         timeZone = site.timeZone ?: ZoneId.systemDefault(), name = site.name, source = source,
+                        horizon = site.horizon,
                     )
                 }
             }

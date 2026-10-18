@@ -16,6 +16,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import net.kuecker.lodestar.kit.foundation.Atmosphere
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.phototools.SensorFormat
 import net.kuecker.lodestar.kit.pointing.MountProfile
 import java.time.DateTimeException
@@ -46,6 +47,8 @@ data class SavedSite private constructor(
     val elevation: Double,
     /** IANA time zone of the site, when known. */
     val timeZoneIdentifier: String?,
+    /** The recorded skyline (trees, mountains), or null for an open horizon. */
+    val horizon: HorizonProfile? = null,
 ) {
     val location: GeographicLocation get() = GeographicLocation(latitude, longitude, elevation)
 
@@ -58,7 +61,8 @@ data class SavedSite private constructor(
         longitude: Double = this.longitude,
         elevation: Double = this.elevation,
         timeZoneIdentifier: String? = this.timeZoneIdentifier,
-    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id)
+        horizon: HorizonProfile? = this.horizon,
+    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id, horizon)
 
     companion object {
         const val MAXIMUM_NAME_LENGTH = 60
@@ -71,6 +75,7 @@ data class SavedSite private constructor(
             elevation: Double = 0.0,
             timeZoneIdentifier: String? = null,
             id: String = UUID.randomUUID().toString(),
+            horizon: HorizonProfile? = null,
         ): SavedSite? {
             val location = GeographicLocation.validated(latitude, longitude, elevation) ?: return null
             if (runCatching { UUID.fromString(id) }.isFailure) return null
@@ -82,6 +87,7 @@ data class SavedSite private constructor(
                 longitude = location.longitude,
                 elevation = location.elevation,
                 timeZoneIdentifier = timeZoneIdentifier?.takeIf { zoneOrNull(it) != null },
+                horizon = horizon?.takeUnless { it.isFlat },
             )
         }
 
@@ -99,6 +105,7 @@ data class SavedSite private constructor(
             put("longitude", JsonPrimitive(site.longitude))
             put("elevation", JsonPrimitive(site.elevation))
             site.timeZoneIdentifier?.let { put("timeZoneIdentifier", JsonPrimitive(it)) }
+            site.horizon?.let { put("horizon", Json.encodeToJsonElement(HorizonProfile.serializer(), it)) }
         }
 
         /** Decodes and re-validates a stored site; `null` for invalid entries (dropped by the caller). */
@@ -111,6 +118,8 @@ data class SavedSite private constructor(
                 longitude = o.getValue("longitude").jsonPrimitive.doubleOrNull ?: return null,
                 elevation = o["elevation"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
                 timeZoneIdentifier = o["timeZoneIdentifier"]?.jsonPrimitive?.content,
+                // A damaged skyline is dropped rather than losing the site.
+                horizon = o["horizon"]?.let { runCatching { Json.decodeFromJsonElement(HorizonProfile.serializer(), it) }.getOrNull() },
             )
         }.getOrNull()
     }

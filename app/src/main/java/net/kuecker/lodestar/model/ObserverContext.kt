@@ -2,6 +2,7 @@ package net.kuecker.lodestar.model
 
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.foundation.Observer
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import java.time.Instant
 import java.time.ZoneId
 
@@ -18,6 +19,8 @@ data class ObserverContext(
     val horizontalAccuracy: Double? = null,
     /** When the device location was measured (device location only). */
     val timestamp: Instant? = null,
+    /** The site's recorded skyline, or null for an open horizon (always null for the device location). */
+    val horizon: HorizonProfile? = null,
 ) {
     val location: GeographicLocation get() = observer.location
 }

@@ -103,6 +103,12 @@ here as CDS asks.
 This research has made use of the VizieR catalogue access tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier).
 The original description of the VizieR service was published in 2000, A&AS 143, 23.
 
+### Meteor shower table — `events/MeteorShower`
+
+The meteor shower table (peak solar longitudes, activity periods, ZHR, radiant positions and drift, velocities) is
+hand-entered from the **IMO Meteor Shower Calendar 2026** (© International Meteor Organization), whose source is cited
+in the code. Radiant drift rates are least-squares fits to the calendar's radiant tables.
+
 ### d3-celestial — `constellations.json` and `milkyway.json`
 
 - **Title:** d3-celestial

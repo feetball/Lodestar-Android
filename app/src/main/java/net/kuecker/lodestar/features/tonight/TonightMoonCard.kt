@@ -40,14 +40,19 @@ import kotlin.math.abs
 
 /** The Moon's phase, when it is up, and how much of the dark it leaves alone. */
 @Composable
-internal fun TonightMoonCard(summary: NightSummary, zone: ZoneId) {
+internal fun TonightMoonCard(summary: NightSummary, zone: ZoneId, isSkylineApplied: Boolean) {
     val palette = LocalPalette.current
     Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         CardTitle("Moon", icon = Icons.Outlined.DarkMode)
         MoonHeader(summary, zone)
         MoonlightChip(summary)
-        HorizonRows(summary.moon, zone)
+        HorizonRows(summary.moon, zone, isSkylineApplied)
         DarkHoursRow(summary)
+        if (isSkylineApplied) {
+            TonightSkylineNote(
+                "The Moon counts as up while it is above your recorded skyline, and the moon-free dark hours follow.",
+            )
+        }
     }
 }
 
@@ -149,20 +154,24 @@ private fun MoonlightChip(summary: NightSummary) {
 // Times
 
 @Composable
-private fun HorizonRows(moon: MoonSummary, zone: ZoneId) {
+private fun HorizonRows(moon: MoonSummary, zone: ZoneId, isSkylineApplied: Boolean) {
     val events = moon.riseTransitSet
+    val riseLabel = if (isSkylineApplied) "Moon clears the skyline" else "Moonrise"
+    val setLabel = if (isSkylineApplied) "Moon sinks behind the skyline" else "Moonset"
     when (events.circumstance) {
-        RiseTransitSet.Circumstance.ALWAYS_UP -> InfoRow("Moon", "Above the horizon all night")
-        RiseTransitSet.Circumstance.ALWAYS_DOWN -> InfoRow("Moon", "Below the horizon all night")
+        RiseTransitSet.Circumstance.ALWAYS_UP ->
+            InfoRow("Moon", if (isSkylineApplied) "Above your skyline all night" else "Above the horizon all night")
+        RiseTransitSet.Circumstance.ALWAYS_DOWN ->
+            InfoRow("Moon", if (isSkylineApplied) "Below your skyline all night" else "Below the horizon all night")
         RiseTransitSet.Circumstance.NORMAL -> {
             val rise = events.rise
             val set = events.set
             if (rise != null && set != null && set < rise) {
-                InfoRow("Moonset", AppFormat.time(set, zone))
-                InfoRow("Moonrise", AppFormat.time(rise, zone))
+                InfoRow(setLabel, AppFormat.time(set, zone))
+                InfoRow(riseLabel, AppFormat.time(rise, zone))
             } else {
-                InfoRow("Moonrise", AppFormat.time(rise, zone))
-                InfoRow("Moonset", AppFormat.time(set, zone))
+                InfoRow(riseLabel, AppFormat.time(rise, zone))
+                InfoRow(setLabel, AppFormat.time(set, zone))
             }
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +61,20 @@ internal fun SettingsLocationSection() {
     val isFull = settings.savedSites.size >= AppSettings.MAXIMUM_SAVED_SITES
     val now = Instant.now()
     var editorTarget by remember { mutableStateOf<SiteEditorTarget?>(null) }
+    // Recording a skyline for the current place: explain, save the place as a site, then record it.
+    var asksToSaveForSkyline by remember { mutableStateOf(false) }
+    var recordsAfterSaving by remember { mutableStateOf(false) }
+    var siteToRecord by remember { mutableStateOf<String?>(null) }
+    var recordingSiteID by remember { mutableStateOf<String?>(null) }
+
+    // Once the editor has closed after saving the place, its skyline is recorded.
+    LaunchedEffect(editorTarget) {
+        if (editorTarget == null) {
+            if (siteToRecord != null) recordingSiteID = siteToRecord
+            siteToRecord = null
+            recordsAfterSaving = false
+        }
+    }
 
     SettingsSection(
         title = "Location",
@@ -83,6 +98,10 @@ internal fun SettingsLocationSection() {
         if (settings.locationSource == LocationSource.Device && !location.isAuthorized) {
             SettingsDivider()
             SettingsRow { AccessPrompt(location) }
+        }
+        if (settings.locationSource == LocationSource.Device) {
+            SettingsDivider()
+            SiteHorizonDeviceRow(onClick = { asksToSaveForSkyline = true })
         }
         for (site in settings.savedSites) {
             SettingsDivider()
@@ -126,9 +145,35 @@ internal fun SettingsLocationSection() {
                     // A newly added site becomes the observing location, as in onboarding.
                     if (target is SiteEditorTarget.New) {
                         store.update { it.copy(locationSource = LocationSource.Site(site.id)) }
+                        if (recordsAfterSaving) siteToRecord = site.id
                     }
                 },
             )
+        }
+    }
+
+    if (asksToSaveForSkyline) {
+        val fix = location.fix
+        SiteHorizonNeedsSiteDialog(
+            blocker = when {
+                fix == null -> "Lodestar does not have your position yet."
+                isFull -> "You have reached the limit of ${AppSettings.MAXIMUM_SAVED_SITES} saved sites. " +
+                    "Delete one first."
+                else -> null
+            },
+            onSave = {
+                asksToSaveForSkyline = false
+                if (fix != null) {
+                    recordsAfterSaving = true
+                    editorTarget = SiteEditorTarget.New(SiteDraft.at("Current Location", fix))
+                }
+            },
+            onDismiss = { asksToSaveForSkyline = false },
+        )
+    }
+    recordingSiteID?.let { id ->
+        settings.savedSites.firstOrNull { it.id == id }?.let { site ->
+            SiteHorizonDialogs(site, SiteHorizonAction.RECORD) { recordingSiteID = null }
         }
     }
 }
@@ -214,8 +259,16 @@ private fun SettingsSavedSiteRow(site: SavedSite, isSelected: Boolean, now: Inst
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(site.name, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge)
                 Text(subtitle(site, now), color = palette.secondaryText, style = MaterialTheme.typography.bodySmall)
+                if (site.horizon != null) {
+                    Text(
+                        "Horizon: ${rememberSiteHorizonStatus(site)}",
+                        color = palette.secondaryText,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
+        SiteHorizonMenuButton(site)
         IconButton(onClick = onEdit) {
             Icon(Icons.Outlined.Edit, contentDescription = "Edit ${site.name}", tint = palette.accent)
         }

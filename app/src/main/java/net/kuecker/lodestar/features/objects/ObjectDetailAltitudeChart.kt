@@ -125,8 +125,24 @@ internal fun ObjectDetailAltitudeChart(
                 strokeWidth = 1.dp.toPx(),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())),
             )
-            // The altitude curve, with the part above the horizon filled.
             val samples = night.samples
+            // The recorded skyline in the object's direction: the ground it has to clear.
+            if (night.usesSkyline && samples.isNotEmpty() && samples.all { it.skylineAltitude != null }) {
+                val ground = Path()
+                val line = Path()
+                ground.moveTo(x(samples.first().date), y(ALTITUDE_MINIMUM))
+                samples.forEachIndexed { index, sample ->
+                    val groundX = x(sample.date)
+                    val groundY = y(max(sample.skylineAltitude ?: 0.0, ALTITUDE_MINIMUM))
+                    ground.lineTo(groundX, groundY)
+                    if (index == 0) line.moveTo(groundX, groundY) else line.lineTo(groundX, groundY)
+                }
+                ground.lineTo(x(samples.last().date), y(ALTITUDE_MINIMUM))
+                ground.close()
+                drawPath(ground, palette.tertiaryText.copy(alpha = 0.3f))
+                drawPath(line, palette.horizonLine, style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Round))
+            }
+            // The altitude curve, with the part above the horizon filled.
             if (samples.isNotEmpty()) {
                 val area = Path()
                 val curve = Path()
@@ -164,8 +180,11 @@ internal fun ObjectDetailAltitudeChart(
 
 /** The highest point of the curve, spoken in place of the drawing. */
 private fun summary(night: ObjectDetailNight, zone: ZoneId): String {
-    val highest = night.samples.maxByOrNull { it.altitude }
-    if (highest == null || highest.altitude <= 0) return "Below the horizon all night"
+    val highest = night.samples.filter { it.isUp }.maxByOrNull { it.altitude }
+    if (highest == null) {
+        val aboveHorizon = night.samples.any { it.altitude > 0 }
+        return if (night.usesSkyline && aboveHorizon) "Behind your skyline all night" else "Below the horizon all night"
+    }
     return "Highest ${AngleFormatter.formatDegrees(highest.altitude, 0)} at ${AppFormat.time(highest.date, zone)}"
 }
 

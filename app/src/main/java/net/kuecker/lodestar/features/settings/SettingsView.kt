@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.tools.ExposureCalculatorScreen
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.features.tools.SensorDiagnosticsScreen
+import net.kuecker.lodestar.features.tools.TrailsTimeLapseScreen
 import net.kuecker.lodestar.shared.NavStack
 import net.kuecker.lodestar.shared.NavStackHost
 import net.kuecker.lodestar.shared.SettingsMenuOption
@@ -57,6 +58,7 @@ internal sealed interface SettingsRoute {
     data object AccuracyNotes : SettingsRoute
     data object DataCredits : SettingsRoute
     data object ExposureCalculator : SettingsRoute
+    data object TrailsTimeLapse : SettingsRoute
     data object PolarAlignment : SettingsRoute
     data object SensorDiagnostics : SettingsRoute
 }
@@ -76,6 +78,7 @@ fun SettingsScreen() {
             SettingsRoute.AccuracyNotes -> AccuracyNotesView(onBack = back)
             SettingsRoute.DataCredits -> DataCreditsView(onBack = back)
             SettingsRoute.ExposureCalculator -> ExposureCalculatorScreen(onBack = back)
+            SettingsRoute.TrailsTimeLapse -> TrailsTimeLapseScreen(onBack = back)
             SettingsRoute.PolarAlignment -> PolarAlignmentScreen(onBack = back)
             SettingsRoute.SensorDiagnostics -> SensorDiagnosticsScreen(onBack = back)
         }

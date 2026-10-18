@@ -52,6 +52,10 @@ internal fun AimReadout(
     isActive: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    if (model.mosaic.isActive) {
+        AimMosaicReadout(model, isActive, modifier)
+        return
+    }
     val target = model.guidanceTarget
     if (target == null) {
         AimNoTargetPrompt(model, onSheet, modifier)
@@ -64,10 +68,16 @@ internal fun AimReadout(
     }
 }
 
-/** "Below the horizon · rises 23:41 (in 5h 12m)", or `null` while the target is up. */
+/**
+ * "Below the horizon · rises 23:41 (in 5h 12m)", "Behind the recorded skyline" while the target is up but hidden by the
+ * trees or hills the site's skyline records, or `null` while the target is in the open sky.
+ */
 private fun belowHorizonNote(model: AimViewModel, target: CelestialObject, frame: AimFrame?): String? {
-    val altitude = frame?.target?.horizontal?.altitude ?: return null
-    if (altitude >= 0) return null
+    val placed = frame?.target ?: return null
+    val altitude = placed.horizontal.altitude
+    if (altitude >= 0) {
+        return if (model.skyContent?.isBehindSkyline(placed.direction) == true) "Behind the recorded skyline" else null
+    }
     val info = model.riseInfo
     val timeZone = model.app.observerContext?.timeZone
     if (info == null || info.targetID != target.id || timeZone == null) return "Below the horizon"
@@ -120,7 +130,7 @@ private fun AimTargetCard(obj: CelestialObject, horizontal: HorizontalCoordinate
 
 /** A short, bold remark with an icon, inside the target card. */
 @Composable
-private fun CardNote(text: String, icon: ImageVector, color: Color) {
+internal fun CardNote(text: String, icon: ImageVector, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         Text(text, color = color, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold))
@@ -129,7 +139,7 @@ private fun CardNote(text: String, icon: ImageVector, color: Color) {
 
 /** The pan and tilt the head has to make, or the state that replaces them. */
 @Composable
-private fun AimMoveRow(summary: AimGuidanceSummary) {
+internal fun AimMoveRow(summary: AimGuidanceSummary) {
     val palette = LocalPalette.current
     // The summary element of the screen speaks the same numbers once a second.
     Box(Modifier.fillMaxWidth().clearAndSetSemantics {}) {

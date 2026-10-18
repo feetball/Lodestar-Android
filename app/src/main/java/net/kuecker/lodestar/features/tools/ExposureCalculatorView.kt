@@ -114,7 +114,7 @@ fun ExposureCalculatorScreen(onBack: () -> Unit) {
 
 /** Closes the keyboard when the user scrolls the form (iOS: `scrollDismissesKeyboard`). */
 @Composable
-private fun rememberKeyboardDismissal(): NestedScrollConnection {
+internal fun rememberKeyboardDismissal(): NestedScrollConnection {
     val focus = LocalFocusManager.current
     return remember(focus) {
         object : NestedScrollConnection {
@@ -148,7 +148,7 @@ private fun RuleSection(inputs: ExposureInputs) {
 
 /** The rule picker: one segment per rule, in palette colours. */
 @Composable
-private fun RulePicker(selected: ExposureRule, onSelect: (ExposureRule) -> Unit) {
+internal fun RulePicker(selected: ExposureRule, onSelect: (ExposureRule) -> Unit) {
     val palette = LocalPalette.current
     val rules = ExposureRule.entries
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -330,17 +330,17 @@ private fun TrailSection(inputs: ExposureInputs, setup: LensSetup) {
 // MARK: Helpers
 
 /** [value] in the user's number format with between [minimumDigits] and [maximumDigits] decimals. */
-private fun decimal(value: Double, minimumDigits: Int, maximumDigits: Int): String =
+internal fun decimal(value: Double, minimumDigits: Int, maximumDigits: Int): String =
     NumberFormat.getNumberInstance().apply {
         minimumFractionDigits = minimumDigits
         maximumFractionDigits = maximumDigits
     }.format(value)
 
 /** The pixel pitch assumed when none is set, e.g. "4.0". */
-private fun defaultPitchText(): String = decimal(ExposureCalculator.defaultPixelPitchMicrometers, 1, 1)
+internal fun defaultPitchText(): String = decimal(ExposureCalculator.defaultPixelPitchMicrometers, 1, 1)
 
 /** The declination of [obj] now, from the observer's place (the equator when the location is not known yet). */
-private fun apparentDeclination(app: AppModel, obj: CelestialObject): Double {
+internal fun apparentDeclination(app: AppModel, obj: CelestialObject): Double {
     val observer = app.observerContext?.observer ?: Observer(GeographicLocation(0.0, 0.0))
     return SkyFrame(app.clock.now, observer).apparentEquatorial(obj).declination
 }
@@ -365,7 +365,7 @@ private fun verdict(trailPixels: Double): String = when {
 }
 
 /** The label used in the segmented picker. */
-private val ExposureRule.shortName: String
+internal val ExposureRule.shortName: String
     get() = when (this) {
         ExposureRule.RULE500 -> "500"
         ExposureRule.RULE400 -> "400"

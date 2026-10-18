@@ -22,6 +22,7 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import net.kuecker.lodestar.app.AppTab
+import net.kuecker.lodestar.features.mosaic.MosaicPlanSheet
 import net.kuecker.lodestar.services.MotionStatus
 import net.kuecker.lodestar.shared.EmptyStateView
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -66,6 +67,14 @@ fun AimScreen() {
     LaunchedEffect(skyInputs, isActive) {
         if (isActive) model.keepRiseInfoCurrent(skyInputs)
     }
+    // A running mosaic leads guidance from panel to panel: the panels' places are refreshed every second, and the
+    // guidance follows the panel being shot at once.
+    val mosaicPlan = model.mosaic.plan
+    val observer = app.observerContext?.observer
+    LaunchedEffect(mosaicPlan, observer, isActive) {
+        if (isActive) model.keepMosaicCurrent(mosaicPlan, observer)
+    }
+    LaunchedEffect(mosaicPlan, model.mosaic.step) { model.syncMosaic() }
     LaunchedEffect(isActive) {
         if (isActive) model.runLoop() else model.stopFeedback()
     }
@@ -88,6 +97,12 @@ fun AimScreen() {
     when (sheet) {
         AimSheet.TARGET_PICKER -> AimTargetPickerSheet(model, onDismiss = { sheet = null })
         AimSheet.ALIGNMENT -> AlignmentSheet(model, onDismiss = { sheet = null })
+        AimSheet.MOSAIC -> MosaicPlanSheet(
+            session = model.mosaic,
+            target = model.guidanceTarget,
+            cameraDirection = { model.engine.frame()?.pointing?.boresight },
+            onDismiss = { sheet = null },
+        )
         null -> Unit
     }
 }

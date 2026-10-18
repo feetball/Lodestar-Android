@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.North
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
@@ -41,11 +43,13 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.mosaic.MosaicSession
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
 import net.kuecker.lodestar.services.MotionStatus
 import net.kuecker.lodestar.shared.LocalAppModel
+import net.kuecker.lodestar.shared.SkylineSummary
 import net.kuecker.lodestar.shared.StatusChip
 import net.kuecker.lodestar.theme.LocalPalette
 import java.text.NumberFormat
@@ -73,6 +77,7 @@ internal fun SkyChartSurface(
     content: SkyChartContent,
     layers: SkyChartLayerOptions,
     rotatesToHeading: Boolean,
+    mosaic: MosaicSession,
     timeZone: ZoneId,
     onDetails: (CelestialObject) -> Unit,
     modifier: Modifier = Modifier,
@@ -99,7 +104,8 @@ internal fun SkyChartSurface(
         }
     }
 
-    val summary = remember(content, timeZone) { accessibilitySummary(content.scene, timeZone) }
+    val mosaicStatus = mosaic.takeIf { content.scene.mosaic?.plan === it.plan }?.spokenStatus
+    val summary = remember(content, timeZone, mosaicStatus) { accessibilitySummary(content.scene, timeZone, mosaicStatus) }
     val visibleBodies = remember(content) { content.scene.bodies.filter { it.isAboveHorizon } }
 
     Box(modifier.fillMaxSize()) {
@@ -123,9 +129,9 @@ internal fun SkyChartSurface(
                 }
                 .semantics { contentDescription = summary },
         ) {
-            PlanisphereCanvas(content, model, live, palette, layers, rotatesToHeading)
+            PlanisphereCanvas(content, model, live, palette, layers, rotatesToHeading, mosaic)
             if (layers.cameraView) PlanisphereLiveCanvas(model, live, palette, rotatesToHeading)
-            StatusChips(model, live, layers.cameraView, rotatesToHeading)
+            StatusChips(model, live, layers.cameraView, rotatesToHeading, mosaic)
             AccessibleBodies(visibleBodies, model::select)
         }
 
@@ -160,24 +166,37 @@ internal fun SkyChartSurface(
 private const val CALLOUT_MILLIS = 200
 
 /**
- * The chips along the top edge: whether north or the camera heading is up, the zoom, and where the camera points. They
- * are not interactive. Only this composable follows the zoom, so a pinch recomposes nothing else.
+ * The chips along the top edge: whether north or the camera heading is up, the zoom, and where the camera points, and
+ * below them the progress of a running mosaic. They are not interactive. Only this composable follows the zoom, so a pinch recomposes nothing else.
  */
 @Composable
-private fun StatusChips(model: SkyChartModel, live: SkyChartLiveState, showsCamera: Boolean, rotatesToHeading: Boolean) {
+private fun StatusChips(
+    model: SkyChartModel,
+    live: SkyChartLiveState,
+    showsCamera: Boolean,
+    rotatesToHeading: Boolean,
+    mosaic: MosaicSession,
+) {
     val zoomText by remember(model) {
         derivedStateOf { if (model.zoom > ZOOM_CHIP_THRESHOLD) zoomText(model.zoom) else null }
     }
     val readout = live.readout
-    Row(
+    Column(
         Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.Top,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        StatusChip(Icons.Outlined.North, if (rotatesToHeading && readout != null) "Heading up" else "North up")
-        zoomText?.let { StatusChip(Icons.Outlined.Search, it) }
-        Spacer(Modifier.weight(1f))
-        if (showsCamera && readout != null) SkyChartCameraReadout(readout)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            StatusChip(Icons.Outlined.North, if (rotatesToHeading && readout != null) "Heading up" else "North up")
+            zoomText?.let { StatusChip(Icons.Outlined.Search, it) }
+            Spacer(Modifier.weight(1f))
+            if (showsCamera && readout != null) SkyChartCameraReadout(readout)
+        }
+        // A second line, so a long chip cannot push the others off a narrow screen.
+        if (mosaic.isActive) StatusChip(Icons.Outlined.GridView, "Mosaic · ${mosaic.progressText}")
     }
 }
 
@@ -212,16 +231,21 @@ private fun AccessibleBodies(bodies: List<SkyChartBodyMarker>, onSelect: (Celest
     }
 }
 
-private fun accessibilitySummary(scene: SkyChartScene, timeZone: ZoneId): String {
+private fun accessibilitySummary(scene: SkyChartScene, timeZone: ZoneId, mosaicStatus: String?): String {
     val time = AppFormat.dateTime(scene.date, timeZone)
     val parts = arrayListOf("Sky chart for $time, looking up with north at the top.")
     val visible = scene.bodies.filter { it.isAboveHorizon }
     if (visible.isEmpty()) parts.add("The Sun, Moon and planets are all below the horizon.")
     visible.mapTo(parts, ::description)
+    scene.skyline?.let {
+        parts.add("${SkylineSummary.describe(it.profile)} It is drawn as a darker band around the edge of the chart.")
+    }
+    if (mosaicStatus != null) parts.add("$mosaicStatus The panels are outlined on the chart, the current one highlighted.")
     return parts.joinToString(" ")
 }
 
 private fun description(body: SkyChartBodyMarker): String {
     val direction = AngleFormatter.compassPoint(body.horizontal.azimuth).fullName.lowercase()
-    return "${body.name}, altitude ${body.horizontal.altitude.roundedHalfAwayFromZero().toInt()} degrees, $direction."
+    val hidden = if (body.isBehindSkyline) ", behind the recorded skyline" else ""
+    return "${body.name}, altitude ${body.horizontal.altitude.roundedHalfAwayFromZero().toInt()} degrees, $direction$hidden."
 }

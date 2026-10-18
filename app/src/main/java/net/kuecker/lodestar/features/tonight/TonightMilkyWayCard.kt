@@ -20,7 +20,7 @@ import java.time.ZoneId
 
 /** When and where the Milky Way's core, the Galactic Centre in Sagittarius, can be photographed. */
 @Composable
-internal fun TonightMilkyWayCard(summary: NightSummary, zone: ZoneId) {
+internal fun TonightMilkyWayCard(summary: NightSummary, zone: ZoneId, isSkylineApplied: Boolean) {
     val palette = LocalPalette.current
     val core = summary.milkyWayCore
     val minimum = MilkyWayCoreVisibility.minimumAltitude.toInt()
@@ -29,23 +29,36 @@ internal fun TonightMilkyWayCard(summary: NightSummary, zone: ZoneId) {
         if (!summary.hasAstronomicalDarkness) {
             TonightNote("There is no astronomical darkness on this night, so the core cannot be photographed.")
         } else if (core.visibleIntervals.isEmpty()) {
-            TonightNote("The Galactic Centre stays below $minimum° while it is dark.")
-            HorizonRows(core, zone)
+            TonightNote(
+                if (isSkylineApplied) {
+                    "The Galactic Centre stays behind your skyline or below $minimum° while it is dark."
+                } else {
+                    "The Galactic Centre stays below $minimum° while it is dark."
+                },
+            )
+            HorizonRows(core, zone, isSkylineApplied)
         } else {
-            VisibleRows(core, zone, minimum)
+            VisibleRows(core, zone, minimum, isSkylineApplied)
+        }
+        if (summary.hasAstronomicalDarkness && isSkylineApplied) {
+            TonightSkylineNote("The core counts as visible only while it is above your recorded skyline.")
         }
     }
 }
 
 /** When the core rises and sets, for a night on which it never gets high enough in the dark. */
 @Composable
-private fun HorizonRows(core: MilkyWayCoreVisibility, zone: ZoneId) {
-    core.riseTransitSet.rise?.let { InfoRow("Rises", AppFormat.time(it, zone)) }
-    core.riseTransitSet.set?.let { InfoRow("Sets", AppFormat.time(it, zone)) }
+private fun HorizonRows(core: MilkyWayCoreVisibility, zone: ZoneId, isSkylineApplied: Boolean) {
+    core.riseTransitSet.rise?.let {
+        InfoRow(if (isSkylineApplied) "Clears the skyline" else "Rises", AppFormat.time(it, zone))
+    }
+    core.riseTransitSet.set?.let {
+        InfoRow(if (isSkylineApplied) "Sinks behind the skyline" else "Sets", AppFormat.time(it, zone))
+    }
 }
 
 @Composable
-private fun VisibleRows(core: MilkyWayCoreVisibility, zone: ZoneId, minimum: Int) {
+private fun VisibleRows(core: MilkyWayCoreVisibility, zone: ZoneId, minimum: Int, isSkylineApplied: Boolean) {
     InfoRow("Visible window", TonightFormat.windows(core.visibleIntervals, zone))
     if (core.moonFreeVisibleIntervals != core.visibleIntervals) {
         InfoRow(
@@ -61,8 +74,8 @@ private fun VisibleRows(core: MilkyWayCoreVisibility, zone: ZoneId, minimum: Int
     InfoRow("Max altitude", core.maxAltitude?.let { AngleFormatter.formatDegrees(it, 0) } ?: AppFormat.MISSING)
     InfoRow("Direction", directionText(core))
     TonightNote(
-        "Visible means at least $minimum° above the horizon during astronomical darkness. Direction and height are " +
-            "for the best time.",
+        "Visible means at least $minimum° above the ${if (isSkylineApplied) "horizon and your skyline" else "horizon"} " +
+            "during astronomical darkness. Direction and height are for the best time.",
         style = TonightNoteStyle.FOOTNOTE,
     )
 }

@@ -65,6 +65,7 @@ fun SkyOverlayView(model: AimViewModel, isActive: Boolean, modifier: Modifier = 
         val frame = model.engine.frame() ?: return@Canvas
         // The target ring holds still for people who asked for less motion.
         val time = if (reduceMotion) 0.0 else frameNanos / 1e9
+        val session = model.mosaic
         SkyOverlayRenderer.create(
             scope = this,
             scratch = scratch,
@@ -72,6 +73,8 @@ fun SkyOverlayView(model: AimViewModel, isActive: Boolean, modifier: Modifier = 
             content = model.skyContent,
             configuration = model.configuration,
             palette = palette,
+            mosaic = model.mosaicPointings?.takeIf { it.plan === session.plan },
+            mosaicStep = session.step,
             camera = model.cameraGeometry,
             virtualFieldOfView = model.virtualFieldOfView,
             hudRotation = model.hudRotation,

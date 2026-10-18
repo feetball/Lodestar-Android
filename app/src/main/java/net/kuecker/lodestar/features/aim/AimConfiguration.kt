@@ -2,11 +2,13 @@ package net.kuecker.lodestar.features.aim
 
 import net.kuecker.lodestar.app.AppModel
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.catalog.Prominence
 import net.kuecker.lodestar.kit.catalog.riseTransitSet
 import net.kuecker.lodestar.kit.ephemeris.RiseSetCalculator
 import net.kuecker.lodestar.kit.ephemeris.RiseTransitSet
 import net.kuecker.lodestar.kit.foundation.DateInterval
 import net.kuecker.lodestar.kit.foundation.Observer
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.phototools.FrameSize
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
 import net.kuecker.lodestar.kit.pointing.DeviceAttitude
@@ -29,6 +31,8 @@ data class AimConfiguration(
     val showConstellationNames: Boolean,
     val showDeepSkyObjects: Boolean,
     val showMilkyWay: Boolean,
+    /** The deep-sky detail setting: objects up to this prominence level are drawn (1 showpieces … 4 everything). */
+    val deepSkyProminence: Prominence,
     val starMagnitudeLimit: Double,
     /**
      * Whether the camera picture is wanted behind the sky (it also has to run). Never with a mount that points the
@@ -56,6 +60,7 @@ data class AimConfiguration(
             includeConstellations = showConstellationLines || showConstellationNames,
             includeDeepSky = showDeepSkyObjects,
             includeMilkyWay = showMilkyWay,
+            deepSkyProminence = deepSkyProminence,
         )
 
     companion object {
@@ -72,6 +77,7 @@ data class AimConfiguration(
                 showConstellationNames = settings.showConstellationNames,
                 showDeepSkyObjects = settings.showDeepSkyObjects,
                 showMilkyWay = settings.showMilkyWay,
+                deepSkyProminence = Prominence.fromRawValue(settings.deepSkyProminence) ?: Prominence.PROMINENT,
                 starMagnitudeLimit = settings.starMagnitudeLimit,
                 wantsCameraPreview = settings.cameraPreviewEnabled && (!isNight || settings.cameraPreviewAtNight) &&
                     phoneCameraFollowsLens(mount),
@@ -93,12 +99,15 @@ data class AimSkyInputs(
     val observer: Observer,
     val options: SkySnapshotOptions,
     val target: CelestialObject?,
+    /** The site's recorded skyline, or `null` for an open horizon. */
+    val horizon: HorizonProfile?,
 )
 
 /** The sheets the Aim screen presents. */
 enum class AimSheet {
     TARGET_PICKER,
     ALIGNMENT,
+    MOSAIC,
 }
 
 /** When the target is next above the horizon, for the below-horizon warning. */

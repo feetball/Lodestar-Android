@@ -14,8 +14,15 @@ class AimFrame(
     val pointing: PointingSolution,
     /** How to reach the target; `null` without a target or before its position is known. */
     val guidance: Guidance?,
-    /** The target's apparent position as of the last sky rebuild. */
+    /** The target's apparent position as of the last sky rebuild; `null` while a mosaic panel is aimed at instead. */
     val target: SkySnapshot.Target?,
+    /** The mosaic panel guidance leads to instead of the target, while a mosaic runs. */
+    val panel: AimPanelAim? = null,
+    /**
+     * How far the camera has to turn about its axis for [panel], degrees, positive clockwise as the photographer sees
+     * it; `null` without a panel.
+     */
+    val rollDifference: Double? = null,
 )
 
 /**
@@ -30,6 +37,7 @@ class AimFrameEngine(private val motion: MotionService, configuration: AimConfig
     private var tracker = GuidanceTracker(configuration.onTargetThreshold)
     private var targetID: String? = null
     private var target: SkySnapshot.Target? = null
+    private var panel: AimPanelAim? = null
 
     fun configure(configuration: AimConfiguration) {
         if (configuration.onTargetThreshold != tracker.onTargetThreshold) {
@@ -49,6 +57,16 @@ class AimFrameEngine(private val motion: MotionService, configuration: AimConfig
         tracker.reset()
     }
 
+    /**
+     * Leads guidance to the panel [aim] of a mosaic instead of the target, or back to the target for `null`. Calling it
+     * again for the same panel (same key) only moves its direction, as the sky turns; another panel, or none, starts
+     * the on-target state afresh.
+     */
+    fun setPanel(aim: AimPanelAim?) {
+        if (aim?.key != panel?.key) tracker.reset()
+        panel = aim
+    }
+
     /** The target's position from a freshly built snapshot; ignored if it belongs to another object. */
     fun update(target: SkySnapshot.Target?) {
         if (target == null || target.obj.id != targetID) return
@@ -59,6 +77,12 @@ class AimFrameEngine(private val motion: MotionService, configuration: AimConfig
     fun frame(): AimFrame? {
         val sample = motion.latestSample() ?: return null
         val pointing = PointingSolution.solve(sample.attitude, configuration.mount, configuration.alignment)
+        val aim = panel
+        if (aim != null) {
+            return AimFrame(
+                sample, pointing, tracker.update(pointing, aim.horizontal), null, aim, aim.rollDifference(pointing),
+            )
+        }
         val target = target
         val guidance = if (target != null) tracker.update(pointing, target.horizontal) else null
         return AimFrame(sample, pointing, guidance, target)

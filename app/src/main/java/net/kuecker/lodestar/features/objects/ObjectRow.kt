@@ -42,10 +42,12 @@ internal fun ObjectRow(
     position: ObjectSkyPosition? = null,
     isFavorite: Boolean = false,
     zone: ZoneId = ZoneId.systemDefault(),
+    showsProminence: Boolean = false,
 ) {
     val isLargeText = LocalDensity.current.fontScale >= LARGE_TEXT_SCALE
-    val summary = remember(obj, position, isFavorite, zone) {
-        ObjectsFormat.spokenSummary(obj, position, isFavorite, zone)
+    val summary = remember(obj, position, isFavorite, zone, showsProminence) {
+        val spoken = ObjectsFormat.spokenSummary(obj, position, isFavorite, zone)
+        if (showsProminence) "$spoken, ${obj.prominence.displayName}" else spoken
     }
     Row(
         modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = summary },
@@ -55,11 +57,11 @@ internal fun ObjectRow(
         ObjectIcon(obj.category)
         if (isLargeText) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Names(obj, position, isFavorite, subtitleLines = 2)
+                Names(obj, position, isFavorite, showsProminence, subtitleLines = 2)
                 SkyPosition(position, zone, isAlignedToEnd = false)
             }
         } else {
-            Names(obj, position, isFavorite, subtitleLines = 1, modifier = Modifier.weight(1f))
+            Names(obj, position, isFavorite, showsProminence, subtitleLines = 1, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             SkyPosition(position, zone, isAlignedToEnd = true)
         }
@@ -76,11 +78,12 @@ private fun Names(
     obj: CelestialObject,
     position: ObjectSkyPosition?,
     isFavorite: Boolean,
+    showsProminence: Boolean,
     subtitleLines: Int,
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalPalette.current
-    val designation = remember(obj) { ObjectsFormat.extraDesignation(obj) }
+    val designation = remember(obj) { ObjectsFormat.rowDesignations(obj) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.Bottom) {
             Text(
@@ -109,7 +112,8 @@ private fun Names(
             }
         }
         Text(
-            ObjectsFormat.subtitle(obj, position?.magnitude),
+            ObjectsFormat.subtitle(obj, position?.magnitude) +
+                if (showsProminence) " · ${obj.prominence.displayName}" else "",
             color = palette.secondaryText,
             style = MaterialTheme.typography.bodySmall,
             maxLines = subtitleLines,
@@ -126,7 +130,7 @@ private fun SkyPosition(position: ObjectSkyPosition?, zone: ZoneId, isAlignedToE
         horizontalAlignment = if (isAlignedToEnd) Alignment.End else Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        if (position.isAboveHorizon) {
+        if (position.isUp) {
             Text(
                 ObjectsFormat.altitudeAndDirection(position),
                 color = palette.accent,
@@ -135,7 +139,7 @@ private fun SkyPosition(position: ObjectSkyPosition?, zone: ZoneId, isAlignedToE
             )
         } else {
             Text(
-                "Below horizon",
+                if (position.isBehindSkyline) "Behind skyline" else "Below horizon",
                 color = palette.tertiaryText,
                 style = MaterialTheme.typography.bodyMedium.monospacedDigits(),
                 maxLines = 1,

@@ -3,6 +3,7 @@ package net.kuecker.lodestar.features.aim
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.foundation.Vector3
+import net.kuecker.lodestar.kit.horizon.HorizonMask
 import net.kuecker.lodestar.shared.SkySnapshot
 import net.kuecker.lodestar.shared.SkySnapshotBuilder
 import java.time.Instant
@@ -24,14 +25,20 @@ class AimSkyContent(val snapshot: SkySnapshot) {
     /** The directions of [namedStars], packed. */
     val namedStarVectors: DoubleArray
 
-    /** Brightest first. */
+    /** Most prominent first, and brightest first within a level; objects the recorded skyline hides are left out. */
     val deepSky: List<AimDeepSkyMarker>
 
     /** The directions of [deepSky], packed. */
     val deepSkyVectors: DoubleArray
 
-    /** The magnitudes of [deepSky] in the same order, ascending; infinite where unknown. */
-    private val deepSkyMagnitudes: DoubleArray
+    /** How many of the [deepSky] markers have each prominence level or better, indexed by the level 0…4. */
+    private val deepSkyCounts: IntArray
+
+    /** The recorded skyline as geometry for the overlay, or `null` for an open horizon. */
+    val skyline: AimSkyline?
+
+    /** Tells whether a direction (apparent, East–North–Up) is hidden by the recorded skyline; `null` for an open horizon. */
+    private val skylineMask: HorizonMask?
 
     /** One layer per Milky Way brightness level, faintest first. */
     val milkyWay: List<AimMilkyWayLayer>
@@ -52,12 +59,13 @@ class AimSkyContent(val snapshot: SkySnapshot) {
         val named = ArrayList<AimNamedStar>()
         for ((index, star) in stars.withIndex()) {
             val code = AimStarGroup.code(
-                AimStarGroup.brightness(star.magnitude), AimStarGroup.tint(star.colorIndex), star.direction.z < 0,
+                AimStarGroup.brightness(star.magnitude), AimStarGroup.tint(star.colorIndex),
+                star.direction.z < 0 || star.isBehindSkyline,
             )
             codes[index] = code
             counts[code] += 1
             val name = star.name
-            if (name != null && star.magnitude <= NAMED_STAR_MAGNITUDE_LIMIT) {
+            if (name != null && star.magnitude <= NAMED_STAR_MAGNITUDE_LIMIT && !star.isBehindSkyline) {
                 named.add(AimNamedStar(name, star.direction))
             }
         }
@@ -73,34 +81,38 @@ class AimSkyContent(val snapshot: SkySnapshot) {
         starGroups = (AimStarGroup.CODE_COUNT - 1 downTo 0).filter { counts[it] > 0 }.map { AimStarGroup(it, grouped[it]) }
         namedStars = named
         namedStarVectors = pack(named.map { it.direction })
-        deepSky = snapshot.deepSky.map { AimDeepSkyMarker(it) }.sortedBy { it.magnitude ?: Double.POSITIVE_INFINITY }
+        deepSky = snapshot.deepSky.filter { !it.isBehindSkyline }.map { AimDeepSkyMarker(it) }
+            .sortedWith(compareBy<AimDeepSkyMarker>({ it.prominence }, { it.magnitude ?: Double.POSITIVE_INFINITY }))
         deepSkyVectors = pack(deepSky.map { it.direction })
-        deepSkyMagnitudes = DoubleArray(deepSky.size) { deepSky[it].magnitude ?: Double.POSITIVE_INFINITY }
+        deepSkyCounts = IntArray(MAXIMUM_PROMINENCE + 1).also { counts ->
+            for (marker in deepSky) counts[marker.prominence.coerceIn(1, MAXIMUM_PROMINENCE)] += 1
+            for (level in 1..MAXIMUM_PROMINENCE) counts[level] += counts[level - 1]
+        }
+        skylineMask = snapshot.horizon?.takeUnless { it.isFlat }?.let(::HorizonMask)
+        skyline = snapshot.horizon?.takeUnless { it.isFlat }?.let(::AimSkyline)
         milkyWay = AimMilkyWayLayer.layers(snapshot.milkyWay, snapshot.frame)
         constellationNames = snapshot.constellations.map { it.name.uppercase(Locale.ROOT) }
         constellationLabelVectors = pack(snapshot.constellations.map { it.label })
         sun = snapshot.bodies.firstOrNull { it.obj.category == ObjectCategory.SUN }
     }
 
-    /** How many of the [deepSky] markers, brightest first, are no fainter than [magnitude]. */
-    fun deepSkyCount(magnitude: Double): Int {
-        var low = 0
-        var high = deepSkyMagnitudes.size
-        while (low < high) {
-            val middle = (low + high) ushr 1
-            if (deepSkyMagnitudes[middle] <= magnitude) low = middle + 1 else high = middle
-        }
-        return low
-    }
+    /** How many of the leading [deepSky] markers have the prominence [level] (1 showpiece … 4 obscure) or better. */
+    fun deepSkyCount(level: Int): Int = deepSkyCounts[level.coerceIn(0, MAXIMUM_PROMINENCE)]
+
+    /** Whether the recorded skyline hides [direction] (apparent, East–North–Up); always `false` for an open horizon. */
+    fun isBehindSkyline(direction: Vector3): Boolean = skylineMask?.isBelow(direction) == true
 
     companion object {
         /** Stars brighter than this get a name label. */
         private const val NAMED_STAR_MAGNITUDE_LIMIT = 3.0
 
+        /** The least prominent level of a deep-sky object. */
+        private const val MAXIMUM_PROMINENCE = 4
+
         /** Builds the snapshot and the groups. Pure: call it from a background dispatcher. */
         fun build(catalog: Catalog, inputs: AimSkyInputs, date: Instant): AimSkyContent =
             AimSkyContent(
-                SkySnapshotBuilder.build(catalog, inputs.observer, date, inputs.options, inputs.target),
+                SkySnapshotBuilder.build(catalog, inputs.observer, date, inputs.options, inputs.target, inputs.horizon),
             )
 
         private fun pack(directions: List<Vector3>): DoubleArray {
@@ -116,7 +128,8 @@ class AimSkyContent(val snapshot: SkySnapshot) {
 }
 
 /**
- * Stars of one look: the same brightness class and tint, above or below the horizon.
+ * Stars of one look: the same brightness class and tint, above the horizon or below it (or hidden by the recorded
+ * skyline).
  *
  * @property code The look as one number, see [code]; the groups of a sky differ in it.
  * @property vectors The star directions packed as x, y, z.
@@ -179,6 +192,9 @@ class AimDeepSkyMarker(deepSky: SkySnapshot.DeepSky) {
     /** Major axis in degrees; 0 when unknown. */
     val diameter: Double = deepSky.majorAxis ?: 0.0
     val magnitude: Double? = deepSky.obj.magnitude
+
+    /** 1 showpiece … 4 obscure. */
+    val prominence: Int = deepSky.prominence.rawValue
     val shape: Shape = when (deepSky.obj.category) {
         ObjectCategory.GALAXY, ObjectCategory.GALAXY_GROUP -> Shape.ELLIPSE
         ObjectCategory.OPEN_CLUSTER, ObjectCategory.GLOBULAR_CLUSTER, ObjectCategory.STAR_ASSOCIATION -> Shape.CLUSTER_DOT

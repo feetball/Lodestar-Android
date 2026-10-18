@@ -17,12 +17,23 @@ internal object ObjectsFormat {
         obj.designations.firstOrNull()?.takeUnless { isName(obj, it) }
 
     /**
-     * The first few designations that differ from the object's name, such as "M 31 · NGC 224"; `null` when there
-     * are none.
+     * The first few designations that differ from the object's name, such as "M 31 · NGC 224" or, for a deep-sky
+     * object in several catalogues, "NGC 7000 · Caldwell 20 · Sh2-117"; `null` when there are none.
      */
     fun designationsLine(obj: CelestialObject): String? {
         val others = obj.designations.filterNot { isName(obj, it) }
-        return if (others.isEmpty()) null else others.take(4).joinToString(" · ")
+        return if (others.isEmpty()) null else others.take(5).joinToString(" · ")
+    }
+
+    /**
+     * The catalogue numbers a list row shows beside the name, at most two, such as "C 9 · Sh2-155" for the Cave
+     * Nebula or "M 31 · NGC 224" for the Andromeda Galaxy; objects with no catalogue numbers show their first other
+     * designation, if any.
+     */
+    fun rowDesignations(obj: CelestialObject): String? {
+        val labels = obj.catalogNumbers.map { it.label }.filterNot { isName(obj, it) }.distinct()
+        if (labels.isNotEmpty()) return labels.take(2).joinToString(" · ")
+        return extraDesignation(obj)
     }
 
     /** Whether [designation] is the object's name, ignoring case and diacritics. */
@@ -60,33 +71,36 @@ internal object ObjectsFormat {
      */
     fun risingText(position: ObjectSkyPosition, zone: ZoneId): String? {
         if (position.neverRises) return "Never rises here"
+        if (position.isBlockedBySkyline) return "Hidden by your skyline"
         val rise = position.nextRise ?: return null
+        val verb = if (position.usesSkyline) "Clears skyline" else "Rises"
         val days = ChronoUnit.DAYS.between(
             position.computedAt.atZone(zone).toLocalDate(),
             rise.atZone(zone).toLocalDate(),
         )
         return when {
-            days < 1 -> "Rises ${AppFormat.time(rise, zone)}"
-            days == 1L -> "Rises tomorrow ${AppFormat.time(rise, zone)}"
-            else -> "Rises ${AppFormat.dateTime(rise, zone)}"
+            days < 1 -> "$verb ${AppFormat.time(rise, zone)}"
+            days == 1L -> "$verb tomorrow ${AppFormat.time(rise, zone)}"
+            else -> "$verb ${AppFormat.dateTime(rise, zone)}"
         }
     }
 
     /** The row's position as a spoken phrase, such as "34° above the horizon, southeast". */
     private fun spokenPosition(position: ObjectSkyPosition, zone: ZoneId): String {
-        if (position.isAboveHorizon) {
+        if (position.isUp) {
             val altitude = AngleFormatter.formatDegrees(position.altitude, 0)
             val direction = AngleFormatter.compassPoint(position.azimuth).fullName.lowercase(Locale.ROOT)
             return "$altitude above the horizon, $direction"
         }
-        val rising = risingText(position, zone) ?: return "Below the horizon"
-        return "Below the horizon, ${rising.lowercase(Locale.ROOT)}"
+        val state = if (position.isBehindSkyline) "Behind your skyline" else "Below the horizon"
+        val rising = risingText(position, zone) ?: return state
+        return "$state, ${rising.lowercase(Locale.ROOT)}"
     }
 
     /** Everything a row shows, as one screen-reader label. */
     fun spokenSummary(obj: CelestialObject, position: ObjectSkyPosition?, isFavorite: Boolean, zone: ZoneId): String {
         val parts = mutableListOf(obj.name)
-        extraDesignation(obj)?.let(parts::add)
+        rowDesignations(obj)?.let(parts::add)
         parts.add(subtitle(obj, position?.magnitude, spoken = true))
         if (position != null) parts.add(spokenPosition(position, zone))
         if (isFavorite) parts.add("Favorite")

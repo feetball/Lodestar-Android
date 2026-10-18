@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Stars
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -147,6 +148,7 @@ internal fun ObjectDetailHeader(obj: CelestialObject, modifier: Modifier = Modif
             StatusChip(obj.category.icon, obj.category.displayName)
             obj.constellationName?.let { StatusChip(Icons.Outlined.Map, it) }
             obj.magnitude?.let { StatusChip(Icons.Outlined.AutoAwesome, AppFormat.magnitude(it)) }
+            if (obj.isDeepSky) StatusChip(Icons.Outlined.Stars, obj.prominence.displayName)
             if (obj.category == ObjectCategory.SUN) {
                 StatusChip(Icons.Outlined.Warning, "Solar filter required", tone = ChipTone.WARNING)
             }

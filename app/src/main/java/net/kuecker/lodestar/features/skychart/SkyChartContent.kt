@@ -74,6 +74,50 @@ internal class SkyChartPaths(scene: SkyChartScene) {
     val constellationLines: Path = Path().apply {
         for (polyline in scene.constellationLines) PlanisphereShapes.polyline(this, polyline)
     }
+
+    /**
+     * The ground below the recorded skyline: the band between the skyline and the rim of the chart, filled with the
+     * even–odd rule (a ring that reaches a little past the horizon circle, minus the sky inside the skyline). `null`
+     * for an open horizon.
+     */
+    val skylineGround: Path? = scene.skyline?.let { skyline ->
+        Path().apply {
+            fillType = PathFillType.EvenOdd
+            addOval(Rect(-SKYLINE_GROUND_REACH, -SKYLINE_GROUND_REACH, SKYLINE_GROUND_REACH, SKYLINE_GROUND_REACH))
+            PlanisphereShapes.polyline(this, skylinePoints(skyline), closed = true)
+        }
+    }
+
+    /** The skyline itself as a closed line, or `null` for an open horizon. */
+    val skylineLine: Path? = scene.skyline?.let { skyline ->
+        Path().apply { PlanisphereShapes.polyline(this, skylinePoints(skyline), closed = true) }
+    }
+
+    /** The outline of each panel of the mosaic (by panel index); empty without a mosaic. */
+    val mosaicPanels: List<Path> = scene.mosaic?.outlines?.map { polylines ->
+        Path().apply { for (polyline in polylines) PlanisphereShapes.polyline(this, polyline) }
+    }.orEmpty()
+
+    /** The rectangle the mosaic was asked to cover, or `null` without a mosaic. */
+    val mosaicRegion: Path? = scene.mosaic?.let { mosaic ->
+        Path().apply { for (polyline in mosaic.region) PlanisphereShapes.polyline(this, polyline) }
+    }
+
+    private companion object {
+        /** How far past the horizon circle (chart units) the ground reaches, so that no edge shows at the rim. */
+        const val SKYLINE_GROUND_REACH = 1.05f
+
+        /** The skyline as chart points (x, y pairs), azimuth 0° first; north is up and east to the left. */
+        fun skylinePoints(skyline: SkyChartSkyline): DoubleArray {
+            val points = DoubleArray(2 * skyline.radii.size)
+            for (degree in skyline.radii.indices) {
+                val azimuth = PlanisphereProjection.unitVectorTowardsAzimuth(degree.toDouble())
+                points[2 * degree] = azimuth.x * skyline.radii[degree]
+                points[2 * degree + 1] = azimuth.y * skyline.radii[degree]
+            }
+            return points
+        }
+    }
 }
 
 /** A scene with its cached paths. */

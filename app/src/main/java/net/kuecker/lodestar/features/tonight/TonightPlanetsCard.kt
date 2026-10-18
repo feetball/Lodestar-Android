@@ -37,7 +37,12 @@ import java.time.ZoneId
 
 /** The planets that are high enough in the dark to photograph, each opening its detail screen. */
 @Composable
-internal fun TonightPlanetsCard(summary: NightSummary, zone: ZoneId, onOpenObject: (CelestialObject) -> Unit) {
+internal fun TonightPlanetsCard(
+    summary: NightSummary,
+    zone: ZoneId,
+    isSkylineApplied: Boolean,
+    onOpenObject: (CelestialObject) -> Unit,
+) {
     val app = LocalAppModel.current
     val palette = LocalPalette.current
     val visible = summary.planets.filter { it.visibleDuringDarkness }
@@ -47,8 +52,13 @@ internal fun TonightPlanetsCard(summary: NightSummary, zone: ZoneId, onOpenObjec
         if (!summary.hasAstronomicalDarkness) {
             TonightNote("There is no astronomical darkness on this night.")
         } else if (visible.isEmpty()) {
+            val minimum = PlanetVisibility.minimumAltitude.toInt()
             TonightNote(
-                "No planet is more than ${PlanetVisibility.minimumAltitude.toInt()}° above the horizon while it is dark.",
+                if (isSkylineApplied) {
+                    "No planet is above your skyline and more than $minimum° high while it is dark."
+                } else {
+                    "No planet is more than $minimum° above the horizon while it is dark."
+                },
             )
         } else {
             for (planet in visible) {
@@ -61,6 +71,9 @@ internal fun TonightPlanetsCard(summary: NightSummary, zone: ZoneId, onOpenObjec
                     style = TonightNoteStyle.FOOTNOTE,
                 )
             }
+        }
+        if (isSkylineApplied) {
+            TonightSkylineNote("A planet counts as up only while it clears your recorded skyline and stays above 10°.")
         }
     }
 }

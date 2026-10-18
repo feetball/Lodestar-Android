@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Sensors
+import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material.icons.outlined.VideocamOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
@@ -55,6 +56,7 @@ internal fun AimStatusChips(model: AimViewModel, modifier: Modifier = Modifier) 
     val context = LocalContext.current
     val items = sensorItems(app.motion.status) + headingItems(app.motion) + alignmentItems(app.alignment) +
         locationItems(app.location.isReducedAccuracy && app.observerContext?.source == LocationSource.Device) +
+        skylineItems(app.observerContext?.horizon != null) +
         cameraItems(model.configuration.wantsCameraPreview, app.camera.authorization, app.camera.errorDescription != null)
     AimFlowLayout(modifier.fillMaxWidth()) {
         for (item in items) {
@@ -132,6 +134,9 @@ private fun alignmentItems(alignment: AlignmentModel): List<ChipItem> {
 
 private fun locationItems(isApproximate: Boolean): List<ChipItem> =
     if (isApproximate) listOf(ChipItem("location", Icons.Outlined.NearMe, "Approx. location")) else emptyList()
+
+private fun skylineItems(hasSkyline: Boolean): List<ChipItem> =
+    if (hasSkyline) listOf(ChipItem("skyline", Icons.Outlined.Terrain, "Skyline")) else emptyList()
 
 private fun cameraItems(wantsPreview: Boolean, authorization: CameraAuthorization, hasError: Boolean): List<ChipItem> {
     if (!wantsPreview) return listOf(ChipItem("camera", Icons.Outlined.AutoAwesome, "Virtual sky"))

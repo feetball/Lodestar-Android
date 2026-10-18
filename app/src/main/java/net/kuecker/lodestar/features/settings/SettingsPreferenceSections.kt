@@ -2,6 +2,7 @@ package net.kuecker.lodestar.features.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.Composable
 import net.kuecker.lodestar.model.CoordinateStyle
@@ -10,6 +11,7 @@ import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.SettingsCaption
 import net.kuecker.lodestar.shared.SettingsDivider
 import net.kuecker.lodestar.shared.SettingsMenuOption
+import net.kuecker.lodestar.shared.SettingsMenuPicker
 import net.kuecker.lodestar.shared.SettingsNumberField
 import net.kuecker.lodestar.shared.SettingsRow
 import net.kuecker.lodestar.shared.SettingsSection
@@ -47,6 +49,20 @@ internal fun SettingsFeedbackSection() {
     }
 }
 
+/** The levels of the deep-sky detail setting, as stored in `AppSettings.deepSkyProminence` (1 … 4). */
+private val deepSkyDetailOptions = listOf(
+    SettingsMenuOption("Showpieces", 1),
+    SettingsMenuOption("Prominent", 2),
+    SettingsMenuOption("Notable", 3),
+    SettingsMenuOption("Everything", 4),
+)
+
+private const val DEEP_SKY_DETAIL_CAPTION =
+    "Which deep-sky objects the Aim screen and the sky chart draw. Showpieces: the 250 or so best known, such as " +
+        "the Messier and Caldwell objects. Prominent: about 490, adding other bright or large ones. Notable: about " +
+        "1,000. Everything: about 2,400, including more than a thousand faint objects and dark nebulae, which " +
+        "crowds the sky."
+
 /** Settings ▸ Sky Display: what the Aim screen and the sky chart draw. */
 @Composable
 internal fun SettingsSkyDisplaySection() {
@@ -72,6 +88,17 @@ internal fun SettingsSkyDisplaySection() {
             checked = settings.showDeepSkyObjects,
             onCheckedChange = { shown -> store.update { it.copy(showDeepSkyObjects = shown) } },
         )
+        if (settings.showDeepSkyObjects) {
+            SettingsDivider()
+            SettingsMenuPicker(
+                title = "Deep-sky detail",
+                selection = settings.deepSkyProminence,
+                options = deepSkyDetailOptions,
+                onSelect = { level -> store.update { it.copy(deepSkyProminence = level) } },
+            )
+            SettingsDivider()
+            SettingsRow { SettingsCaption(DEEP_SKY_DETAIL_CAPTION) }
+        }
         SettingsDivider()
         SettingsToggleRow(
             title = "Milky Way",
@@ -130,11 +157,15 @@ internal fun SettingsAtmosphereSection() {
     }
 }
 
-/** Settings ▸ Tools: links to the exposure calculator and the polar alignment helper. */
+/** Settings ▸ Tools: links to the exposure calculator, the star trails and time-lapse planner, and polar alignment. */
 @Composable
 internal fun SettingsToolsSection(onOpen: (SettingsRoute) -> Unit) {
     SettingsSection(title = "Tools") {
         SettingsNavigationRow("Exposure Calculator", Icons.Outlined.Timer) { onOpen(SettingsRoute.ExposureCalculator) }
+        SettingsDivider()
+        SettingsNavigationRow("Star Trails & Time-Lapse", Icons.Outlined.Timelapse) {
+            onOpen(SettingsRoute.TrailsTimeLapse)
+        }
         SettingsDivider()
         SettingsNavigationRow("Polar Alignment", Icons.Outlined.AutoAwesome) { onOpen(SettingsRoute.PolarAlignment) }
     }

@@ -22,6 +22,8 @@ import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.foundation.Refraction
 import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.foundation.addingTimeInterval
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.horizon.HorizonVisibility
 import net.kuecker.lodestar.kit.phototools.ExposureCalculator
 import net.kuecker.lodestar.kit.phototools.ExposureRule
 import net.kuecker.lodestar.kit.phototools.FieldOfView
@@ -46,7 +48,7 @@ internal object ObjectDetailCalculator {
         val reusableNight = input.previousNight?.takeIf { it.expiry > input.date }
         val tonight = reusableNight ?: night(input.obj, input.context, input.date)
         return ObjectDetailSnapshot(
-            current = current(input.obj, observer, input.date),
+            current = current(input.obj, observer, input.date, input.context.skyline),
             night = tonight,
             moon = moonConditions(input.obj, observer, tonight, input.date),
         )
@@ -54,8 +56,11 @@ internal object ObjectDetailCalculator {
 
     // Now
 
-    /** Where the object is, how bright, how large and how lit at [date]. */
-    fun current(obj: CelestialObject, observer: Observer, date: Instant): ObjectDetailCurrent {
+    /**
+     * Where the object is, how bright, how large and how lit at [date]. With a recorded [skyline] the object is up only
+     * above it.
+     */
+    fun current(obj: CelestialObject, observer: Observer, date: Instant, skyline: HorizonProfile? = null): ObjectDetailCurrent {
         val frame = SkyFrame(date, observer)
         var distance: ObjectDetailDistance? = obj.distanceLightYears?.let { ObjectDetailDistance.LightYears(it) }
         var illuminatedFraction: Double? = null
@@ -72,15 +77,19 @@ internal object ObjectDetailCalculator {
             illuminatedFraction = state.illuminatedFraction
             moonPhase = if (isMoon) MoonPhaseCalculator.info(date) else null
         }
+        val horizontal = frame.horizontal(obj, true)
         return ObjectDetailCurrent(
             date = date,
-            horizontal = frame.horizontal(obj, true),
+            horizontal = horizontal,
             equatorial = frame.apparentEquatorial(obj),
             magnitude = frame.currentMagnitude(obj),
             angularSize = frame.currentAngularSize(obj),
             distance = distance,
             illuminatedFraction = illuminatedFraction,
             moonPhase = moonPhase,
+            isUp = skyline?.let { HorizonVisibility(it).isVisible(horizontal.altitude, horizontal.azimuth, refracted = true) }
+                ?: (horizontal.altitude > 0),
+            skylineAltitude = skyline?.altitude(horizontal.azimuth),
         )
     }
 
@@ -95,8 +104,10 @@ internal object ObjectDetailCalculator {
         val chartEnd = maxOf(twilight.sunrise ?: interval.end, chartStart)
         val chartRange = DateInterval(chartStart, chartEnd)
 
-        val events = RiseSetCalculator.riseTransitSet(obj, observer, interval)
-        val samples = altitudeSamples(obj, observer, chartRange)
+        // With a recorded skyline rising is clearing it and setting is sinking behind it.
+        val horizon = context.skyline?.let(::HorizonVisibility)
+        val events = horizon?.riseTransitSet(obj, observer, interval) ?: RiseSetCalculator.riseTransitSet(obj, observer, interval)
+        val samples = altitudeSamples(obj, observer, chartRange, horizon)
         val darkness = twilight.astronomicalNight
         return ObjectDetailNight(
             interval = interval,
@@ -108,7 +119,8 @@ internal object ObjectDetailCalculator {
             samples = samples,
             twilightBands = twilightBands(twilight, chartRange),
             hourTicks = hourTicks(chartRange, context.timeZone),
-            bestInDarkness = bestPoint(obj, observer, samples, darkness, events.transit),
+            bestInDarkness = bestPoint(obj, observer, samples, darkness, events.transit, horizon),
+            usesSkyline = horizon != null,
         )
     }
 
@@ -123,20 +135,34 @@ internal object ObjectDetailCalculator {
         return TwilightCalculator.night(date, context.observer, context.timeZone)
     }
 
-    private fun apparentAltitude(obj: CelestialObject, observer: Observer, date: Instant): Double =
-        SkyFrame(date, observer).horizontal(obj, true).altitude
+    /** The object's apparent altitude at [date] and, with a skyline, whether that is above it. */
+    private fun sample(obj: CelestialObject, observer: Observer, date: Instant, horizon: HorizonVisibility?): ObjectDetailAltitudeSample {
+        val horizontal = SkyFrame(date, observer).horizontal(obj, true)
+        return ObjectDetailAltitudeSample(
+            date = date,
+            altitude = horizontal.altitude,
+            skylineAltitude = horizon?.profile?.altitude(horizontal.azimuth),
+            isUp = horizon?.isVisible(horizontal.altitude, horizontal.azimuth, refracted = true) ?: (horizontal.altitude > 0),
+        )
+    }
 
-    private fun altitudeSamples(obj: CelestialObject, observer: Observer, range: DateInterval): List<ObjectDetailAltitudeSample> {
+    private fun altitudeSamples(
+        obj: CelestialObject,
+        observer: Observer,
+        range: DateInterval,
+        horizon: HorizonVisibility?,
+    ): List<ObjectDetailAltitudeSample> {
         val gaps = if (range.duration > 0) max(1, ceil(range.duration / SAMPLE_STEP).toInt()) else 0
         return (0..gaps).map { step ->
             val date = if (step == gaps) range.end else range.start.addingTimeInterval(step * SAMPLE_STEP)
-            ObjectDetailAltitudeSample(date, apparentAltitude(obj, observer, date))
+            sample(obj, observer, date, horizon)
         }
     }
 
     /**
      * The highest apparent altitude during [darkness], looked for at the samples, the ends of the darkness and the
-     * transit, so that a culmination between two samples is not missed.
+     * transit, so that a culmination between two samples is not missed. With a skyline the highest point above it
+     * counts; when the object stays behind it the highest point is still reported, as not up.
      */
     private fun bestPoint(
         obj: CelestialObject,
@@ -144,14 +170,16 @@ internal object ObjectDetailCalculator {
         samples: List<ObjectDetailAltitudeSample>,
         darkness: DateInterval?,
         transit: Instant?,
+        horizon: HorizonVisibility?,
     ): ObjectDetailPeak? {
         if (darkness == null) return null
-        val candidates = samples.filter { it.date in darkness }
-            .mapTo(ArrayList()) { ObjectDetailPeak(it.date, it.altitude) }
+        val candidates = samples.filter { it.date in darkness }.toMutableList()
         val extraDates = mutableListOf(darkness.start, darkness.end)
         if (transit != null && transit in darkness) extraDates.add(transit)
-        extraDates.mapTo(candidates) { ObjectDetailPeak(it, apparentAltitude(obj, observer, it)) }
-        return candidates.maxByOrNull { it.altitude }
+        extraDates.mapTo(candidates) { sample(obj, observer, it, horizon) }
+        val usable = if (horizon != null) candidates.filter { it.isUp } else emptyList()
+        val best = (usable.ifEmpty { candidates }).maxByOrNull { it.altitude } ?: return null
+        return ObjectDetailPeak(best.date, best.altitude, best.isUp)
     }
 
     /** Hourly labels for the time axis: every hour, every two hours or every four, depending on the length. */

@@ -93,6 +93,17 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             syncServices()
         }
 
+    private var keepsCameraRunningState by mutableStateOf(false)
+
+    /** Keeps the camera preview running outside the Aim tab (the horizon recording screen), if the settings want it. */
+    var keepsCameraRunning: Boolean
+        get() = keepsCameraRunningState
+        set(value) {
+            if (value == keepsCameraRunningState) return
+            keepsCameraRunningState = value
+            syncServices()
+        }
+
     /** Whether the Sun is below −6° at the observer (drives automatic night mode). */
     var isSunBelowCivilTwilight by mutableStateOf(false)
         private set
@@ -258,12 +269,15 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             motion.stop()
         }
 
-        // Camera preview: Aim tab only, if enabled for the current display mode, and only when the phone's back
-        // camera looks along the lens (flat-on-top mounts would show the ground).
+        // Camera preview: Aim tab only (or while a screen asks to keep it, see keepsCameraRunning), if enabled for
+        // the current display mode, and on Aim only when the phone's back camera looks along the lens (flat-on-top
+        // mounts would show the ground).
         val backCameraAlongLens = mountProfile.cameraAxis.dot(DeviceAttitude.backCameraAxis) > 0.99
-        val wantsPreview = settings.cameraPreviewEnabled && backCameraAlongLens &&
+        val wantsPreview = settings.cameraPreviewEnabled && (backCameraAlongLens || keepsCameraRunning) &&
             (!isNightModeActive || settings.cameraPreviewAtNight)
-        if (active && onboarded && selectedTab == AppTab.AIM && wantsPreview && observerContext != null) {
+        if (active && onboarded && (selectedTab == AppTab.AIM || keepsCameraRunning) && wantsPreview &&
+            observerContext != null
+        ) {
             camera.start(if (isNightModeActive) settings.nightIntensity else null)
         } else {
             camera.stop()

@@ -52,7 +52,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.features.horizon.HorizonCoverageMemory
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.model.AppSettings
 import net.kuecker.lodestar.model.SavedSite
 import net.kuecker.lodestar.services.LocationFix
@@ -90,6 +92,9 @@ private const val MAXIMUM_COORDINATE_TEXT = 64
 
 /** A saved site's position counts as unchanged when it moved less than this many degrees (about 10 cm). */
 private const val UNCHANGED_POSITION_DEGREES = 1e-6
+
+/** A site counts as moved, for its skyline, when its position changed by more than this many degrees (about 100 m). */
+private const val MOVED_POSITION_DEGREES = 0.001
 
 /**
  * Adds or edits a saved observing site: its name, its position (typed, picked on the map or taken from the device),
@@ -163,6 +168,7 @@ internal fun SiteEditor(
         val site = SavedSite.create(
             name = draft.name, latitude = point.latitude, longitude = point.longitude, elevation = point.elevation,
             timeZoneIdentifier = zone.id, id = existingSite?.id ?: UUID.randomUUID().toString(),
+            horizon = storedHorizon(app.settings, existingSite),
         )
         if (site == null) {
             failureMessage = "This position cannot be saved. Check the latitude, longitude and elevation."
@@ -256,6 +262,12 @@ internal fun SiteEditor(
                     onChoose = { timeZoneStatus = SiteTimeZoneStatus.Resolved(it) },
                     onLookUpAgain = { lookupAttempt += 1 },
                 )
+                SiteHorizonSection(
+                    site = existingSite,
+                    movedAway = existingSite != null && location != null &&
+                        (abs(existingSite.latitude - location.latitude) > MOVED_POSITION_DEGREES ||
+                            abs(existingSite.longitude - location.longitude) > MOVED_POSITION_DEGREES),
+                )
                 if (existingSite != null) {
                     SettingsSection(title = "Delete") {
                         if (isConfirmingDelete) {
@@ -266,6 +278,7 @@ internal fun SiteEditor(
                                 isDestructive = true,
                                 onClick = {
                                     app.settingsStore.removeSites(setOf(existingSite.id))
+                                    HorizonCoverageMemory.store(context, existingSite.id, null, 0.0)
                                     onClose()
                                 },
                             )
@@ -293,6 +306,13 @@ internal fun SiteEditor(
         )
     }
 }
+
+/**
+ * The skyline stored with [site] now. Recording and clearing a skyline save at once, outside the editor's draft, so
+ * saving the draft keeps what is stored instead of what the editor was opened with.
+ */
+private fun storedHorizon(settings: AppSettings, site: SavedSite?): HorizonProfile? =
+    site?.let { original -> settings.savedSites.firstOrNull { it.id == original.id }?.horizon }
 
 private fun initialDraft(target: SiteEditorTarget): SiteDraft = when (target) {
     is SiteEditorTarget.New -> target.draft

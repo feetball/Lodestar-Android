@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -21,7 +22,6 @@ import net.kuecker.lodestar.theme.Palette
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.log2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -82,7 +82,9 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
 
     /**
      * Draws the whole chart. The compass letters and ticks go first, then the sky inside the horizon circle (clipped to
-     * it), then the horizon ring and the labels.
+     * it) with the recorded skyline and the panels of a running mosaic over it, then the horizon ring and the labels.
+     *
+     * @param mosaicStep The place in the shooting order of the mosaic panel being shot; negative to draw no panels.
      */
     fun draw(
         scope: DrawScope,
@@ -91,6 +93,7 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
         palette: Palette,
         layers: SkyChartLayerOptions,
         selectedDirection: Vector3?,
+        mosaicStep: Int,
     ) {
         scene = content.scene
         paths = content.paths
@@ -108,10 +111,10 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
             gridDash = PathEffect.dashPathEffect(floatArrayOf(2f * dp, 4f * dp))
             selectionDash = PathEffect.dashPathEffect(floatArrayOf(4f * dp, 3f * dp))
         }
-        with(scope) { drawChart(selectedDirection) }
+        with(scope) { drawChart(selectedDirection, mosaicStep) }
     }
 
-    private fun DrawScope.drawChart(selectedDirection: Vector3?) {
+    private fun DrawScope.drawChart(selectedDirection: Vector3?, mosaicStep: Int) {
         val center = Offset(viewport.centerX, viewport.centerY)
         disc.rewind()
         disc.addOval(Rect(center, viewport.radius))
@@ -126,6 +129,8 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
             drawStars()
             if (layers.deepSkyObjects) drawDeepSky()
             drawBodies()
+            drawSkyline()
+            drawMosaic(mosaicStep)
             drawTarget()
             drawSelection(selectedDirection)
         }
@@ -209,17 +214,18 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
     }
 
     /**
-     * Galaxies are drawn as ellipses, nebulae as rounded squares and clusters as circles. Fainter objects appear as the
-     * chart is zoomed in.
+     * Galaxies are drawn as ellipses, nebulae as rounded squares and clusters as circles. The less prominent objects
+     * appear as the chart is zoomed in: the scene holds everything the deep-sky detail setting allows, and zoomed out
+     * the obscure ones are left out.
      */
     private fun DrawScope.drawDeepSky() {
-        val magnitudeLimit = 7 + 2 * log2(viewport.zoom.toDouble())
+        val prominenceLimit = chartDeepSkyProminenceLimit(viewport.zoom)
         deepSkyMarkers.rewind()
         val direction = android.graphics.Path.Direction.CW
         val list = scene.deepSky
         for (index in list.indices) {
             val marker = list[index]
-            if ((marker.magnitude ?: UNKNOWN_DEEP_SKY_MAGNITUDE) > magnitudeLimit) continue
+            if (marker.prominence > prominenceLimit) continue
             val x = viewport.screenX(marker.x, marker.y)
             val y = viewport.screenY(marker.x, marker.y)
             if (!isVisible(x, y)) continue
@@ -237,6 +243,92 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
         drawPath(deepSkyMarkers, palette.deepSkyMarker, style = Stroke(1f * dp))
     }
 
+    // Recorded skyline
+
+    /** The ground below the recorded skyline, darker than the sky, with the skyline as a line. Nothing for an open horizon. */
+    private fun DrawScope.drawSkyline() {
+        val ground = paths.skylineGround ?: return
+        val line = paths.skylineLine ?: return
+        withTransform({ applyViewport() }) {
+            drawPath(ground, palette.background.copy(alpha = GROUND_OPACITY))
+            drawPath(line, palette.horizonLine, style = Stroke(1.5f * dp / viewport.radius, join = StrokeJoin.Round))
+        }
+    }
+
+    // Mosaic
+
+    /**
+     * The panels of the mosaic being shot: those still to shoot faint, shot ones dimmed, the next one a little stronger
+     * and the current one thick and tinted, over the faint outline of the requested region; their numbers are written
+     * by [drawMosaicNumbers].
+     */
+    private fun DrawScope.drawMosaic(step: Int) {
+        val mosaic = scene.mosaic ?: return
+        if (step < 0) return
+        val outlines = paths.mosaicPanels
+        val unit = dp / viewport.radius
+        withTransform({ applyViewport() }) {
+            paths.mosaicRegion?.let {
+                drawPath(it, palette.secondaryText.copy(alpha = 0.35f), style = Stroke(1f * unit, join = StrokeJoin.Round))
+            }
+            strokePanels(mosaic, outlines, step, MOSAIC_PENDING, palette.dslrFrame.copy(alpha = 0.5f), 1f * unit)
+            strokePanels(mosaic, outlines, step, MOSAIC_DONE, palette.positive.copy(alpha = 0.4f), 1f * unit)
+            strokePanels(mosaic, outlines, step, MOSAIC_NEXT, palette.guidance.copy(alpha = 0.8f), 2f * unit)
+            strokePanels(mosaic, outlines, step, MOSAIC_CURRENT, palette.guidance, 3f * unit)
+            for (index in outlines.indices) {
+                if (mosaic.positions[index] == step) {
+                    drawPath(outlines[index], palette.guidance.copy(alpha = 0.14f))
+                }
+            }
+        }
+        drawMosaicNumbers(mosaic, step)
+    }
+
+    private fun DrawScope.strokePanels(
+        mosaic: SkyChartMosaic, outlines: List<Path>, step: Int, kind: Int, color: Color, width: Float,
+    ) {
+        val stroke = Stroke(width, join = StrokeJoin.Round)
+        for (index in outlines.indices) {
+            val position = mosaic.positions[index]
+            val panelKind = when {
+                position < step -> MOSAIC_DONE
+                position == step -> MOSAIC_CURRENT
+                position == step + 1 -> MOSAIC_NEXT
+                else -> MOSAIC_PENDING
+            }
+            if (panelKind == kind) drawPath(outlines[index], color, style = stroke)
+        }
+    }
+
+    /**
+     * Writes the number of the current panel at its centre, and the numbers of the others while there are few of them
+     * or the chart is zoomed in; a number that would overlap another text is left out. The current panel goes first.
+     */
+    private fun DrawScope.drawMosaicNumbers(mosaic: SkyChartMosaic, step: Int) {
+        val showsAll = mosaic.panelCount <= MOSAIC_NUMBERS_FEW || viewport.zoom >= MOSAIC_NUMBERS_ZOOM
+        val others = palette.dslrFrame.copy(alpha = 0.85f)
+        for (pass in 0..1) {
+            for (index in 0 until mosaic.panelCount) {
+                val isCurrent = mosaic.positions[index] == step
+                if (isCurrent != (pass == 0) || !(isCurrent || showsAll)) continue
+                val chartX = mosaic.centers[2 * index]
+                if (chartX.isNaN()) continue
+                val chartY = mosaic.centers[2 * index + 1]
+                val x = viewport.screenX(chartX, chartY)
+                val y = viewport.screenY(chartX, chartY)
+                if (!isVisible(x, y)) continue
+                val layout = text.layout(PlanisphereTextRole.MOSAIC, mosaic.numbers[index])
+                val width = layout.size.width.toFloat()
+                val height = layout.size.height.toFloat()
+                val left = x - width / 2
+                val top = y - height / 2
+                if (!isCurrent && occupied.intersects(left, top, left + width, top + height)) continue
+                drawText(layout, if (isCurrent) palette.guidance else others, Offset(left, top))
+                occupied.add(left, top, left + width, top + height)
+            }
+        }
+    }
+
     // Solar system
 
     /** Draws the Sun, Moon and planets, and reserves the screen rectangles they occupy. */
@@ -244,7 +336,7 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
         val list = scene.bodies
         for (index in list.indices) {
             val body = list[index]
-            if (!body.isAboveHorizon) continue
+            if (!body.isShown) continue
             val x = viewport.screenX(body.x, body.y)
             val y = viewport.screenY(body.x, body.y)
             if (!isVisible(x, y)) continue
@@ -493,7 +585,17 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
         /** Dots smaller than this diameter (dp) are squares. */
         const val SQUARE_DOT_LIMIT = 2f
 
-        /** Deep-sky objects without a magnitude count as this when deciding what to show. */
-        const val UNKNOWN_DEEP_SKY_MAGNITUDE = 9.5
+        /** The opacity of the ground below the recorded skyline: stars, lines and objects behind it nearly vanish. */
+        const val GROUND_OPACITY = 0.85f
+
+        /** The roles panels play in the shooting order, for the strokes of the mosaic. */
+        const val MOSAIC_PENDING = 0
+        const val MOSAIC_DONE = 1
+        const val MOSAIC_NEXT = 2
+        const val MOSAIC_CURRENT = 3
+
+        /** The numbers of all panels are written when there are at most this many, or from this zoom on. */
+        const val MOSAIC_NUMBERS_FEW = 30
+        const val MOSAIC_NUMBERS_ZOOM = 2f
     }
 }

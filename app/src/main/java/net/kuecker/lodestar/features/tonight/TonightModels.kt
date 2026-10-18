@@ -2,6 +2,7 @@ package net.kuecker.lodestar.features.tonight
 
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.planning.NightSummary
 import net.kuecker.lodestar.model.ObserverContext
 import java.time.Instant
@@ -65,6 +66,8 @@ internal data class TonightReport(
     val tonightStart: Instant,
     /** How many nights this one is after tonight: 1 is tomorrow night, -1 is last night. */
     val nightsFromTonight: Int,
+    /** The site's recorded skyline when the Moon, the Milky Way core, the planets and the targets respect it. */
+    val skyline: HorizonProfile? = null,
 ) {
     /** Local noon of the date this night starts on. */
     val nightStart: Instant get() = summary.night.start

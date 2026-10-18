@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material.icons.outlined.CenterFocusStrong
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GpsFixed
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material.icons.outlined.VideocamOff
 import androidx.compose.material3.Icon
@@ -39,8 +41,8 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * The buttons of the screen: target, align, camera, night mode and zoom, in a row or, in a wide HUD, in a column
- * (`axis` = vertical).
+ * The buttons of the screen: target, align, mosaic, camera, night mode and zoom, in a row or, in a wide HUD, in a
+ * column (`axis` = vertical).
  */
 @Composable
 internal fun AimControlsBar(
@@ -55,53 +57,78 @@ internal fun AimControlsBar(
     val cameraFollowsLens = model.configuration.phoneCameraFollowsLens
     val nightMode = app.settings.nightMode
     val isAligned = app.alignment.isAligned
+    val mosaic = model.mosaic
     val buttonHeight = if (axis == Orientation.Horizontal) 54.dp else 46.dp
 
-    // Both layouts hold the same buttons; each one gets the weight (row) or the full width (column) it needs.
-    val buttons: @Composable (Modifier) -> Unit = { slot ->
-        AimControl(
-            title = "Target", icon = Icons.Outlined.GpsFixed, minHeight = buttonHeight,
-            label = "Choose target", value = model.guidanceTarget?.name ?: "None",
-            modifier = slot, onClick = { onSheet(AimSheet.TARGET_PICKER) },
-        )
-        AimControl(
-            title = "Align", icon = Icons.Outlined.CenterFocusStrong, isOn = isAligned, minHeight = buttonHeight,
-            label = "Align on a star", value = if (isAligned) "Aligned" else "Not aligned",
-            modifier = slot, onClick = { onSheet(AimSheet.ALIGNMENT) },
-        )
-        AimControl(
-            title = "Camera", icon = if (previewOn) Icons.Filled.CameraAlt else Icons.Outlined.VideocamOff,
-            isOn = previewOn, enabled = cameraFollowsLens, minHeight = buttonHeight,
-            label = "Camera picture",
-            value = if (previewOn) "On" else if (cameraFollowsLens) "Off" else "Not available with this mount",
-            modifier = slot,
-            onClick = {
-                // Turning the picture on is also the moment to ask for camera access, if it has not been granted.
-                val turnsOn = !previewOn
-                model.toggleCameraPreview()
-                if (turnsOn && app.camera.authorization != CameraAuthorization.AUTHORIZED) {
-                    scope.launch { app.camera.requestAccess() }
-                }
-            },
-        )
-        AimControl(
-            title = nightTitle(nightMode), icon = nightIcon(nightMode), isOn = app.isNightModeActive,
-            minHeight = buttonHeight, label = "Night mode", value = nightMode.title,
-            hint = "Cycles between off, on and after sunset.",
-            modifier = slot, onClick = model::cycleNightMode,
-        )
-        AimFieldOfViewButton(model, buttonHeight, slot)
-    }
+    // Both layouts hold the same buttons; each one gets the weight (row) or half the width (two columns) it needs.
+    val buttons: List<@Composable (Modifier) -> Unit> = listOf(
+        { slot ->
+            AimControl(
+                title = "Target", icon = Icons.Outlined.GpsFixed, minHeight = buttonHeight,
+                label = "Choose target", value = model.guidanceTarget?.name ?: "None",
+                modifier = slot, onClick = { onSheet(AimSheet.TARGET_PICKER) },
+            )
+        },
+        { slot ->
+            AimControl(
+                title = "Align", icon = Icons.Outlined.CenterFocusStrong, isOn = isAligned, minHeight = buttonHeight,
+                label = "Align on a star", value = if (isAligned) "Aligned" else "Not aligned",
+                modifier = slot, onClick = { onSheet(AimSheet.ALIGNMENT) },
+            )
+        },
+        { slot ->
+            AimControl(
+                title = "Mosaic", icon = if (mosaic.isActive) Icons.Filled.GridView else Icons.Outlined.GridView,
+                isOn = mosaic.isActive, minHeight = buttonHeight,
+                label = "Mosaic planner", value = if (mosaic.isActive) mosaic.progressText else "Off",
+                modifier = slot, onClick = { onSheet(AimSheet.MOSAIC) },
+            )
+        },
+        { slot ->
+            AimControl(
+                title = "Camera", icon = if (previewOn) Icons.Filled.CameraAlt else Icons.Outlined.VideocamOff,
+                isOn = previewOn, enabled = cameraFollowsLens, minHeight = buttonHeight,
+                label = "Camera picture",
+                value = if (previewOn) "On" else if (cameraFollowsLens) "Off" else "Not available with this mount",
+                modifier = slot,
+                onClick = {
+                    // Turning the picture on is also the moment to ask for camera access, if it has not been granted.
+                    val turnsOn = !previewOn
+                    model.toggleCameraPreview()
+                    if (turnsOn && app.camera.authorization != CameraAuthorization.AUTHORIZED) {
+                        scope.launch { app.camera.requestAccess() }
+                    }
+                },
+            )
+        },
+        { slot ->
+            AimControl(
+                title = nightTitle(nightMode), icon = nightIcon(nightMode), isOn = app.isNightModeActive,
+                minHeight = buttonHeight, label = "Night mode", value = nightMode.title,
+                hint = "Cycles between off, on and after sunset.",
+                modifier = slot, onClick = model::cycleNightMode,
+            )
+        },
+        { slot -> AimFieldOfViewButton(model, buttonHeight, slot) },
+    )
     if (axis == Orientation.Horizontal) {
         Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            buttons(Modifier.weight(1f))
+            for (button in buttons) button(Modifier.weight(1f))
         }
     } else {
-        Column(modifier.width(66.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            buttons(Modifier.fillMaxWidth())
+        // Six buttons would be taller than a phone clamped sideways: two columns of three.
+        Column(modifier.width(WIDE_COLUMN_WIDTH), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (pair in buttons.chunked(2)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (button in pair) button(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
+
+/** The width of the two columns of buttons in a wide HUD. */
+private val WIDE_COLUMN_WIDTH = 138.dp
 
 /** A button: a symbol over a caption, with the label and value that accessibility services speak. */
 @Composable

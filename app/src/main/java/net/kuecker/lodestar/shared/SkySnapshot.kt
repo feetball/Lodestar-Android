@@ -4,6 +4,7 @@ import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
 import net.kuecker.lodestar.kit.catalog.ObjectPosition
+import net.kuecker.lodestar.kit.catalog.Prominence
 import net.kuecker.lodestar.kit.catalog.horizontal
 import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
 import net.kuecker.lodestar.kit.ephemeris.horizontal
@@ -14,7 +15,11 @@ import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.foundation.Vector3
+import net.kuecker.lodestar.kit.formatting.AngleFormatter
+import net.kuecker.lodestar.kit.horizon.HorizonMask
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import java.time.Instant
+import kotlin.math.roundToInt
 
 /**
  * What the sky views draw, for one instant and observer: every visible thing as an apparent (refracted) unit vector
@@ -33,6 +38,8 @@ class SkySnapshot(
     val constellations: List<ConstellationFigure>,
     val milkyWay: List<MilkyWayBand>,
     val target: Target?,
+    /** The site's recorded skyline the snapshot was built for, or `null` for an open horizon. */
+    val horizon: HorizonProfile? = null,
 ) {
     data class Star(
         val id: String,
@@ -40,6 +47,8 @@ class SkySnapshot(
         val magnitude: Double,
         val colorIndex: Double?,
         val name: String?,
+        /** `true` when the recorded skyline (trees, a ridge) hides the star; always `false` for an open horizon. */
+        val isBehindSkyline: Boolean = false,
     )
 
     /** The Sun, the Moon or a planet. */
@@ -52,6 +61,8 @@ class SkySnapshot(
         val angularDiameter: Double,
         val illuminatedFraction: Double?,
         val isWaxing: Boolean?,
+        /** `true` when the recorded skyline hides the body; always `false` for an open horizon. */
+        val isBehindSkyline: Boolean = false,
     ) {
         val id: String get() = obj.id
     }
@@ -61,8 +72,13 @@ class SkySnapshot(
         val direction: Vector3,
         /** Major axis in degrees, when known. */
         val majorAxis: Double?,
+        /** `true` when the recorded skyline hides the object; always `false` for an open horizon. */
+        val isBehindSkyline: Boolean = false,
     ) {
         val id: String get() = obj.id
+
+        /** How conspicuous the object is (1 showpiece … 4 obscure). */
+        val prominence: Prominence get() = obj.prominence
     }
 
     data class ConstellationFigure(
@@ -106,26 +122,35 @@ data class SkySnapshotOptions(
     val includeConstellations: Boolean = true,
     val includeDeepSky: Boolean = true,
     val includeMilkyWay: Boolean = true,
-    /** Deep-sky objects fainter than this are left out (objects without a magnitude are kept). */
-    val deepSkyMagnitudeLimit: Double = 10.0,
+    /**
+     * Deep-sky objects of this prominence or better are included (the "Deep-sky detail" setting: 1 showpieces … 4
+     * everything). There is no magnitude cut-off: the prominence already ranks by brightness, size and fame, and dark
+     * nebulae have no magnitude at all. The views thin the symbols and names out further when they are zoomed out.
+     */
+    val deepSkyProminence: Prominence = Prominence.PROMINENT,
 )
 
 object SkySnapshotBuilder {
     /** Below this geometric altitude refraction is zero, so the vector is used as is. */
     private val refractionFloor = AstroMath.sinDeg(-5.0)
 
-    private val deepSkyGroups = setOf(ObjectGroup.GALAXIES, ObjectGroup.NEBULAE, ObjectGroup.CLUSTERS, ObjectGroup.SPECIAL)
-
-    /** Computes the snapshot. Pure; call it on a background dispatcher. */
+    /**
+     * Computes the snapshot. Pure; call it on a background dispatcher.
+     *
+     * @param horizon The site's recorded skyline, or `null` for an open horizon: stars and deep-sky objects it hides
+     * are flagged `isBehindSkyline` (the views dim or leave them out).
+     */
     fun build(
         catalog: Catalog,
         observer: Observer,
         date: Instant,
         options: SkySnapshotOptions,
         target: CelestialObject?,
+        horizon: HorizonProfile? = null,
     ): SkySnapshot {
         val frame = SkyFrame(date, observer)
         val atmosphere = observer.atmosphere
+        val mask = horizon?.takeUnless { it.isFlat }?.let(::HorizonMask)
         fun apparent(geometric: Vector3): Vector3 {
             if (geometric.z <= refractionFloor) return geometric
             return SkyFrame.refracted(HorizontalCoordinate(geometric), atmosphere).unitVector
@@ -135,8 +160,10 @@ object SkySnapshotBuilder {
         val stars = catalog.renderStars.asSequence()
             .takeWhile { it.magnitude <= options.starMagnitudeLimit }
             .map { star ->
+                val direction = apparent(frame.horizontalVector(star.unitVector))
                 SkySnapshot.Star(
-                    star.id, apparent(frame.horizontalVector(star.unitVector)), star.magnitude, star.colorIndex, star.name,
+                    star.id, direction, star.magnitude, star.colorIndex, star.name,
+                    isBehindSkyline = mask != null && mask.isBelow(direction),
                 )
             }
             .toList()
@@ -148,16 +175,19 @@ object SkySnapshotBuilder {
             SkySnapshot.Body(
                 obj, horizontal.unitVector, horizontal, state.apparentMagnitude,
                 state.angularDiameterArcseconds / 3600, state.illuminatedFraction, state.isWaxing,
+                isBehindSkyline = mask != null && mask.isBelow(horizontal.unitVector),
             )
         }
 
-        val deepSky = if (!options.includeDeepSky) emptyList() else catalog.listedObjects.mapNotNull { obj ->
-            val position = obj.position as? ObjectPosition.Fixed ?: return@mapNotNull null
-            if (obj.group !in deepSkyGroups) return@mapNotNull null
-            val magnitude = obj.magnitude
-            if (magnitude != null && magnitude > options.deepSkyMagnitudeLimit) return@mapNotNull null
-            SkySnapshot.DeepSky(obj, direction(position.coordinate), obj.angularSize?.let { it.majorArcminutes / 60 })
-        }
+        val deepSky = if (!options.includeDeepSky) emptyList() else deepSkyCandidates(catalog, options.deepSkyProminence)
+            .mapNotNull { obj ->
+                val position = obj.position as? ObjectPosition.Fixed ?: return@mapNotNull null
+                val direction = direction(position.coordinate)
+                SkySnapshot.DeepSky(
+                    obj, direction, obj.angularSize?.let { it.majorArcminutes / 60 },
+                    isBehindSkyline = mask != null && mask.isBelow(direction),
+                )
+            }
 
         val constellations = if (!options.includeConstellations) emptyList() else catalog.constellations.map { c ->
             SkySnapshot.ConstellationFigure(
@@ -178,7 +208,19 @@ object SkySnapshotBuilder {
             SkySnapshot.Target(obj, horizontal.unitVector, horizontal)
         }
 
-        return SkySnapshot(date, observer, stars, bodies, deepSky, constellations, milkyWay, targetPosition)
+        return SkySnapshot(date, observer, stars, bodies, deepSky, constellations, milkyWay, targetPosition, horizon)
+    }
+
+    /**
+     * The deep-sky objects of [maximum] prominence or better (obscure ones are not in the browse lists but are drawn
+     * when asked for), plus the fixed special directions such as the Galactic Center.
+     */
+    private fun deepSkyCandidates(catalog: Catalog, maximum: Prominence): List<CelestialObject> {
+        val special = catalog.listedObjects.filter {
+            !it.isDeepSky && it.group == ObjectGroup.SPECIAL && it.position is ObjectPosition.Fixed &&
+                it.prominence <= maximum
+        }
+        return catalog.deepSkyObjects(maximum) + special
     }
 
     /** Catalog identifier of a solar-system body ("sun", "moon", "planet.mars"). */
@@ -186,5 +228,21 @@ object SkySnapshotBuilder {
         SolarSystemBody.SUN -> "sun"
         SolarSystemBody.MOON -> "moon"
         else -> "planet.${body.rawValue}"
+    }
+}
+
+/** Words for a recorded skyline, for the canvas summaries that accessibility services read in the sky views. */
+object SkylineSummary {
+    /** For example "The recorded skyline hides the sky up to 32 degrees, highest towards the east." */
+    fun describe(profile: HorizonProfile): String {
+        val altitudes = profile.altitudes
+        var highest = 0
+        for (index in altitudes.indices) {
+            if (altitudes[index] > altitudes[highest]) highest = index
+        }
+        val top = altitudes[highest]
+        if (top < 1.0) return "The recorded skyline stays below one degree."
+        val direction = AngleFormatter.compassPoint(highest.toDouble()).fullName.lowercase()
+        return "The recorded skyline hides the sky up to ${top.roundToInt()} degrees, highest towards the $direction."
     }
 }

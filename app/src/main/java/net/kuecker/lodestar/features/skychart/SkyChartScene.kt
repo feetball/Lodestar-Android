@@ -8,6 +8,8 @@ import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.mosaic.MosaicPlan
 import net.kuecker.lodestar.shared.SkySnapshot
 import java.time.Instant
 import kotlin.math.atan2
@@ -79,12 +81,17 @@ internal class SkyChartBodyMarker(
      * the Moon points.
      */
     val towardsSunAngle: Double,
+    /** `true` when the recorded skyline hides the body. */
+    val isBehindSkyline: Boolean = false,
 ) {
     enum class Kind { SUN, MOON, PLANET }
 
     val id: String get() = obj.id
     val name: String get() = obj.name
     val isAboveHorizon: Boolean get() = horizontal.altitude >= 0
+
+    /** Above the horizon and not hidden by the recorded skyline: the body is drawn, labelled and can be tapped. */
+    val isShown: Boolean get() = isAboveHorizon && !isBehindSkyline
 }
 
 /** A deep-sky object. */
@@ -92,11 +99,21 @@ internal class SkyChartDeepSkyMarker(
     val x: Float,
     val y: Float,
     val group: ObjectGroup,
-    /** Apparent magnitude; objects without one count as 9.5 when deciding what to show. */
-    val magnitude: Double?,
+    /** How conspicuous the object is: 1 showpiece … 4 obscure. Zooming out leaves the least prominent out first. */
+    val prominence: Int,
     /** The object's largest dimension in radians, when known. */
     val extent: Double?,
 )
+
+/**
+ * The site's recorded skyline in chart space: its distance from the zenith, in chart units (the horizon circle is 1), at
+ * every whole degree of azimuth. Where the skyline lies below the horizon the distance is capped at 1.
+ */
+internal class SkyChartSkyline(val profile: HorizonProfile) {
+    val radii: DoubleArray = DoubleArray(HorizonProfile.binCount) { degree ->
+        min(1.0, PlanisphereProjection.radiusOfAltitude(profile.altitude(degree.toDouble())))
+    }
+}
 
 /** The aiming target. */
 internal class SkyChartTargetMarker(val obj: CelestialObject, val direction: Vector3, val horizontal: HorizontalCoordinate) {
@@ -131,6 +148,13 @@ internal class SkyChartLabel(
     }
 }
 
+/**
+ * The least prominent level of deep-sky objects the chart draws at [zoom] (1 showpieces … 4 everything): the scene holds
+ * everything the deep-sky detail setting allows, and zoomed out the obscure objects are left out so that the chart stays
+ * readable. A tap does not pick what is not drawn.
+ */
+internal fun chartDeepSkyProminenceLimit(zoom: Float): Int = if (zoom < 2f) 3 else 4
+
 /** Something a tap can select. */
 internal class SkyChartPickable(
     val id: String,
@@ -139,6 +163,8 @@ internal class SkyChartPickable(
     val y: Float,
     /** The object itself when the snapshot has it; stars are looked up in the catalog by [id]. */
     val obj: CelestialObject?,
+    /** The prominence level of a deep-sky object (1 showpiece … 4 obscure); 0 for everything else. */
+    val prominence: Int = 0,
 ) {
     enum class Kind(
         /** Scales the distance to a tap: objects that are rarer or more important win ties. */
@@ -169,6 +195,10 @@ internal class SkyChartScene(
     /** Highest priority first. */
     val labels: List<SkyChartLabel>,
     val pickables: List<SkyChartPickable>,
+    /** The recorded skyline, or `null` for an open horizon. */
+    val skyline: SkyChartSkyline? = null,
+    /** The panels of the mosaic being shot, as they stand at the scene's instant; `null` without a mosaic. */
+    val mosaic: SkyChartMosaic? = null,
 ) {
     /**
      * The thing a tap at ([tapX], [tapY]) selects: the nearest pickable within [tolerance] pixels, where a planet or the
@@ -182,7 +212,9 @@ internal class SkyChartScene(
     ): SkyChartPickable? {
         var best: SkyChartPickable? = null
         var bestScore = Float.MAX_VALUE
+        val prominenceLimit = chartDeepSkyProminenceLimit(viewport.zoom)
         for (pickable in pickables) {
+            if (pickable.prominence > prominenceLimit) continue
             val dx = viewport.screenX(pickable.x, pickable.y) - tapX
             val dy = viewport.screenY(pickable.x, pickable.y) - tapY
             val distance = hypot(dx, dy)
@@ -201,7 +233,7 @@ internal object SkyChartSceneBuilder {
     /** The most labels of each kind a scene carries; the views place as many as fit. */
     private const val CONSTELLATION_LABEL_LIMIT = 60
     private const val STAR_LABEL_LIMIT = 30
-    private const val DEEP_SKY_LABEL_LIMIT = 50
+    private const val DEEP_SKY_LABEL_LIMIT = 220
 
     /** Only stars at least this bright get a name label. */
     private const val STAR_LABEL_MAGNITUDE = 3.2
@@ -209,7 +241,11 @@ internal object SkyChartSceneBuilder {
     /** Label anchors this far above the horizon (sine of the altitude) or higher are kept. */
     private const val LABEL_HORIZON = 0.03
 
-    fun build(snapshot: SkySnapshot): SkyChartScene {
+    /**
+     * Builds the scene for [snapshot]; [mosaic] is the plan being shot, whose panels are placed in the sky of the
+     * snapshot's instant. Objects the snapshot flags as hidden by the recorded skyline are left out.
+     */
+    fun build(snapshot: SkySnapshot, mosaic: MosaicPlan? = null): SkyChartScene {
         val sun = snapshot.bodies.firstOrNull { it.obj.id == "sun" }
         val bodies = snapshot.bodies.map { bodyMarker(it, sun) }
         val deepSky = deepSkyMarkers(snapshot.deepSky)
@@ -219,7 +255,7 @@ internal object SkyChartSceneBuilder {
         val labels = ArrayList<SkyChartLabel>(constellationLabels)
         labels += starLabels(snapshot.stars)
         labels += deepSkyLabels(snapshot.deepSky)
-        for (body in bodies) if (body.isAboveHorizon) labels += bodyLabel(body)
+        for (body in bodies) if (body.isShown) labels += bodyLabel(body)
         if (target != null && target.isAboveHorizon) {
             val point = PlanisphereProjection.chartPoint(target.direction)
             labels += SkyChartLabel(
@@ -240,6 +276,8 @@ internal object SkyChartSceneBuilder {
             target = target,
             labels = labels,
             pickables = pickables(snapshot, bodies, target),
+            skyline = snapshot.horizon?.takeUnless { it.isFlat }?.let(::SkyChartSkyline),
+            mosaic = mosaic?.let { SkyChartMosaicBuilder.build(it, snapshot.frame) },
         )
     }
 
@@ -252,7 +290,7 @@ internal object SkyChartSceneBuilder {
         val keys = IntArray(snapshot.stars.size) { -1 }
         val counts = IntArray(classCount)
         snapshot.stars.forEachIndexed { index, star ->
-            if (vectors[index * 3 + 2] >= 0) {
+            if (vectors[index * 3 + 2] >= 0 && !star.isBehindSkyline) {
                 val sizeClass = SkyChartStarStyle.sizeClass(star.magnitude)
                 val key = sizeClass * colorCount + SkyChartStarStyle.colorClass(star.colorIndex)
                 keys[index] = key
@@ -276,7 +314,7 @@ internal object SkyChartSceneBuilder {
 
     private fun starLabels(stars: List<SkySnapshot.Star>): List<SkyChartLabel> {
         val named = stars.filter {
-            it.name != null && it.direction.z > LABEL_HORIZON && it.magnitude <= STAR_LABEL_MAGNITUDE
+            it.name != null && it.direction.z > LABEL_HORIZON && it.magnitude <= STAR_LABEL_MAGNITUDE && !it.isBehindSkyline
         }
         val brightest = named.sortedWith(compareBy<SkySnapshot.Star>({ it.magnitude }, { it.id }))
         return brightest.take(STAR_LABEL_LIMIT).mapNotNull { star ->
@@ -340,6 +378,7 @@ internal object SkyChartSceneBuilder {
             obj = body.obj, kind = kind, x = point.x.toFloat(), y = point.y.toFloat(), horizontal = body.horizontal,
             magnitude = body.magnitude, illuminatedFraction = body.illuminatedFraction,
             towardsSunAngle = sun?.let { towardsAngle(body.direction, it.direction) } ?: 0.0,
+            isBehindSkyline = body.isBehindSkyline,
         )
     }
 
@@ -360,29 +399,43 @@ internal object SkyChartSceneBuilder {
     // Deep-sky objects
 
     private fun deepSkyMarkers(objects: List<SkySnapshot.DeepSky>): List<SkyChartDeepSkyMarker> =
-        objects.filter { it.direction.z >= 0 }.map { item ->
-            val point = PlanisphereProjection.chartPoint(item.direction)
-            SkyChartDeepSkyMarker(
-                x = point.x.toFloat(), y = point.y.toFloat(), group = item.obj.group,
-                magnitude = item.obj.magnitude, extent = item.majorAxis?.let { AstroMath.radians(it) },
-            )
-        }
+        objects.filter { it.direction.z >= 0 && !it.isBehindSkyline }
+            .sortedWith(compareBy<SkySnapshot.DeepSky>({ it.prominence }, { rankingMagnitude(it.obj) }, { it.obj.id }))
+            .map { item ->
+                val point = PlanisphereProjection.chartPoint(item.direction)
+                SkyChartDeepSkyMarker(
+                    x = point.x.toFloat(), y = point.y.toFloat(), group = item.obj.group,
+                    prominence = item.prominence.rawValue, extent = item.majorAxis?.let { AstroMath.radians(it) },
+                )
+            }
 
+    /**
+     * The names of the most prominent deep-sky objects, each shown from the zoom its prominence needs: showpieces as the
+     * chart is zoomed in a little, the obscure ones only far in.
+     */
     private fun deepSkyLabels(objects: List<SkySnapshot.DeepSky>): List<SkyChartLabel> {
-        val visible = objects.filter { it.direction.z > LABEL_HORIZON }
-        val brightest = visible.sortedWith(compareBy<SkySnapshot.DeepSky>({ rankingMagnitude(it.obj) }, { it.obj.id }))
-        return brightest.take(DEEP_SKY_LABEL_LIMIT).map { item ->
+        val visible = objects.filter { it.direction.z > LABEL_HORIZON && !it.isBehindSkyline }
+        val ranked = visible.sortedWith(
+            compareBy<SkySnapshot.DeepSky>({ it.prominence }, { rankingMagnitude(it.obj) }, { it.obj.id }),
+        )
+        return ranked.take(DEEP_SKY_LABEL_LIMIT).map { item ->
             val magnitude = rankingMagnitude(item.obj)
-            val zoom = if (magnitude <= 5) 1.8f else if (magnitude <= 7) 2.8f else if (magnitude <= 9) 4f else 5f
+            val level = item.prominence.rawValue
+            val zoom = when (level) {
+                1 -> 1.4f
+                2 -> 2.2f
+                3 -> 3.4f
+                else -> 4.8f
+            }
             val point = PlanisphereProjection.chartPoint(item.direction)
             SkyChartLabel(
                 "deepSky.${item.obj.id}", item.obj.name, SkyChartLabel.Style.DEEP_SKY, point.x.toFloat(), point.y.toFloat(),
-                priority = 25 - (min(magnitude, 20.0) / 2).toInt(), minimumZoom = zoom, offset = 7f,
+                priority = 26 - 3 * level - (min(magnitude, 12.0) / 6).toInt(), minimumZoom = zoom, offset = 7f,
             )
         }
     }
 
-    /** The magnitude used to rank deep-sky objects; 99 when it is unknown. */
+    /** The magnitude used to rank deep-sky objects of equal prominence; 99 when it is unknown. */
     private fun rankingMagnitude(obj: CelestialObject): Double {
         val magnitude = obj.magnitude ?: return 99.0
         return if (magnitude.isFinite()) magnitude else 99.0
@@ -403,20 +456,21 @@ internal object SkyChartSceneBuilder {
             )
         }
         for (body in bodies) {
-            if (!body.isAboveHorizon) continue
+            if (!body.isShown) continue
             result += SkyChartPickable(body.id, SkyChartPickable.Kind.BODY, body.x, body.y, body.obj)
         }
         for (item in snapshot.deepSky) {
-            if (item.direction.z < 0) continue
+            if (item.direction.z < 0 || item.isBehindSkyline) continue
             val point = PlanisphereProjection.chartPoint(item.direction)
             result += SkyChartPickable(
                 item.obj.id, SkyChartPickable.Kind.DEEP_SKY, point.x.toFloat(), point.y.toFloat(), item.obj,
+                prominence = item.prominence.rawValue,
             )
         }
         val vectors = snapshot.starVectors
         snapshot.stars.forEachIndexed { index, star ->
             val z = vectors[index * 3 + 2]
-            if (z >= 0) {
+            if (z >= 0 && !star.isBehindSkyline) {
                 val denominator = 1 + z
                 result += SkyChartPickable(
                     star.id, SkyChartPickable.Kind.STAR,

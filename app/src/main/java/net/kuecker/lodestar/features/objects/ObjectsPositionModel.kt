@@ -19,6 +19,8 @@ import net.kuecker.lodestar.kit.foundation.DateInterval
 import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.foundation.timeIntervalSince
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.horizon.HorizonVisibility
 import net.kuecker.lodestar.model.SkyClock
 import java.time.Instant
 
@@ -36,8 +38,18 @@ internal data class ObjectSkyPosition(
     val magnitude: Double?,
     /** The instant the position was computed for. */
     val computedAt: Instant,
+    /** `true` when a recorded skyline, not a flat horizon, decides whether the object is up. */
+    val usesSkyline: Boolean = false,
+    /** `true` when the object is up: above the horizon and, with a skyline, above the skyline at its azimuth. */
+    val isUp: Boolean = altitude > 0,
+    /** `true` when the object rises at this place but only ever sinks behind or stays behind the skyline in the window. */
+    val isBlockedBySkyline: Boolean = false,
 ) {
+    /** `true` when the object is above the true horizon, whatever the skyline does. */
     val isAboveHorizon: Boolean get() = altitude > 0
+
+    /** `true` when the object is above the horizon but hidden behind the recorded skyline. */
+    val isBehindSkyline: Boolean get() = usesSkyline && isAboveHorizon && !isUp
 }
 
 /** Computes sky positions for lists of objects. Pure, so it can run on any thread. */
@@ -48,21 +60,43 @@ internal object ObjectsPositionCalculator {
      */
     const val RISE_SEARCH_WINDOW = 25.0 * 3600
 
-    /** The position of every object in [objects] at [date], keyed by object identifier. */
-    fun positions(objects: List<CelestialObject>, observer: Observer, date: Instant): Map<String, ObjectSkyPosition> {
+    /**
+     * The position of every object in [objects] at [date], keyed by object identifier. With a [skyline] an object is up
+     * only above it, and it rises when it clears it.
+     */
+    fun positions(
+        objects: List<CelestialObject>,
+        observer: Observer,
+        date: Instant,
+        skyline: HorizonProfile? = null,
+    ): Map<String, ObjectSkyPosition> {
         val frame = SkyFrame(date, observer)
         val window = DateInterval(date, RISE_SEARCH_WINDOW)
+        val horizon = skyline?.let(::HorizonVisibility)
         val result = HashMap<String, ObjectSkyPosition>(objects.size * 2)
         for (obj in objects) {
             val horizontal = frame.horizontal(obj, true)
-            val events = RiseSetCalculator.riseTransitSet(obj, observer, window)
+            val flat = horizon == null
+            val events = if (horizon != null) {
+                horizon.riseTransitSet(obj, observer, window)
+            } else {
+                RiseSetCalculator.riseTransitSet(obj, observer, window)
+            }
+            val isHiddenAllWindow = events.circumstance == RiseTransitSet.Circumstance.ALWAYS_DOWN
+            // Behind the skyline all window is not the same as never rising: the flat horizon tells them apart.
+            val neverRises = isHiddenAllWindow &&
+                (flat || RiseSetCalculator.riseTransitSet(obj, observer, window).circumstance ==
+                    RiseTransitSet.Circumstance.ALWAYS_DOWN)
             result[obj.id] = ObjectSkyPosition(
                 altitude = horizontal.altitude,
                 azimuth = horizontal.azimuth,
                 nextRise = events.rise,
-                neverRises = events.circumstance == RiseTransitSet.Circumstance.ALWAYS_DOWN,
+                neverRises = neverRises,
                 magnitude = if (obj.isSolarSystem) frame.currentMagnitude(obj) else null,
                 computedAt = date,
+                usesSkyline = !flat,
+                isUp = horizon?.isVisible(horizontal.altitude, horizontal.azimuth, refracted = true) ?: (horizontal.altitude > 0),
+                isBlockedBySkyline = isHiddenAllWindow && !neverRises,
             )
         }
         return result
@@ -82,6 +116,7 @@ internal class ObjectsPositionModel {
         private set
 
     private var observer: Observer? = null
+    private var skyline: HorizonProfile? = null
 
     /** The latest position of the object with [id], or `null` when it is not tracked or not yet computed. */
     fun position(id: String): ObjectSkyPosition? = positions[id]
@@ -90,9 +125,14 @@ internal class ObjectsPositionModel {
      * Computes the positions of the objects [tracked] returns now and then every 30 s until the calling coroutine
      * is cancelled. [tracked] is asked again on every pass, so the objects can change over time.
      */
-    suspend fun keepFresh(observer: Observer, clock: SkyClock, tracked: () -> List<CelestialObject>) {
+    suspend fun keepFresh(
+        observer: Observer,
+        skyline: HorizonProfile?,
+        clock: SkyClock,
+        tracked: () -> List<CelestialObject>,
+    ) {
         while (currentCoroutineContext().isActive) {
-            refresh(tracked(), observer, clock.now)
+            refresh(tracked(), observer, skyline, clock.now)
             delay(REFRESH_INTERVAL_MS)
         }
     }
@@ -101,10 +141,11 @@ internal class ObjectsPositionModel {
     fun clear() {
         positions = emptyMap()
         observer = null
+        skyline = null
     }
 
-    private suspend fun refresh(objects: List<CelestialObject>, observer: Observer, date: Instant) {
-        val isNewObserver = this.observer != observer
+    private suspend fun refresh(objects: List<CelestialObject>, observer: Observer, skyline: HorizonProfile?, date: Instant) {
+        val isNewObserver = this.observer != observer || this.skyline != skyline
         val outdated = if (isNewObserver) {
             objects
         } else {
@@ -114,11 +155,14 @@ internal class ObjectsPositionModel {
             }
         }
         if (outdated.isEmpty()) return
-        val computed = withContext(Dispatchers.Default) { ObjectsPositionCalculator.positions(outdated, observer, date) }
+        val computed = withContext(Dispatchers.Default) {
+            ObjectsPositionCalculator.positions(outdated, observer, date, skyline)
+        }
         currentCoroutineContext().ensureActive()
         if (isNewObserver) {
             positions = computed
             this.observer = observer
+            this.skyline = skyline
         } else {
             positions = positions + computed
         }

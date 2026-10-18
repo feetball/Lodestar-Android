@@ -87,40 +87,58 @@ internal fun SkyOverlayRenderer.drawConstellations() {
 
 // Deep-sky objects
 
-/** Fainter objects are left out the wider the view, so a wide view stays readable. */
-internal fun deepSkyMagnitudeCutoff(fieldOfView: Double): Double = when {
-    fieldOfView >= 70 -> 7.0
-    fieldOfView >= 40 -> 8.5
-    fieldOfView >= 20 -> 10.0
-    else -> Double.POSITIVE_INFINITY
-}
+/**
+ * The least prominent level of deep-sky objects drawn in a view [fieldOfView] degrees wide (1 showpieces … 4 everything):
+ * the setting caps what is in the sky content at all, and a very wide view leaves the obscure objects out so that it
+ * stays readable.
+ */
+internal fun deepSkyProminenceLimit(fieldOfView: Double): Int = if (fieldOfView >= 70) 3 else 4
 
-/** Names are shown in views narrower than this many degrees. */
-private const val DEEP_SKY_NAME_FIELD_OF_VIEW = 40.0
+/**
+ * The least prominent level of deep-sky objects that gets a name in a view [fieldOfView] degrees wide, or 0 for none:
+ * the widest views name nothing, wide ones the showpieces only, and the lesser objects follow as the view narrows.
+ */
+internal fun deepSkyNameProminence(fieldOfView: Double): Int = when {
+    fieldOfView >= 70 -> 0
+    fieldOfView >= 45 -> 1
+    fieldOfView >= 30 -> 2
+    fieldOfView >= 22 -> 3
+    else -> 4
+}
 
 /** The most deep-sky names shown at once. */
 private const val DEEP_SKY_NAME_LIMIT = 12
 
-/** The deep-sky objects as chart symbols, brighter than the cutoff for the field of view, with names when zoomed in. */
+/** The most deep-sky symbols drawn in one frame, the most prominent first. */
+private const val DEEP_SKY_SYMBOL_LIMIT = 300
+
+/**
+ * The deep-sky objects as chart symbols, as prominent as the setting allows and the width of the view lets through,
+ * with the names of the most prominent ones.
+ */
 internal fun SkyOverlayRenderer.drawDeepSky() {
     if (!configuration.showDeepSkyObjects) return
     val content = content ?: return
     val markers = content.deepSky
     if (markers.isEmpty()) return
-    val shown = content.deepSkyCount(deepSkyMagnitudeCutoff(fieldOfView))
+    val shown = content.deepSkyCount(deepSkyProminenceLimit(fieldOfView))
     val points = scratch.points(2 * shown)
     projector.projectAll(content.deepSkyVectors, shown, points)
+    val nameProminence = deepSkyNameProminence(fieldOfView)
     var namesShown = 0
+    var symbolsShown = 0
     val nameStyle = AimLabelStyle(11f, FontWeight.Normal, palette.deepSkyMarker)
     val outline = Stroke(density)
     for (index in 0 until shown) {
         val x = points[2 * index]
         val y = points[2 * index + 1]
         if (!isVisible(x, y, 16f)) continue
+        if (symbolsShown >= DEEP_SKY_SYMBOL_LIMIT) break
         val marker = markers[index]
         val extent = min(max(marker.diameter * pointsPerDegree, 8.0), 44.0).toFloat()
         drawSymbol(marker.shape, x, y, extent, outline)
-        if (fieldOfView < DEEP_SKY_NAME_FIELD_OF_VIEW && namesShown < DEEP_SKY_NAME_LIMIT) {
+        symbolsShown += 1
+        if (marker.prominence <= nameProminence && namesShown < DEEP_SKY_NAME_LIMIT) {
             addLabel(marker.name, x, y, nameStyle, 6, offsetY = extent / 2 + 10)
             namesShown += 1
         }

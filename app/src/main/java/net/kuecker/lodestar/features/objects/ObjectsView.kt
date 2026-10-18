@@ -115,7 +115,7 @@ fun ObjectsScreen() {
     val stack = rememberRetained("objects.nav") { NavStack<ObjectsRoute>(ObjectsRoute.Browse) }
     val browse = rememberRetained("objects.browse") { ObjectsBrowseState() }
     val options = rememberObjectsOptions()
-    ObjectsBackgroundWork(browse)
+    ObjectsBackgroundWork(browse, options.options.catalogue)
     NavStackHost(stack, Modifier.fillMaxSize()) { route ->
         when (route) {
             ObjectsRoute.Browse -> ObjectsBrowse(browse, options) { stack.push(ObjectsRoute.Detail(it)) }
@@ -132,14 +132,17 @@ private const val SEARCH_DEBOUNCE_MS = 150L
 
 /**
  * The work behind the Objects tab, which keeps running while an object's detail is open: loading the catalog,
- * indexing it, searching it as the query changes, and keeping the sky positions of the listed objects fresh.
+ * indexing it, searching it as the query changes, and keeping the sky positions of the listed objects, and of the
+ * chosen [catalogueFilter]'s, fresh. A recorded skyline decides what is up.
  */
 @Composable
-private fun ObjectsBackgroundWork(browse: ObjectsBrowseState) {
+private fun ObjectsBackgroundWork(browse: ObjectsBrowseState, catalogueFilter: ObjectsCatalogueFilter) {
     val app = LocalAppModel.current
     val catalog = app.catalog.catalog
     val settings = app.settings
-    val observer = app.observerContext?.observer
+    val observerContext = app.observerContext
+    val observer = observerContext?.observer
+    val skyline = observerContext?.skyline
     val isForeground = app.isForeground
     val trimmedQuery = browse.trimmedQuery
 
@@ -170,18 +173,28 @@ private fun ObjectsBackgroundWork(browse: ObjectsBrowseState) {
     // Favorites, recents and search results that the browse listing does not include are tracked in addition to
     // the listed objects.
     val outcome = browse.outcome
-    val extraObjects = remember(catalog, settings.favoriteObjectIDs, settings.recentObjectIDs, outcome) {
-        offListObjects(catalog, settings.favoriteObjectIDs, settings.recentObjectIDs, outcome.objects)
+    // A catalogue also lists objects the browse listing leaves out (the obscure ones).
+    val indexed = browse.indexed?.takeIf { it.catalog === catalog }
+    val catalogueExtras = remember(indexed, catalogueFilter) {
+        if (indexed != null && catalogueFilter.isCatalogue) {
+            indexed.index.pool(catalogueFilter).filter { !it.isListed }
+        } else {
+            emptyList()
+        }
     }
-    val extraIDs = extraObjects.map { it.id }
-    LaunchedEffect(observer, catalog, extraIDs, isForeground) {
+    val extraObjects = remember(catalog, settings.favoriteObjectIDs, settings.recentObjectIDs, outcome, catalogueExtras) {
+        (offListObjects(catalog, settings.favoriteObjectIDs, settings.recentObjectIDs, outcome.objects) + catalogueExtras)
+            .distinctBy { it.id }
+    }
+    val extraIDs = remember(extraObjects) { extraObjects.map { it.id } }
+    LaunchedEffect(observer, skyline, catalog, extraIDs, isForeground) {
         if (!isForeground) return@LaunchedEffect
         if (observer == null) {
             browse.positions.clear()
             return@LaunchedEffect
         }
         val listed = catalog?.listedObjects ?: emptyList()
-        browse.positions.keepFresh(observer, app.clock) { listed + extraObjects }
+        browse.positions.keepFresh(observer, skyline, app.clock) { listed + extraObjects }
     }
 }
 
@@ -226,10 +239,17 @@ private fun ObjectsBrowse(browse: ObjectsBrowseState, options: ObjectsOptionsSta
                 options = options.options,
                 onOptionsChange = { next -> options.update { next } },
                 hasLocation = app.observerContext != null,
+                hasSkyline = app.observerContext?.skyline != null,
                 enabled = browse.trimmedQuery.isEmpty(),
             )
         }
         ObjectsSearchField(browse.query, onQueryChange = { browse.query = it })
+        if (browse.trimmedQuery.isEmpty()) {
+            ObjectsCatalogueChips(
+                selected = options.options.catalogue,
+                onSelect = { chosen -> options.update { it.choosingCatalogue(chosen) } },
+            )
+        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 catalog != null && indexed != null -> ObjectsList(
@@ -280,7 +300,7 @@ private fun ObjectsSearchField(query: String, onQueryChange: (String) -> Unit) {
         )
         Box(Modifier.weight(1f).padding(start = 8.dp), contentAlignment = Alignment.CenterStart) {
             if (query.isEmpty()) {
-                Text("Name, M31, NGC 7000", color = palette.tertiaryText, style = MaterialTheme.typography.bodyLarge)
+                Text("Name, M31, Sh2-155, NGC 7000", color = palette.tertiaryText, style = MaterialTheme.typography.bodyLarge)
             }
             BasicTextField(
                 value = query,
@@ -379,6 +399,8 @@ private fun ObjectsList(
         LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
             if (observerContext == null && !isShowingResults) {
                 item(key = "location-notice") { ObjectsLocationNotice() }
+            } else if (observerContext?.skyline != null && !isShowingResults) {
+                item(key = "skyline-note") { ObjectsSkylineNote() }
             }
             for (section in sections) {
                 stickyHeader(key = "header/${section.id}") {
@@ -390,6 +412,7 @@ private fun ObjectsList(
                         obj = obj,
                         position = positions.position(obj.id),
                         isFavorite = obj.id in favorites,
+                        showsProminence = options.catalogue.isCatalogue,
                         zone = zone,
                         shape = rowShape(isFirst = itemIndex == 0, isLast = itemIndex == lastIndex),
                         showsDivider = itemIndex != lastIndex,
@@ -420,7 +443,13 @@ private fun ObjectsList(
                     LodestarButton(
                         "Reset Filters",
                         onClick = {
-                            onOptionsChange(options.copy(showsOnlyAboveHorizon = false, hidesFaintObjects = false))
+                            onOptionsChange(
+                                options.choosingCatalogue(ObjectsCatalogueFilter.ALL).copy(
+                                    showsOnlyAboveHorizon = false,
+                                    hidesFaintObjects = false,
+                                    showsOnlyPopular = false,
+                                ),
+                            )
                         },
                         kind = LodestarButtonKind.SECONDARY,
                     )

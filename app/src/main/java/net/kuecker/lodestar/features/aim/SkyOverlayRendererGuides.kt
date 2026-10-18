@@ -8,9 +8,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.font.FontWeight
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
+import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.pointing.GuidanceState
 import net.kuecker.lodestar.kit.pointing.PinholeProjection
-import net.kuecker.lodestar.shared.SkySnapshot
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -119,13 +119,25 @@ private const val EDGE_SIDE_INSET = 36f
 private const val EDGE_TOP_INSET = 96f
 private const val EDGE_BOTTOM_INSET = 240f
 
-/** The target's marker and name, or an arrow at the screen edge towards it when it is out of view. */
+/**
+ * The marker and name of what guidance leads to (the target, or the panel of a running mosaic), or an arrow at the
+ * screen edge towards it when it is out of view.
+ */
 internal fun SkyOverlayRenderer.drawTarget() {
-    val target = frame.target ?: return
+    val target = frame.target
+    if (target != null) {
+        drawAimMarker(target.direction, target.obj.name)
+        return
+    }
+    val panel = frame.panel ?: return
+    drawAimMarker(panel.direction, panel.label)
+}
+
+private fun SkyOverlayRenderer.drawAimMarker(direction: Vector3, name: String) {
     val isOnTarget = frame.guidance?.state == GuidanceState.ON_TARGET
     val color = if (isOnTarget) palette.positive else palette.guidance
-    if (!projector.project(target.direction) || !isVisible(projector.x, projector.y, 0f)) {
-        drawEdgeIndicator(target, color)
+    if (!projector.project(direction) || !isVisible(projector.x, projector.y, 0f)) {
+        drawEdgeIndicator(direction, color)
         return
     }
     val center = Offset(projector.x, projector.y)
@@ -134,15 +146,12 @@ internal fun SkyOverlayRenderer.drawTarget() {
     val radius = (21 + pulse).toFloat()
     drawCircle(color, radius * density, center, style = Stroke((if (isOnTarget) 3.5f else 2f) * density))
     drawCircle(color, 2.5f * density, center)
-    addLabel(
-        target.obj.name, center.x, center.y, AimLabelStyle(14f, FontWeight.Bold, color), 0,
-        offsetY = -(radius + 15),
-    )
+    addLabel(name, center.x, center.y, AimLabelStyle(14f, FontWeight.Bold, color), 0, offsetY = -(radius + 15))
 }
 
 /** An arrow at the screen edge in the direction of a target that is not in view, with its distance. */
-private fun SkyOverlayRenderer.drawEdgeIndicator(target: SkySnapshot.Target, color: Color) {
-    val screen = worldToScreen * target.direction
+private fun SkyOverlayRenderer.drawEdgeIndicator(direction: Vector3, color: Color) {
+    val screen = worldToScreen * direction
     var headingX = screen.x
     var headingY = -screen.y
     val length = hypot(headingX, headingY)
@@ -193,7 +202,7 @@ private fun SkyOverlayRenderer.drawEdgeIndicator(target: SkySnapshot.Target, col
         drawPath(arrow, Color.Black.faded(0.5f), style = Stroke(density))
     }
 
-    val separation = AimFormat.angle(boresight.angle(target.direction))
+    val separation = AimFormat.angle(boresight.angle(direction))
     scratch.labels.add(
         separation, (tipX - headingX * 38 * density).toFloat(), (tipY - headingY * 38 * density).toFloat(),
         AimLabelStyle(14f, FontWeight.Bold, color), 3,

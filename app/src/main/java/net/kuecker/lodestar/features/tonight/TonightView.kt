@@ -23,9 +23,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.events.EventDetailScreen
+import net.kuecker.lodestar.features.events.EventsCalendarScreen
 import net.kuecker.lodestar.features.objects.ObjectDetailScreen
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.NavStack
 import net.kuecker.lodestar.shared.NavStackHost
@@ -44,6 +47,12 @@ private sealed interface TonightRoute {
 
     /** The full Polar Alignment tool. */
     data object PolarAlignment : TonightRoute
+
+    /** The calendar of astronomical events for the next twelve months. */
+    data object EventsCalendar : TonightRoute
+
+    /** The detail screen of one astronomical event. */
+    data class EventDetail(val event: AstronomicalEvent) : TonightRoute
 }
 
 /**
@@ -52,7 +61,8 @@ private sealed interface TonightRoute {
  * for aligning a tracker.
  *
  * The night defaults to the one under way (or the coming one by day); the selector and calendar reach a year either
- * way. Planets and targets open the object detail screen.
+ * way. Planets and targets open the object detail screen; the Upcoming card opens the events calendar and the detail of
+ * an astronomical event.
  */
 @Composable
 fun TonightScreen() {
@@ -67,9 +77,16 @@ fun TonightScreen() {
                     // A second tap during the slide must not stack the same screen twice.
                     onOpenObject = { obj -> if (stack.top == TonightRoute.Root) stack.push(TonightRoute.ObjectDetail(obj)) },
                     onOpenPolarAlignment = { if (stack.top == TonightRoute.Root) stack.push(TonightRoute.PolarAlignment) },
+                    onOpenEvent = { event -> if (stack.top == TonightRoute.Root) stack.push(TonightRoute.EventDetail(event)) },
+                    onOpenCalendar = { if (stack.top == TonightRoute.Root) stack.push(TonightRoute.EventsCalendar) },
                 )
                 is TonightRoute.ObjectDetail -> ObjectDetailScreen(route.obj, onBack = { stack.pop() })
                 TonightRoute.PolarAlignment -> PolarAlignmentScreen(onBack = { stack.pop() })
+                TonightRoute.EventsCalendar -> EventsCalendarScreen(
+                    onBack = { stack.pop() },
+                    onOpenEvent = { event -> if (stack.top == TonightRoute.EventsCalendar) stack.push(TonightRoute.EventDetail(event)) },
+                )
+                is TonightRoute.EventDetail -> EventDetailScreen(route.event, onBack = { stack.pop() })
             }
         }
     }
@@ -77,10 +94,15 @@ fun TonightScreen() {
 
 /** The planner once an observing place is known, otherwise the request for one. */
 @Composable
-private fun TonightRoot(onOpenObject: (CelestialObject) -> Unit, onOpenPolarAlignment: () -> Unit) {
+private fun TonightRoot(
+    onOpenObject: (CelestialObject) -> Unit,
+    onOpenPolarAlignment: () -> Unit,
+    onOpenEvent: (AstronomicalEvent) -> Unit,
+    onOpenCalendar: () -> Unit,
+) {
     val context = LocalAppModel.current.observerContext
     if (context != null) {
-        TonightContent(context, onOpenObject, onOpenPolarAlignment)
+        TonightContent(context, onOpenObject, onOpenPolarAlignment, onOpenEvent, onOpenCalendar)
     } else {
         Column(Modifier.fillMaxSize()) {
             TonightTopBar()

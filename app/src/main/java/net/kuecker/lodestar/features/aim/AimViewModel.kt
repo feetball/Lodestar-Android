@@ -13,9 +13,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.app.AppModel
+import net.kuecker.lodestar.features.mosaic.MosaicSession
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.foundation.AstroMath
+import net.kuecker.lodestar.kit.foundation.Observer
+import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.foundation.Vector3
+import net.kuecker.lodestar.kit.mosaic.MosaicPlan
 import net.kuecker.lodestar.kit.pointing.GuidanceState
 import net.kuecker.lodestar.model.NightModeSetting
 import net.kuecker.lodestar.services.CameraGeometry
@@ -30,9 +34,12 @@ import net.kuecker.lodestar.shared.ScreenAxes
  * `guidanceTarget?.id` changes; and runs the three suspending loops from `LaunchedEffect`s while the tab is showing
  * and the app is in front: `LaunchedEffect(skyInputs, isActive) { model.keepSkyCurrent(skyInputs) }` and
  * `keepRiseInfoCurrent(skyInputs)` with `skyInputs = model.skyInputs(configuration)`, and
- * `LaunchedEffect(isActive) { model.runLoop() }` (call [stopFeedback] when inactive and on disposal). Only low-rate
+ * `LaunchedEffect(isActive) { model.runLoop() }` (call [stopFeedback] when inactive and on disposal). While a mosaic
+ * runs ([mosaic] has a plan) a fourth loop, `LaunchedEffect(plan, observer, isActive) { model.keepMosaicCurrent(plan,
+ * observer) }`, refreshes where the panels stand, and `LaunchedEffect(plan, step) { model.syncMosaic() }` leads
+ * guidance to the panel being shot at once. Only low-rate
  * values are Compose state ([configuration], [skyContent], [riseInfo], [hudRotation], [virtualFieldOfView],
- * [alignmentTarget]); what changes with every sensor sample is not published: the overlay and the readouts call
+ * [alignmentTarget], [mosaicPointings]); what changes with every sensor sample is not published: the overlay and the readouts call
  * `engine.frame()` when they draw (or in a per-frame loop of their own), so the composition is not invalidated 60
  * times a second. [SkyOverlayView] publishes the display rotation in [screenAxes]. Pinch gestures call
  * [updatePinch]/[endPinch] while [cameraGeometry] is `null`. Main thread only.
@@ -44,6 +51,9 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
 
         /** Milliseconds between searches for the target's next rise. */
         const val RISE_REFRESH_INTERVAL_MS = 60_000L
+
+        /** Milliseconds between the recalculations of where the panels of a mosaic stand in the sky. */
+        const val MOSAIC_REFRESH_INTERVAL_MS = 1_000L
         const val LOOP_INTERVAL_MS = 33L
 
         /**
@@ -64,6 +74,16 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     var riseInfo: AimRiseInfo? by mutableStateOf(null)
         private set
     var hudRotation: AimHUDRotation by mutableStateOf(AimHUDRotation.UPRIGHT)
+        private set
+
+    /**
+     * The mosaic being shot (shared with the Sky chart). While it has a plan, guidance leads to the current panel
+     * instead of the target; see [keepMosaicCurrent] and [syncMosaic].
+     */
+    val mosaic: MosaicSession = app.retained.getOrPut(MosaicSession.KEY) { MosaicSession() }
+
+    /** Where every panel of the running mosaic stands in the sky, as of about a second ago; `null` without a mosaic. */
+    var mosaicPointings: AimMosaicPointings? by mutableStateOf(null)
         private set
 
     /** An object the alignment sheet asks to be guided to; it replaces the app's target while it is set. */
@@ -90,6 +110,7 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     private var hasHUDRotation = false
     private var pinchStartFieldOfView: Double? = null
     private var wasOnTarget: Boolean? = null
+    private var panelKey: Int? = null
 
     // Derived state
 
@@ -107,7 +128,7 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     fun skyInputs(configuration: AimConfiguration): AimSkyInputs? {
         val context = app.observerContext ?: return null
         if (app.catalog.loadState != CatalogService.LoadState.Loaded) return null
-        return AimSkyInputs(context.observer, configuration.skyOptions, guidanceTarget)
+        return AimSkyInputs(context.observer, configuration.skyOptions, guidanceTarget, context.horizon)
     }
 
     // Configuration
@@ -157,6 +178,39 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
             riseInfo = info
             delay(RISE_REFRESH_INTERVAL_MS)
         }
+    }
+
+    /**
+     * Works out where the panels of [plan] stand in the sky now and then once a second until cancelled (equatorial
+     * panels drift with the sky), and leads guidance to the current one. Restart it (`LaunchedEffect` keyed on the plan
+     * and the observer) whenever they change; without a plan or an observer it ends the mosaic guidance and returns.
+     */
+    suspend fun keepMosaicCurrent(plan: MosaicPlan?, observer: Observer?) {
+        if (plan == null || observer == null) {
+            mosaicPointings = null
+            syncMosaic()
+            return
+        }
+        while (currentCoroutineContext().isActive) {
+            val date = app.clock.now
+            mosaicPointings = withContext(Dispatchers.Default) { AimMosaicPointings.make(plan, SkyFrame(date, observer)) }
+            syncMosaic()
+            delay(MOSAIC_REFRESH_INTERVAL_MS)
+        }
+    }
+
+    /**
+     * Points guidance at the mosaic's current panel, or back at the target when no mosaic runs or all its panels are
+     * shot. Call it whenever the panel changes ([MosaicSession.step], [MosaicSession.plan]); [keepMosaicCurrent] does
+     * after every refresh.
+     */
+    fun syncMosaic() {
+        val plan = mosaic.plan
+        val pointings = mosaicPointings
+        val aim = if (plan != null && pointings != null && pointings.plan === plan) pointings.aim(mosaic.step) else null
+        if (aim?.key != panelKey) wasOnTarget = null
+        panelKey = aim?.key
+        engine.setPanel(aim)
     }
 
     /**

@@ -40,7 +40,12 @@ import java.time.ZoneId
 
 /** The deep-sky objects that rise highest in the dark, brightest and biggest first, each opening its detail screen. */
 @Composable
-internal fun TonightTargetsCard(outcome: TonightTargetsOutcome, zone: ZoneId, onOpenObject: (CelestialObject) -> Unit) {
+internal fun TonightTargetsCard(
+    outcome: TonightTargetsOutcome,
+    zone: ZoneId,
+    isSkylineApplied: Boolean,
+    onOpenObject: (CelestialObject) -> Unit,
+) {
     val palette = LocalPalette.current
     val minimum = TonightCalculator.minimumTargetAltitude.toInt()
     Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -48,7 +53,13 @@ internal fun TonightTargetsCard(outcome: TonightTargetsOutcome, zone: ZoneId, on
         when (outcome) {
             is TonightTargetsOutcome.Ranked -> {
                 if (outcome.targets.isEmpty()) {
-                    TonightNote("No listed deep-sky object climbs above $minimum° while it is dark.")
+                    TonightNote(
+                        if (isSkylineApplied) {
+                            "No listed deep-sky object clears your skyline and climbs above $minimum° while it is dark."
+                        } else {
+                            "No listed deep-sky object climbs above $minimum° while it is dark."
+                        },
+                    )
                 } else {
                     for (target in outcome.targets) {
                         if (target.id != outcome.targets.first().id) TonightRowSeparator()
@@ -59,6 +70,12 @@ internal fun TonightTargetsCard(outcome: TonightTargetsOutcome, zone: ZoneId, on
                             "are listed.",
                         style = TonightNoteStyle.FOOTNOTE,
                     )
+                    if (isSkylineApplied) {
+                        TonightSkylineNote(
+                            "Targets hidden behind your recorded skyline are left out. The hours and the best time " +
+                                "count only the time above it.",
+                        )
+                    }
                 }
             }
             TonightTargetsOutcome.NoDarkness ->

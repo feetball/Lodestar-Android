@@ -2,13 +2,19 @@ package net.kuecker.lodestar.features.objects
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Terrain
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
@@ -57,12 +63,37 @@ private fun Content(obj: CelestialObject, night: ObjectDetailNight, now: Instant
     )
     ObjectDetailAltitudeChart(night, now, zone)
     Text(
-        "Lighter bands show twilight; the dashed line is the horizon.",
+        "Lighter bands show twilight; the dashed line is the horizon." +
+            if (night.usesSkyline) " The shaded ground is your skyline in the object's direction." else "",
         color = palette.tertiaryText,
         style = MaterialTheme.typography.labelMedium,
     )
     EventRows(night, zone)
     DarknessRows(obj, night, zone)
+    if (night.usesSkyline) SkylineNote()
+}
+
+/** A small note that the times and the best point follow the site's recorded skyline. */
+@Composable
+private fun SkylineNote() {
+    val palette = LocalPalette.current
+    Row(
+        Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            Icons.Outlined.Terrain,
+            contentDescription = null,
+            tint = palette.secondaryText,
+            modifier = Modifier.size(14.dp),
+        )
+        Text(
+            "Skyline applied: rising is clearing your recorded skyline and setting is sinking behind it.",
+            color = palette.tertiaryText,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
 
 /** The observer's time zone as people write it, such as "MDT". */
@@ -72,9 +103,10 @@ private fun zoneName(zone: ZoneId, date: Instant): String =
 @Composable
 private fun EventRows(night: ObjectDetailNight, zone: ZoneId) {
     when (night.events.circumstance) {
-        RiseTransitSet.Circumstance.ALWAYS_DOWN -> InfoRow("Visibility", "Stays below the horizon")
+        RiseTransitSet.Circumstance.ALWAYS_DOWN ->
+            InfoRow("Visibility", if (night.usesSkyline) "Stays below your skyline" else "Stays below the horizon")
         RiseTransitSet.Circumstance.ALWAYS_UP -> {
-            InfoRow("Visibility", "Always above the horizon")
+            InfoRow("Visibility", if (night.usesSkyline) "Always above your skyline" else "Always above the horizon")
             TimelineRows(night, zone)
         }
         RiseTransitSet.Circumstance.NORMAL -> TimelineRows(night, zone)
@@ -85,9 +117,9 @@ private fun EventRows(night: ObjectDetailNight, zone: ZoneId) {
 private fun TimelineRows(night: ObjectDetailNight, zone: ZoneId) {
     for (event in night.timeline) {
         val title = when (event.kind) {
-            ObjectDetailEvent.Kind.RISE -> "Rises"
+            ObjectDetailEvent.Kind.RISE -> if (night.usesSkyline) "Clears the skyline" else "Rises"
             ObjectDetailEvent.Kind.TRANSIT -> "Highest point"
-            ObjectDetailEvent.Kind.SET -> "Sets"
+            ObjectDetailEvent.Kind.SET -> if (night.usesSkyline) "Sinks behind the skyline" else "Sets"
         }
         InfoRow(title, eventValue(event, night, zone))
     }
@@ -111,10 +143,10 @@ private fun DarknessRows(obj: CelestialObject, night: ObjectDetailNight, zone: Z
     InfoRow("Dark sky", "${AppFormat.time(darkness.start, zone)} – ${AppFormat.time(darkness.end, zone)}")
     val best = night.bestInDarkness
     if (obj.category != ObjectCategory.SUN && best != null) {
-        val text = if (best.altitude > 0) {
-            "${AppFormat.altitude(best.altitude)} at ${AppFormat.time(best.date, zone)}"
-        } else {
-            "Below the horizon"
+        val text = when {
+            best.isUp -> "${AppFormat.altitude(best.altitude)} at ${AppFormat.time(best.date, zone)}"
+            night.usesSkyline && best.altitude > 0 -> "Behind your skyline"
+            else -> "Below the horizon"
         }
         InfoRow("Highest in the dark", text)
     }

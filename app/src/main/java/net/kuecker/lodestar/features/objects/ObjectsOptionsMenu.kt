@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.NorthEast
+import androidx.compose.material.icons.outlined.Stars
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -31,14 +32,15 @@ import net.kuecker.lodestar.theme.LocalPalette
 
 /**
  * The top-bar menu that groups, orders and filters the Objects list. Its icon is filled when any option differs
- * from the default list; [hasLocation] enables the horizon filter, which needs an observer; [enabled] is off while a
- * search is showing.
+ * from the default list; [hasLocation] enables the horizon filter, which needs an observer; [hasSkyline] says the
+ * site has a recorded skyline, which the horizon filter then follows; [enabled] is off while a search is showing.
  */
 @Composable
 internal fun ObjectsOptionsMenu(
     options: ObjectsListOptions,
     onOptionsChange: (ObjectsListOptions) -> Unit,
     hasLocation: Boolean,
+    hasSkyline: Boolean,
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -70,20 +72,34 @@ internal fun ObjectsOptionsMenu(
             HorizontalDivider(color = palette.stroke)
             MenuSectionTitle("Sort By")
             for (option in ObjectsSortOrder.entries) {
-                MenuOption(option.title, option.icon, isChosen = options.sortOrder == option) {
+                MenuOption(
+                    option.title,
+                    option.icon,
+                    isChosen = options.sortOrder == option,
+                    // A catalogue number only orders a catalogue.
+                    enabled = option != ObjectsSortOrder.NUMBER || options.catalogue.isCatalogue,
+                ) {
                     choose(options.copy(sortOrder = option))
                 }
             }
             HorizontalDivider(color = palette.stroke)
             MenuSectionTitle("Filters")
             MenuOption(
-                "Above Horizon Now",
+                if (hasSkyline) "Above Skyline Now" else "Above Horizon Now",
                 Icons.Outlined.NorthEast,
                 isChosen = options.showsOnlyAboveHorizon,
                 isToggle = true,
                 enabled = hasLocation,
             ) {
                 choose(options.copy(showsOnlyAboveHorizon = !options.showsOnlyAboveHorizon))
+            }
+            MenuOption(
+                "Popular Objects Only",
+                Icons.Outlined.Stars,
+                isChosen = options.showsOnlyPopular,
+                isToggle = true,
+            ) {
+                choose(options.copy(showsOnlyPopular = !options.showsOnlyPopular))
             }
             MenuOption(
                 "Hide Faint (mag > ${ObjectsListOptions.FAINT_MAGNITUDE_LIMIT.toInt()})",

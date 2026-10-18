@@ -31,8 +31,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.app.AppModel
+import net.kuecker.lodestar.features.events.EventsUpcomingCard
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.foundation.timeIntervalSince
 import net.kuecker.lodestar.model.ObserverContext
 import net.kuecker.lodestar.shared.AppFormat
@@ -58,6 +60,8 @@ internal fun TonightContent(
     context: ObserverContext,
     onOpenObject: (CelestialObject) -> Unit,
     onOpenPolarAlignment: () -> Unit,
+    onOpenEvent: (AstronomicalEvent) -> Unit,
+    onOpenCalendar: () -> Unit,
 ) {
     val app = LocalAppModel.current
     val zone = context.timeZone
@@ -140,6 +144,7 @@ internal fun TonightContent(
             } else {
                 TonightPendingCard()
             }
+            EventsUpcomingCard(context, onOpenEvent, onOpenCalendar)
             TonightPolarCard(context.observer, zone, onOpenPolarAlignment)
         }
     }
@@ -159,6 +164,7 @@ internal fun TonightContent(
 /** Whether this report answers what the screen asks for: the same place and, for "tonight", a night not yet over. */
 private fun TonightReport.fits(context: ObserverContext, choice: TonightNightChoice, now: Instant): Boolean =
     summary.observer == context.observer && timeZone == context.timeZone &&
+        skyline == context.horizon?.takeUnless { it.isFlat } &&
         (choice != TonightNightChoice.Tonight || now < expiry)
 
 /** Where the times are for: the site's name and its time zone. */

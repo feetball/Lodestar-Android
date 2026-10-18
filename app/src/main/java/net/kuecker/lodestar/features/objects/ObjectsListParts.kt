@@ -1,8 +1,10 @@
 package net.kuecker.lodestar.features.objects
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +20,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -26,6 +32,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.LocationOff
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -141,6 +148,70 @@ internal fun ObjectsSectionHeader(title: String, icon: ImageVector, count: Int, 
     }
 }
 
+/**
+ * The catalogue filter under the search field: one chip for each deep-sky catalogue (and "All"), exactly one chosen. A
+ * catalogue lists every object numbered in it, in catalogue order.
+ */
+@Composable
+internal fun ObjectsCatalogueChips(
+    selected: ObjectsCatalogueFilter,
+    onSelect: (ObjectsCatalogueFilter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = LocalPalette.current
+    Row(
+        modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .selectableGroup()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (filter in ObjectsCatalogueFilter.entries) {
+            val isSelected = filter == selected
+            Box(
+                Modifier
+                    .heightIn(min = 48.dp)
+                    .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(filter) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    filter.title,
+                    color = if (isSelected) palette.onAccent else palette.secondaryText,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    maxLines = 1,
+                    modifier = Modifier
+                        .background(if (isSelected) palette.accent else palette.surface, CircleShape)
+                        .border(0.75.dp, if (isSelected) palette.accent else palette.stroke, CircleShape)
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                )
+            }
+        }
+    }
+}
+
+/** A one-line note that the recorded skyline, not a flat horizon, decides which objects are up. */
+@Composable
+internal fun ObjectsSkylineNote(modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    Row(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 6.dp)
+            .semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(Icons.Outlined.Terrain, contentDescription = null, tint = palette.secondaryText, modifier = Modifier.size(14.dp))
+        Text(
+            "Skyline applied: up now, rising and the horizon filter follow your recorded skyline.",
+            color = palette.tertiaryText,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
 /** Shown while the catalog loads. */
 @Composable
 internal fun ObjectsLoadingView(modifier: Modifier = Modifier) {
@@ -208,6 +279,7 @@ internal fun ObjectsSwipeRow(
     obj: CelestialObject,
     position: ObjectSkyPosition?,
     isFavorite: Boolean,
+    showsProminence: Boolean,
     zone: ZoneId,
     shape: Shape,
     showsDivider: Boolean,
@@ -306,7 +378,7 @@ internal fun ObjectsSwipeRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                ObjectRow(obj, Modifier.weight(1f), position, isFavorite, zone)
+                ObjectRow(obj, Modifier.weight(1f), position, isFavorite, zone, showsProminence)
                 // The disclosure chevron is drawn in a palette colour; the system's would be grey.
                 Icon(
                     Icons.AutoMirrored.Outlined.KeyboardArrowRight,

@@ -62,13 +62,24 @@ internal data class ObjectDetailCurrent(
     val illuminatedFraction: Double?,
     /** The Moon's phase; set only for the Moon. */
     val moonPhase: MoonPhaseInfo?,
-)
+    /** `true` when the object is up: above the horizon and, with a recorded skyline, above the skyline. */
+    val isUp: Boolean = horizontal.altitude > 0,
+    /** The apparent altitude of the recorded skyline at the object's azimuth; `null` without a skyline. */
+    val skylineAltitude: Double? = null,
+) {
+    /** `true` when the object is above the horizon but behind the recorded skyline. */
+    val isBehindSkyline: Boolean get() = skylineAltitude != null && horizontal.altitude > 0 && !isUp
+}
 
 /** One point of the altitude curve. */
 internal data class ObjectDetailAltitudeSample(
     val date: Instant,
     /** Apparent altitude in degrees. */
     val altitude: Double,
+    /** The apparent altitude of the recorded skyline at the object's azimuth then; `null` without a skyline. */
+    val skylineAltitude: Double? = null,
+    /** `true` when the object is up: above the horizon and, with a skyline, above it. */
+    val isUp: Boolean = altitude > 0,
 )
 
 /** A stretch of the night in which the sky is lit to a certain degree by the Sun. */
@@ -83,6 +94,8 @@ internal data class ObjectDetailPeak(
     val date: Instant,
     /** Apparent altitude in degrees. */
     val altitude: Double,
+    /** `true` when the object is up then: above the horizon and, with a recorded skyline, above it. */
+    val isUp: Boolean = altitude > 0,
 )
 
 /** The object rising, culminating or setting. */
@@ -114,6 +127,8 @@ internal data class ObjectDetailNight(
     val hourTicks: List<Instant>,
     /** Where the object is highest while it is dark; `null` when there is no darkness. */
     val bestInDarkness: ObjectDetailPeak?,
+    /** `true` when the events, the curve and the best point respect the site's recorded skyline. */
+    val usesSkyline: Boolean = false,
 ) {
     /** When this night is over and "tonight" means the next one. */
     val expiry: Instant get() = twilight.sunrise ?: interval.end

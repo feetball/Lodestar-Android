@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.mosaic.MosaicSession
 import net.kuecker.lodestar.theme.Palette
 
 /**
@@ -26,8 +27,8 @@ import net.kuecker.lodestar.theme.Palette
  * come ready-made, and the text labels are laid out once and looked up in a cache.
  *
  * The draw block reads the zoom, pan and selection from [model] (and, while the chart turns with the camera
- * ([followsHeading]), the heading from [live]), so a pinch, drag or heading change redraws the canvas without
- * recomposing anything.
+ * ([followsHeading]), the heading from [live], and the panel being shot from the [mosaic] session), so a pinch, drag,
+ * heading change or finished panel redraws the canvas without recomposing anything.
  */
 @Composable
 internal fun PlanisphereCanvas(
@@ -37,6 +38,7 @@ internal fun PlanisphereCanvas(
     palette: Palette,
     layers: SkyChartLayerOptions,
     followsHeading: Boolean,
+    mosaic: MosaicSession,
     modifier: Modifier = Modifier,
 ) {
     val measurer = rememberTextMeasurer()
@@ -46,7 +48,9 @@ internal fun PlanisphereCanvas(
         val layout = PlanisphereLayout(size.width, size.height, this.density)
         val rotation = if (followsHeading) live.rotation else 0.0
         val viewport = model.viewport(layout, rotation)
-        renderer.draw(this, content, viewport, palette, layers, model.selection?.horizontal?.unitVector)
+        // The panels are drawn while the scene holds the plan that is being shot (a new scene follows a new plan).
+        val step = if (content.scene.mosaic?.plan === mosaic.plan) mosaic.step else -1
+        renderer.draw(this, content, viewport, palette, layers, model.selection?.horizontal?.unitVector, step)
     }
 }
 
@@ -60,6 +64,7 @@ internal enum class PlanisphereTextRole {
     CARDINAL,
     CARDINAL_MINOR,
     ALTITUDE,
+    MOSAIC,
 }
 
 internal val SkyChartLabel.Style.role: PlanisphereTextRole
@@ -100,6 +105,7 @@ internal class PlanisphereTextCache(private val measurer: TextMeasurer, density:
             style(16f, FontWeight.Bold), // CARDINAL
             style(11f, FontWeight.Bold), // CARDINAL_MINOR
             style(9f, FontWeight.Normal), // ALTITUDE
+            style(12f, FontWeight.Bold), // MOSAIC
         )
     }
 

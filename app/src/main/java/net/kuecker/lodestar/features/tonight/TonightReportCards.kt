@@ -3,10 +3,13 @@ package net.kuecker.lodestar.features.tonight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +24,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import net.kuecker.lodestar.kit.catalog.CelestialObject
@@ -34,10 +38,11 @@ import java.time.Instant
 internal fun TonightReportCards(report: TonightReport, onOpenObject: (CelestialObject) -> Unit) {
     TonightTimelineCard(report)
     TonightSunCard(report.summary, report.timeZone)
-    TonightMoonCard(report.summary, report.timeZone)
-    TonightMilkyWayCard(report.summary, report.timeZone)
-    TonightPlanetsCard(report.summary, report.timeZone, onOpenObject)
-    TonightTargetsCard(report.targets, report.timeZone, onOpenObject)
+    val isSkylineApplied = report.skyline != null
+    TonightMoonCard(report.summary, report.timeZone, isSkylineApplied)
+    TonightMilkyWayCard(report.summary, report.timeZone, isSkylineApplied)
+    TonightPlanetsCard(report.summary, report.timeZone, isSkylineApplied, onOpenObject)
+    TonightTargetsCard(report.targets, report.timeZone, isSkylineApplied, onOpenObject)
 }
 
 /** How a [TonightNote] reads. */
@@ -57,6 +62,35 @@ internal fun TonightNote(text: String, modifier: Modifier = Modifier, style: Ton
         },
         style = if (style == TonightNoteStyle.BODY) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
     )
+}
+
+/**
+ * A small note in a card saying that the site's recorded skyline, not a flat horizon, decides what counts as up.
+ * [text] says what it changes in this card.
+ */
+@Composable
+internal fun TonightSkylineNote(text: String, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    Row(
+        modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            Icons.Outlined.Terrain,
+            contentDescription = null,
+            tint = palette.secondaryText,
+            modifier = Modifier.padding(top = 1.dp).size(14.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(
+                "Skyline applied",
+                color = palette.secondaryText,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+            Text(text, color = palette.tertiaryText, style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }
 
 /** A hairline between the rows of a card, drawn in the palette's stroke colour. */

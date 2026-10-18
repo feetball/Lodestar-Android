@@ -17,6 +17,8 @@ import net.kuecker.lodestar.kit.catalog.horizontal
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.foundation.SkyFrame
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.mosaic.MosaicPlan
 import net.kuecker.lodestar.shared.SkySnapshotBuilder
 import net.kuecker.lodestar.shared.SkySnapshotOptions
 import java.time.Instant
@@ -30,6 +32,10 @@ internal data class SkyChartInputs(
     val date: Instant,
     val options: SkySnapshotOptions,
     val target: CelestialObject?,
+    /** The site's recorded skyline, or `null` for an open horizon. */
+    val horizon: HorizonProfile?,
+    /** The mosaic being shot, or `null` without one. */
+    val mosaic: MosaicPlan?,
     /** Whether the catalog was loaded when these inputs were made (the chart cannot be built before). */
     val isCatalogLoaded: Boolean,
 )
@@ -73,8 +79,10 @@ internal class SkyChartModel {
 
     private class BuildRequest(val catalog: Catalog, val inputs: SkyChartInputs) {
         fun build(): Pair<SkyChartScene, SkyChartPaths> {
-            val snapshot = SkySnapshotBuilder.build(catalog, inputs.observer, inputs.date, inputs.options, inputs.target)
-            val scene = SkyChartSceneBuilder.build(snapshot)
+            val snapshot = SkySnapshotBuilder.build(
+                catalog, inputs.observer, inputs.date, inputs.options, inputs.target, inputs.horizon,
+            )
+            val scene = SkyChartSceneBuilder.build(snapshot, inputs.mosaic)
             return scene to SkyChartPaths(scene)
         }
     }

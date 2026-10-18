@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Navigation
 import androidx.compose.material.icons.outlined.NorthEast
 import androidx.compose.material.icons.outlined.SouthEast
+import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -55,14 +56,24 @@ internal fun ObjectDetailNowCard(current: ObjectDetailCurrent?, style: Coordinat
 
 @Composable
 private fun Rows(current: ObjectDetailCurrent, style: CoordinateStyle) {
-    val isUp = current.horizontal.altitude > 0
+    val isUp = current.isUp
+    val hasSkyline = current.skylineAltitude != null
     StatusChip(
-        icon = if (isUp) Icons.Outlined.NorthEast else Icons.Outlined.SouthEast,
-        text = if (isUp) "Above the horizon" else "Below the horizon",
+        icon = when {
+            isUp -> Icons.Outlined.NorthEast
+            current.isBehindSkyline -> Icons.Outlined.Terrain
+            else -> Icons.Outlined.SouthEast
+        },
+        text = when {
+            isUp -> if (hasSkyline) "Above your skyline" else "Above the horizon"
+            current.isBehindSkyline -> "Behind your skyline"
+            else -> "Below the horizon"
+        },
         tone = if (isUp) ChipTone.POSITIVE else ChipTone.NEUTRAL,
     )
     InfoRow("Altitude", AppFormat.altitude(current.horizontal.altitude))
     InfoRow("Azimuth", AppFormat.azimuth(current.horizontal.azimuth))
+    current.skylineAltitude?.let { InfoRow("Skyline this way", AppFormat.altitude(it)) }
     InfoRow("RA (of date)", AppFormat.rightAscension(current.equatorial, style))
     InfoRow("Dec (of date)", AppFormat.declination(current.equatorial, style))
     current.magnitude?.let { InfoRow("Brightness", AppFormat.magnitude(it)) }

@@ -51,8 +51,10 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.app.AppModel
+import net.kuecker.lodestar.features.mosaic.MosaicSession
 import net.kuecker.lodestar.features.objects.ObjectDetailScreen
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.catalog.Prominence
 import net.kuecker.lodestar.services.CatalogService
 import net.kuecker.lodestar.services.MotionStatus
 import net.kuecker.lodestar.shared.EmptyStateView
@@ -111,6 +113,7 @@ private fun SkyChartRoot(onDetails: (CelestialObject) -> Unit) {
     val palette = LocalPalette.current
     val model = rememberRetained("sky.model") { SkyChartModel() }
     val preferences = rememberRetained("sky.preferences") { SkyChartPreferences() }
+    val mosaic = rememberRetained(MosaicSession.KEY) { MosaicSession() }
     var showsLayers by remember { mutableStateOf(false) }
     var showsDateSheet by remember { mutableStateOf(false) }
     val observer = app.observerContext
@@ -118,7 +121,7 @@ private fun SkyChartRoot(onDetails: (CelestialObject) -> Unit) {
     // The scenes are built for as long as this screen is shown, for the newest inputs.
     LaunchedEffect(model) { model.runBuilds() }
     LaunchedEffect(model, app) {
-        snapshotFlow { inputs(app) }.collect { current ->
+        snapshotFlow { inputs(app, mosaic) }.collect { current ->
             val catalog = app.catalog.catalog
             if (current != null && catalog != null) model.update(catalog, current)
         }
@@ -131,7 +134,7 @@ private fun SkyChartRoot(onDetails: (CelestialObject) -> Unit) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 Column(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f).fillMaxWidth()) {
-                        ChartArea(app, model, preferences, observer.timeZone, onDetails)
+                        ChartArea(app, model, preferences, mosaic, observer.timeZone, onDetails)
                     }
                     TimeTravelBar(
                         observer.timeZone,
@@ -154,7 +157,7 @@ private fun SkyChartRoot(onDetails: (CelestialObject) -> Unit) {
  * What the scene depends on, or `null` while there is no observer. The chart's instant is rounded, so the 1 Hz clock does
  * not rebuild it every second.
  */
-private fun inputs(app: AppModel): SkyChartInputs? {
+private fun inputs(app: AppModel, mosaic: MosaicSession): SkyChartInputs? {
     val observer = app.observerContext ?: return null
     val settings = app.settings
     val options = SkySnapshotOptions(
@@ -162,12 +165,15 @@ private fun inputs(app: AppModel): SkyChartInputs? {
         includeConstellations = settings.showConstellationLines || settings.showConstellationNames,
         includeDeepSky = settings.showDeepSkyObjects,
         includeMilkyWay = settings.showMilkyWay,
+        deepSkyProminence = Prominence.fromRawValue(settings.deepSkyProminence) ?: Prominence.PROMINENT,
     )
     return SkyChartInputs(
         observer = observer.observer,
         date = SkyChartModel.bucketed(app.clock.displayDate),
         options = options,
         target = app.target,
+        horizon = observer.horizon,
+        mosaic = mosaic.plan,
         isCatalogLoaded = app.catalog.catalog != null,
     )
 }
@@ -178,6 +184,7 @@ private fun ChartArea(
     app: AppModel,
     model: SkyChartModel,
     preferences: SkyChartPreferences,
+    mosaic: MosaicSession,
     timeZone: ZoneId,
     onDetails: (CelestialObject) -> Unit,
 ) {
@@ -199,6 +206,7 @@ private fun ChartArea(
                 cameraView = preferences.showsCameraView,
             ),
             rotatesToHeading = preferences.rotatesToHeading,
+            mosaic = mosaic,
             timeZone = timeZone,
             onDetails = onDetails,
         )

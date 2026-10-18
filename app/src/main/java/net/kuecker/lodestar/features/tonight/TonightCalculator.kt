@@ -4,12 +4,15 @@ import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
 import net.kuecker.lodestar.kit.catalog.ObjectPosition
+import net.kuecker.lodestar.kit.catalog.Prominence
 import net.kuecker.lodestar.kit.catalog.horizontal
 import net.kuecker.lodestar.kit.ephemeris.TwilightCalculator
 import net.kuecker.lodestar.kit.foundation.AstroMath
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
 import net.kuecker.lodestar.kit.foundation.ProperMotion
 import net.kuecker.lodestar.kit.foundation.SkyFrame
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.horizon.visibility as visibilityOverSkyline
 import net.kuecker.lodestar.kit.planning.DarknessKind
 import net.kuecker.lodestar.kit.planning.NightPlanner
 import net.kuecker.lodestar.kit.planning.NightSummary
@@ -41,7 +44,10 @@ internal object TonightCalculator {
             TonightNightChoice.Tonight -> tonight
             is TonightNightChoice.Date -> choice.date
         }
-        val summary = NightPlanner.summary(requested, context.observer, zone)
+        // A recorded skyline replaces the flat horizon for the Moon, the Milky Way core, the planets and the targets.
+        val skyline = context.horizon?.takeUnless { it.isFlat }
+        val plain = NightPlanner.summary(requested, context.observer, zone)
+        val summary = if (skyline != null) TonightSkyline.apply(plain, skyline) else plain
         val tonightStart = localNoon(tonight, zone)
         val nights = ChronoUnit.DAYS.between(
             tonightStart.atZone(zone).toLocalDate(),
@@ -51,9 +57,10 @@ internal object TonightCalculator {
             summary = summary,
             timeZone = zone,
             timeline = TonightTimelineModel(summary, zone),
-            targets = targets(summary, input.catalog),
+            targets = targets(summary, input.catalog, skyline),
             tonightStart = tonightStart,
             nightsFromTonight = nights,
+            skyline = skyline,
         )
     }
 
@@ -78,19 +85,20 @@ internal object TonightCalculator {
 
     // Best targets
 
-    private fun targets(summary: NightSummary, catalog: Catalog?): TonightTargetsOutcome {
+    private fun targets(summary: NightSummary, catalog: Catalog?, skyline: HorizonProfile?): TonightTargetsOutcome {
         if (!summary.hasAstronomicalDarkness) return TonightTargetsOutcome.NoDarkness
         if (catalog == null) return TonightTargetsOutcome.CatalogPending
-        return TonightTargetsOutcome.Ranked(rankedTargets(catalog, summary))
+        return TonightTargetsOutcome.Ranked(rankedTargets(catalog, summary, skyline))
     }
 
     private class Candidate(val obj: CelestialObject, val visibility: TargetVisibility, val peak: Double, val score: Double)
 
     /**
      * The listed deep-sky objects that climb to at least [minimumTargetAltitude] in the dark, best first, at most
-     * [targetLimit] of them.
+     * [targetLimit] of them. With a [skyline] an object must also clear it: hidden targets are dropped, and the
+     * hours and the best time count only the stretches above it.
      */
-    private fun rankedTargets(catalog: Catalog, summary: NightSummary): List<TonightTarget> {
+    private fun rankedTargets(catalog: Catalog, summary: NightSummary, skyline: HorizonProfile?): List<TonightTarget> {
         val objects = ArrayList<CelestialObject>()
         val places = ArrayList<EquatorialCoordinate>()
         val motions = ArrayList<ProperMotion?>()
@@ -101,12 +109,18 @@ internal object TonightCalculator {
             places.add(position.coordinate)
             motions.add(position.properMotion)
         }
-        val visibilities = NightPlanner.visibility(
-            places, motions, summary, DarknessKind.ASTRONOMICAL, minimumTargetAltitude,
-        )
+        val visibilities = if (skyline != null) {
+            NightPlanner.visibilityOverSkyline(
+                places, motions, summary, DarknessKind.ASTRONOMICAL, minimumTargetAltitude, skyline,
+            )
+        } else {
+            NightPlanner.visibility(places, motions, summary, DarknessKind.ASTRONOMICAL, minimumTargetAltitude)
+        }
         val candidates = ArrayList<Candidate>()
         for ((index, obj) in objects.withIndex()) {
             val visibility = visibilities[index]
+            // Filter hidden targets on the usable stretches, not on the altitude (see API-horizon.md).
+            if (skyline != null && visibility.intervalsAboveMinimum.isEmpty()) continue
             val peak = visibility.maxAltitudeDuringDarkness ?: continue
             if (peak.isNaN() || peak < minimumTargetAltitude || visibility.bestTime == null) continue
             candidates.add(Candidate(obj, visibility, peak, score(obj, peak)))
@@ -132,7 +146,8 @@ internal object TonightCalculator {
 
     /**
      * Rates an object for a wide-field camera: higher in the dark is better, and so are brighter and larger. Each
-     * part runs from 0 to 1; brightness counts most.
+     * part runs from 0 to 1; brightness counts most. A little extra goes to the more prominent objects, so that a
+     * showpiece without a magnitude (a dark nebula) is not ranked below a faint galaxy.
      */
     private fun score(obj: CelestialObject, peakAltitude: Double): Double {
         val altitude = AstroMath.clamp((peakAltitude - minimumTargetAltitude) / (90 - minimumTargetAltitude), 0.0, 1.0)
@@ -141,6 +156,7 @@ internal object TonightCalculator {
         val brightness = if (magnitude != null && magnitude.isFinite()) AstroMath.clamp((11 - magnitude) / 8, 0.0, 1.0) else 0.0
         // 5′ is a speck, 2° or more a big target for a wide lens.
         val size = obj.angularSize?.let { AstroMath.clamp(log10(it.majorArcminutes / 5) / 1.4, 0.0, 1.0) } ?: 0.0
-        return altitude + 1.5 * brightness + 0.8 * size
+        val prominence = (Prominence.OBSCURE.rawValue - obj.prominence.rawValue) / 3.0
+        return altitude + 1.5 * brightness + 0.8 * size + 0.6 * prominence
     }
 }

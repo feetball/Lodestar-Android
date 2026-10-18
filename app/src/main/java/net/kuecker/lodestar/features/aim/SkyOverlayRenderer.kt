@@ -33,6 +33,15 @@ internal class SkyOverlayScratch(textMeasurer: TextMeasurer, density: Density) {
     val world = AimWorldPath()
     val polygonClip = AimPolygonClip()
 
+    /** Whether each panel of the running mosaic reaches into the view this frame; grown as plans get larger. */
+    private var panelsInView = BooleanArray(INITIAL_PANELS)
+
+    /** A buffer for the visibility flags of [count] panels; its contents are not preserved. */
+    fun panelsInView(count: Int): BooleanArray {
+        if (panelsInView.size < count) panelsInView = BooleanArray(maxOf(count, 2 * panelsInView.size))
+        return panelsInView
+    }
+
     /** Draws the stars as round dots: one `drawPoints` call per group of equal look. */
     val starPaint = android.graphics.Paint().apply {
         isAntiAlias = true
@@ -50,12 +59,14 @@ internal class SkyOverlayScratch(textMeasurer: TextMeasurer, density: Density) {
 
     private companion object {
         const val INITIAL_POINTS = 2048
+        const val INITIAL_PANELS = 128
     }
 }
 
 /**
  * Paints one frame of the sky overlay: Milky Way, grid, constellations, horizon, deep-sky objects, stars, planets,
- * the DSLR frame, the target and the reticle, followed by their labels.
+ * the ground below the recorded skyline, the panels of a running mosaic, the DSLR frame, the target and the reticle,
+ * followed by their labels.
  *
  * Everything is projected with the phone's own back camera, the heading offset applied and the DSLR's device
  * correction not; only the DSLR frame itself comes from the corrected pointing. (A phone that lies on top of the
@@ -73,6 +84,12 @@ internal class SkyOverlayRenderer private constructor(
     val content: AimSkyContent?,
     val configuration: AimConfiguration,
     val palette: Palette,
+    /** The mosaic being shot with its panels in the sky as of a moment ago, or `null` without one. */
+    val mosaic: AimMosaicPointings?,
+    /** The place in the shooting order of the panel being shot (the panel count when all are done). */
+    val mosaicStep: Int,
+    /** Whether the camera picture is behind the overlay (the ground shading then darkens it instead of covering it). */
+    val isCameraPicture: Boolean,
     /** Seconds on a continuous clock; drives the pulse of the target ring. */
     val time: Double,
     val hudRotation: AimHUDRotation,
@@ -102,6 +119,8 @@ internal class SkyOverlayRenderer private constructor(
         drawDeepSky()
         drawStars()
         drawBodies()
+        drawSkyline()
+        drawMosaic()
         drawDSLRFrame()
         drawTarget()
         drawReticle()
@@ -157,6 +176,8 @@ internal class SkyOverlayRenderer private constructor(
             content: AimSkyContent?,
             configuration: AimConfiguration,
             palette: Palette,
+            mosaic: AimMosaicPointings?,
+            mosaicStep: Int,
             camera: CameraGeometry?,
             virtualFieldOfView: Double,
             hudRotation: AimHUDRotation,
@@ -186,6 +207,9 @@ internal class SkyOverlayRenderer private constructor(
                 content = content,
                 configuration = configuration,
                 palette = palette,
+                mosaic = mosaic,
+                mosaicStep = mosaicStep,
+                isCameraPicture = camera != null,
                 time = time,
                 hudRotation = hudRotation,
                 projector = AimProjector(projection, worldToScreen),

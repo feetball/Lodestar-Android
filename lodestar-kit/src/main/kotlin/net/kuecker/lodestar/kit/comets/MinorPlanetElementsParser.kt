@@ -58,7 +58,7 @@ object MinorPlanetElementsParser {
         if (abs(expectedMotion - meanMotion) > 0.01 * meanMotion) {
             throw SmallBodyParseError.InconsistentElements("the mean motion $meanMotion and the semi-major axis $semiMajorAxis disagree")
         }
-        val orbit = OrbitalElements.fromMeanAnomaly(
+        val orbit = SmallBodyElements.fromMeanAnomaly(
             semiMajorAxisAU = semiMajorAxis,
             eccentricity = eccentricity,
             inclination = inclination,

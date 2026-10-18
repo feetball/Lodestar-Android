@@ -26,7 +26,7 @@ class CometsOrbitTests {
         node: Double = 0.0,
         t: Double = 2_460_000.0,
         epoch: Double? = null,
-    ): OrbitalElements = assertNotNull(OrbitalElements.create(q, e, i, w, node, t, epoch))
+    ): SmallBodyElements = assertNotNull(SmallBodyElements.create(q, e, i, w, node, t, epoch))
 
     // MARK: Elements
 
@@ -56,30 +56,30 @@ class CometsOrbitTests {
 
     @Test
     fun invalidElementsAreRejected() {
-        assertNull(OrbitalElements.create(0.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(-1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(0.000_001, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1_000.1, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, -0.1, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, 100.1, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, 180.1, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, -0.1, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, 0.0, Double.NaN, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, Double.POSITIVE_INFINITY, 2_460_000.0))
-        assertNull(OrbitalElements.create(Double.NaN, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, Double.NaN, 0.0, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, Double.NaN, 0.0, 0.0, 2_460_000.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, 0.0, -1.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 6_000_001.0))
-        assertNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, 0.0, Double.NaN))
-        assertNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0, Double.NaN))
-        assertNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0, 7_000_000.0))
+        assertNull(SmallBodyElements.create(0.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(-1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(0.000_001, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1_000.1, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, -0.1, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, 100.1, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 180.1, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, -0.1, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 0.0, Double.NaN, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, Double.POSITIVE_INFINITY, 2_460_000.0))
+        assertNull(SmallBodyElements.create(Double.NaN, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, Double.NaN, 0.0, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, Double.NaN, 0.0, 0.0, 2_460_000.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, 0.0, -1.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 6_000_001.0))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, 0.0, Double.NaN))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0, Double.NaN))
+        assertNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0, 7_000_000.0))
     }
 
     @Test
     fun boundaryValuesAreAccepted() {
-        assertNotNull(OrbitalElements.create(0.00001, 0.0, 0.0, 0.0, 0.0, 0.0))
-        assertNotNull(OrbitalElements.create(1000.0, 100.0, 180.0, 360.0, 360.0, 6_000_000.0))
+        assertNotNull(SmallBodyElements.create(0.00001, 0.0, 0.0, 0.0, 0.0, 0.0))
+        assertNotNull(SmallBodyElements.create(1000.0, 100.0, 180.0, 360.0, 360.0, 6_000_000.0))
     }
 
     @Test
@@ -128,7 +128,7 @@ class CometsOrbitTests {
     fun meanAnomalyConstructorRecoversTheAnomalyAtTheEpoch() {
         // Vesta (MPC): epoch 2026 June 9, M = 81.19019 degrees, a = 2.3613660 AU, e = 0.0902037.
         val orbit = assertNotNull(
-            OrbitalElements.fromMeanAnomaly(2.361_366, 0.090_203_7, 7.143_93, 151.468_56, 103.701_35, 81.190_19, 2_461_200.5),
+            SmallBodyElements.fromMeanAnomaly(2.361_366, 0.090_203_7, 7.143_93, 151.468_56, 103.701_35, 81.190_19, 2_461_200.5),
         )
         assertEquals(81.190_19, assertNotNull(orbit.meanAnomaly(2_461_200.5)), 1e-9)
         assertEquals(2.361_366 * (1 - 0.090_203_7), orbit.perihelionDistanceAU, 1e-12)
@@ -139,24 +139,24 @@ class CometsOrbitTests {
 
     @Test
     fun meanAnomalyConstructorReducesTheAnomaly() {
-        val a = assertNotNull(OrbitalElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        val b = assertNotNull(OrbitalElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, 400.0, 2_460_000.5))
-        val c = assertNotNull(OrbitalElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, -320.0, 2_460_000.5))
+        val a = assertNotNull(SmallBodyElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        val b = assertNotNull(SmallBodyElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, 400.0, 2_460_000.5))
+        val c = assertNotNull(SmallBodyElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, -320.0, 2_460_000.5))
         assertEquals(a.perihelionJulianDayTT, b.perihelionJulianDayTT, 1e-9)
         assertEquals(a.perihelionJulianDayTT, c.perihelionJulianDayTT, 1e-9)
     }
 
     @Test
     fun meanAnomalyConstructorRejectsInvalidInput() {
-        assertNull(OrbitalElements.fromMeanAnomaly(2.0, 1.0, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(2.0, 1.5, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(2.0, -0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(0.0, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(-2.0, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(Double.NaN, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, Double.NaN, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(2.0, 0.1, 200.0, 10.0, 20.0, 40.0, 2_460_000.5))
-        assertNull(OrbitalElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, 40.0, -5.0))
+        assertNull(SmallBodyElements.fromMeanAnomaly(2.0, 1.0, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(2.0, 1.5, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(2.0, -0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(0.0, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(-2.0, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(Double.NaN, 0.1, 5.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, Double.NaN, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(2.0, 0.1, 200.0, 10.0, 20.0, 40.0, 2_460_000.5))
+        assertNull(SmallBodyElements.fromMeanAnomaly(2.0, 0.1, 5.0, 10.0, 20.0, 40.0, -5.0))
     }
 
     // MARK: Stumpff functions

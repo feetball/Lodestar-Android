@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
 class CometsEphemerisTests {
     private fun body(case: CometsHorizonsData.Case): SmallBody {
         val orbit = assertNotNull(
-            OrbitalElements.create(
+            SmallBodyElements.create(
                 case.perihelionDistance, case.eccentricity, case.inclination, case.argumentOfPerihelion,
                 case.ascendingNode, case.perihelionTimeTDB, case.epochTDB,
             ),
@@ -517,7 +517,7 @@ class CometsEphemerisTests {
         assertEquals(10.0, SmallBodyEphemeris.defaultMagnitudeLimit)
         assertEquals(25.0, SmallBodyEphemeris.defaultMinimumElongation)
         // A body without photometry is never photographable.
-        val orbit = assertNotNull(OrbitalElements.create(1.0, 0.5, 10.0, 20.0, 30.0, case.perihelionTimeTDB))
+        val orbit = assertNotNull(SmallBodyElements.create(1.0, 0.5, 10.0, 20.0, 30.0, case.perihelionTimeTDB))
         val bare = assertNotNull(SmallBody.create("X", "", SmallBodyKind.COMET, null, orbit, null))
         val bareState = assertNotNull(SmallBodyEphemeris.state(bare, JulianDate(case.epochTDB + 8)))
         assertNull(bareState.apparentMagnitude)
@@ -571,7 +571,7 @@ class CometsEphemerisTests {
     /** A synthetic state 1e6 AU away in the horizontal direction [h] (ENU), whose tail points along [tail] (ENU) for [frame]. */
     private fun syntheticState(frame: SkyFrame, h: Vector3, tail: Vector3): SmallBodyState {
         val toJ2000 = frame.j2000ToHorizontal.transposed
-        val orbit = assertNotNull(OrbitalElements.create(1.0, 0.5, 10.0, 20.0, 30.0, 2_460_000.0))
+        val orbit = assertNotNull(SmallBodyElements.create(1.0, 0.5, 10.0, 20.0, 30.0, 2_460_000.0))
         val body = assertNotNull(SmallBody.create("S", "", SmallBodyKind.COMET, null, orbit))
         val apparent = toJ2000 * h.normalized * 1e6
         return SmallBodyState(

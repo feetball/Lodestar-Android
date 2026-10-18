@@ -135,16 +135,16 @@ Cost: `CometEls.txt` 2 ms; `NEA.txt` (43 000 lines) 80 ms.
 enum class SmallBodyKind(val rawValue: String) { COMET, ASTEROID; val displayName: String }                    // "comet", "asteroid"
 enum class OrbitShape(val rawValue: String) { ELLIPTIC, PARABOLIC, HYPERBOLIC }                                 // e < 1, == 1, > 1
 
-data class OrbitalElements private constructor(                       // J2000 ecliptic, Julian Days in TT
+data class SmallBodyElements private constructor(                       // J2000 ecliptic, Julian Days in TT
     val perihelionDistanceAU: Double, val eccentricity: Double, val inclination: Double, val argumentOfPerihelion: Double,
     val longitudeOfAscendingNode: Double, val perihelionJulianDayTT: Double, val epochJulianDayTT: Double) {
     val shape: OrbitShape; val semiMajorAxisAU: Double?; val aphelionDistanceAU: Double?; val meanMotion: Double?     // °/day
     val periodDays: Double?; val periodYears: Double?; fun meanAnomaly(julianDayTT: Double): Double?                  // elliptic only
     companion object {
         fun create(perihelionDistanceAU: Double, eccentricity: Double, inclination: Double, argumentOfPerihelion: Double,
-                   longitudeOfAscendingNode: Double, perihelionJulianDayTT: Double, epochJulianDayTT: Double? = null): OrbitalElements?
+                   longitudeOfAscendingNode: Double, perihelionJulianDayTT: Double, epochJulianDayTT: Double? = null): SmallBodyElements?
         fun fromMeanAnomaly(semiMajorAxisAU: Double, eccentricity: Double, inclination: Double, argumentOfPerihelion: Double,
-                            longitudeOfAscendingNode: Double, meanAnomaly: Double, epochJulianDayTT: Double): OrbitalElements?   // asteroids
+                            longitudeOfAscendingNode: Double, meanAnomaly: Double, epochJulianDayTT: Double): SmallBodyElements?   // asteroids
     }
 }
 data class CometMagnitudes private constructor(val totalMagnitude: Double, val totalSlope: Double,          // M1, K1: m = M1 + 5 log10 Δ + K1 log10 r
@@ -169,22 +169,22 @@ data class SmallBody private constructor(
     val id: String,            // "comet.C/2023 A3", "comet.12P", "asteroid.4", "asteroid.2024 YR4": stable across element updates
     val designation: String,   // "C/2023 A3", "12P", "73P-B", "P/2020 K9", "4", "2024 YR4"
     val name: String,          // "Tsuchinshan-ATLAS", "Pons-Brooks", "Vesta" or ""
-    val kind: SmallBodyKind, val number: Int?, val orbit: OrbitalElements, val photometry: SmallBodyPhotometry?) {
+    val kind: SmallBodyKind, val number: Int?, val orbit: SmallBodyElements, val photometry: SmallBodyPhotometry?) {
     val displayName: String    // name, else designation
     val title: String          // "C/2023 A3 (Tsuchinshan-ATLAS)", "12P/Pons-Brooks", "(4) Vesta", "2024 YR4"
     companion object { const val maximumTextLength: Int            // 80
-        fun create(designation: String, name: String = "", kind: SmallBodyKind, number: Int? = null, orbit: OrbitalElements,
+        fun create(designation: String, name: String = "", kind: SmallBodyKind, number: Int? = null, orbit: SmallBodyElements,
                    photometry: SmallBodyPhotometry? = null): SmallBody? }
 }
 ```
 ```swift
 public enum SmallBodyKind: String, CaseIterable, Codable { case comet, asteroid; var displayName: String }
 public enum OrbitShape: String, CaseIterable, Codable { case elliptic, parabolic, hyperbolic }
-public struct OrbitalElements: Hashable, Sendable {
+public struct SmallBodyElements: Hashable, Sendable {
     public let perihelionDistanceAU, eccentricity, inclination, argumentOfPerihelion, longitudeOfAscendingNode, perihelionJulianDayTT, epochJulianDayTT: Double
     public init?(perihelionDistanceAU: Double, eccentricity: Double, inclination: Double, argumentOfPerihelion: Double,
                  longitudeOfAscendingNode: Double, perihelionJulianDayTT: Double, epochJulianDayTT: Double? = nil)
-    public static func fromMeanAnomaly(semiMajorAxisAU:eccentricity:inclination:argumentOfPerihelion:longitudeOfAscendingNode:meanAnomaly:epochJulianDayTT:) -> OrbitalElements?
+    public static func fromMeanAnomaly(semiMajorAxisAU:eccentricity:inclination:argumentOfPerihelion:longitudeOfAscendingNode:meanAnomaly:epochJulianDayTT:) -> SmallBodyElements?
     public var shape: OrbitShape; semiMajorAxisAU, aphelionDistanceAU, meanMotion, periodDays, periodYears: Double?;  func meanAnomaly(at julianDayTT: Double) -> Double?
 }
 public struct CometMagnitudes: Hashable, Sendable { // totalMagnitude, totalSlope, nuclearMagnitude?, nuclearSlope?, nuclearPhaseCoefficient
@@ -198,7 +198,7 @@ public struct AsteroidMagnitudes: Hashable, Sendable { // absoluteMagnitude, slo
 public enum SmallBodyPhotometry: Hashable, Sendable { case comet(CometMagnitudes), asteroid(AsteroidMagnitudes)
     func apparentMagnitude(sunDistanceAU:earthDistanceAU:phaseAngle:) -> Double?;  func nuclearMagnitude(sunDistanceAU:earthDistanceAU:phaseAngle:) -> Double? }
 public struct SmallBody: Hashable, Sendable { // id, designation, name, kind, number, orbit, photometry; displayName, title
-    public init?(designation: String, name: String = "", kind: SmallBodyKind, number: Int? = nil, orbit: OrbitalElements, photometry: SmallBodyPhotometry? = nil) }
+    public init?(designation: String, name: String = "", kind: SmallBodyKind, number: Int? = nil, orbit: SmallBodyElements, photometry: SmallBodyPhotometry? = nil) }
 ```
 Brightness: comets `m = M1 + 5 log10 Δ + K1 log10 r` (total) and `M2 + 5 log10 Δ + K2 log10 r + PC·α` (nuclear), asteroids
 `V = H + 5 log10(rΔ) − 2.5 log10((1−G)Φ1 + GΦ2)` (IAU 1985, `Φi = exp(−Ai tan(α/2)^Bi)`). The MPC comet file lists `H` and a slope `k`
@@ -210,9 +210,9 @@ Brightness: comets `m = M1 + 5 log10 Δ + K1 log10 r` (total) and `M2 + 5 log10 
 object OrbitPropagator {                            // universal-variable two-body motion, all eccentricities (Stumpff functions)
     const val gaussianGravitationalConstant: Double   // 0.01720209895
     const val maximumUnboundSpanDays: Double          // 50_000: parabolic/hyperbolic orbits are evaluated within ±137 years of perihelion
-    fun heliocentricEcliptic(elements: OrbitalElements, julianDayTT: Double): Vector3?    // J2000 ecliptic, AU; null outside the span
-    fun heliocentricJ2000(elements: OrbitalElements, julianDayTT: Double): Vector3?       // J2000 equatorial, AU
-    fun heliocentricDistance(elements: OrbitalElements, julianDayTT: Double): Double?
+    fun heliocentricEcliptic(elements: SmallBodyElements, julianDayTT: Double): Vector3?    // J2000 ecliptic, AU; null outside the span
+    fun heliocentricJ2000(elements: SmallBodyElements, julianDayTT: Double): Vector3?       // J2000 equatorial, AU
+    fun heliocentricDistance(elements: SmallBodyElements, julianDayTT: Double): Double?
 }
 object SmallBodyEphemeris {                         // ≈ 5 µs per state on a desktop CPU
     const val defaultMagnitudeLimit: Double           // 10.0
@@ -244,9 +244,9 @@ fun SkyFrame.geocentricApparentEquatorial(body: SmallBody): EquatorialCoordinate
 ```
 ```swift
 public enum OrbitPropagator { static let gaussianGravitationalConstant = 0.01720209895, maximumUnboundSpanDays = 50_000.0
-    static func heliocentricEcliptic(of elements: OrbitalElements, at julianDayTT: Double) -> Vector3?
-    static func heliocentricJ2000(of elements: OrbitalElements, at julianDayTT: Double) -> Vector3?
-    static func heliocentricDistance(of elements: OrbitalElements, at julianDayTT: Double) -> Double? }
+    static func heliocentricEcliptic(of elements: SmallBodyElements, at julianDayTT: Double) -> Vector3?
+    static func heliocentricJ2000(of elements: SmallBodyElements, at julianDayTT: Double) -> Vector3?
+    static func heliocentricDistance(of elements: SmallBodyElements, at julianDayTT: Double) -> Double? }
 public enum SmallBodyEphemeris { static let defaultMagnitudeLimit = 10.0, defaultMinimumElongation = 25.0
     static func state(of body: SmallBody, at julianDate: JulianDate) -> SmallBodyState?
     static func geocentricJ2000(of body: SmallBody, at julianDate: JulianDate) -> Vector3?

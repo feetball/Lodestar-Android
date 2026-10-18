@@ -77,7 +77,7 @@ object SmallBodyJSONParser {
         val elementArray = orbitObject.members["elements"] as? JSONValue.ArrayValue
             ?: throw SmallBodyParseError.UnsupportedObject("the orbit has no elements")
         val elements = namedValues(elementArray)
-        val eccentricity = number(elements["e"], SmallBodyField.ECCENTRICITY, 0.0, OrbitalElements.maximumEccentricity)
+        val eccentricity = number(elements["e"], SmallBodyField.ECCENTRICITY, 0.0, SmallBodyElements.maximumEccentricity)
             ?: throw SmallBodyParseError.MissingField(SmallBodyField.ECCENTRICITY)
         val inclination = number(elements["i"], SmallBodyField.INCLINATION, 0.0, 180.0)
             ?: throw SmallBodyParseError.MissingField(SmallBodyField.INCLINATION)
@@ -85,16 +85,16 @@ object SmallBodyJSONParser {
             ?: throw SmallBodyParseError.MissingField(SmallBodyField.LONGITUDE_OF_ASCENDING_NODE)
         val argument = number(elements["w"], SmallBodyField.ARGUMENT_OF_PERIHELION, 0.0, 360.0)
             ?: throw SmallBodyParseError.MissingField(SmallBodyField.ARGUMENT_OF_PERIHELION)
-        val epoch = number(orbitObject.members["epoch"], SmallBodyField.EPOCH, OrbitalElements.minimumJulianDay, OrbitalElements.maximumJulianDay)
+        val epoch = number(orbitObject.members["epoch"], SmallBodyField.EPOCH, SmallBodyElements.minimumJulianDay, SmallBodyElements.maximumJulianDay)
         val semiMajorAxis = number(elements["a"], SmallBodyField.SEMI_MAJOR_AXIS, -1e12, 1e12)
-        val perihelionDistance = number(elements["q"], SmallBodyField.PERIHELION_DISTANCE, 0.0, OrbitalElements.maximumPerihelionDistanceAU)
-        val perihelionTime = number(elements["tp"], SmallBodyField.PERIHELION_TIME, OrbitalElements.minimumJulianDay, OrbitalElements.maximumJulianDay)
-        val orbit: OrbitalElements
+        val perihelionDistance = number(elements["q"], SmallBodyField.PERIHELION_DISTANCE, 0.0, SmallBodyElements.maximumPerihelionDistanceAU)
+        val perihelionTime = number(elements["tp"], SmallBodyField.PERIHELION_TIME, SmallBodyElements.minimumJulianDay, SmallBodyElements.maximumJulianDay)
+        val orbit: SmallBodyElements
         if (perihelionTime != null) {
             val q = perihelionDistance
                 ?: (if (semiMajorAxis != null && eccentricity < 1 && semiMajorAxis > 0) semiMajorAxis * (1 - eccentricity) else null)
                 ?: throw SmallBodyParseError.MissingField(SmallBodyField.PERIHELION_DISTANCE)
-            orbit = OrbitalElements.create(q, eccentricity, inclination, argument, node, perihelionTime, epoch)
+            orbit = SmallBodyElements.create(q, eccentricity, inclination, argument, node, perihelionTime, epoch)
                 ?: throw SmallBodyParseError.InconsistentElements("the elements do not describe an orbit")
         } else {
             val anomaly = number(elements["ma"], SmallBodyField.MEAN_ANOMALY, -1e9, 1e9)
@@ -103,7 +103,7 @@ object SmallBodyJSONParser {
                 ?: (if (perihelionDistance != null && eccentricity < 1) perihelionDistance / (1 - eccentricity) else null)
                 ?: throw SmallBodyParseError.MissingField(SmallBodyField.SEMI_MAJOR_AXIS)
             if (epoch == null) throw SmallBodyParseError.MissingField(SmallBodyField.EPOCH)
-            orbit = OrbitalElements.fromMeanAnomaly(a, eccentricity, inclination, argument, node, anomaly, epoch)
+            orbit = SmallBodyElements.fromMeanAnomaly(a, eccentricity, inclination, argument, node, anomaly, epoch)
                 ?: throw SmallBodyParseError.InconsistentElements("the elements do not describe an elliptic orbit")
         }
 

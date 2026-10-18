@@ -12,7 +12,7 @@ import kotlin.math.sinh
 import kotlin.math.sqrt
 
 /**
- * Two-body heliocentric motion of a small body from [OrbitalElements], for every eccentricity.
+ * Two-body heliocentric motion of a small body from [SmallBodyElements], for every eccentricity.
  *
  * Kepler's equation is solved in universal variables (Stumpff functions; Bate, Mueller & White, *Fundamentals of
  * Astrodynamics*, §4.4; Vallado 2013, §2.3), starting at perihelion: with `χ` the universal anomaly, `α = (1 − e)/q`
@@ -49,7 +49,7 @@ object OrbitPropagator {
      * The heliocentric position in AU at [julianDayTT] in the mean ecliptic and equinox of J2000.0, or `null`
      * if the date is not finite or too far from perihelion for an unbound orbit.
      */
-    fun heliocentricEcliptic(elements: OrbitalElements, julianDayTT: Double): Vector3? {
+    fun heliocentricEcliptic(elements: SmallBodyElements, julianDayTT: Double): Vector3? {
         val perifocal = perifocal(
             elements.perihelionDistanceAU,
             elements.eccentricity,
@@ -79,11 +79,11 @@ object OrbitPropagator {
      * The heliocentric position in AU at [julianDayTT] in the mean equatorial frame of J2000.0 (the frame of
      * `BodyState.geocentricJ2000`), or `null` as for [heliocentricEcliptic].
      */
-    fun heliocentricJ2000(elements: OrbitalElements, julianDayTT: Double): Vector3? =
+    fun heliocentricJ2000(elements: SmallBodyElements, julianDayTT: Double): Vector3? =
         heliocentricEcliptic(elements, julianDayTT)?.let { eclipticToEquatorialJ2000 * it }
 
     /** The distance from the Sun in AU at [julianDayTT]; `null` as for [heliocentricEcliptic]. Cheaper than the position. */
-    fun heliocentricDistance(elements: OrbitalElements, julianDayTT: Double): Double? =
+    fun heliocentricDistance(elements: SmallBodyElements, julianDayTT: Double): Double? =
         perifocal(
             elements.perihelionDistanceAU,
             elements.eccentricity,

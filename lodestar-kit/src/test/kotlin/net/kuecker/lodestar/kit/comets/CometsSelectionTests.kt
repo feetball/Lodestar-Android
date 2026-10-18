@@ -99,7 +99,7 @@ class CometsSelectionTests {
         // C/2023 A3 brightened towards the Sun in early October 2024; with daily samples the peak falls between two of them.
         val case = CometsHorizonsData.c2023a3
         val orbit = assertNotNull(
-            OrbitalElements.create(
+            SmallBodyElements.create(
                 case.perihelionDistance, case.eccentricity, case.inclination, case.argumentOfPerihelion,
                 case.ascendingNode, case.perihelionTimeTDB, case.epochTDB,
             ),
@@ -171,7 +171,7 @@ class CometsSelectionTests {
 
     @Test
     fun prefilterBoundForSpecialOrbits() {
-        val orbit = assertNotNull(OrbitalElements.create(0.5, 1.0, 20.0, 30.0, 40.0, 2_461_340.0))
+        val orbit = assertNotNull(SmallBodyElements.create(0.5, 1.0, 20.0, 30.0, 40.0, 2_461_340.0))
         val photometry = SmallBodyPhotometry.Comet(assertNotNull(CometMagnitudes.create(8.0, 10.0)))
         val parabolic = assertNotNull(SmallBody.create("P", "", SmallBodyKind.COMET, null, orbit, photometry))
         // Perihelion (r = 0.5) lies inside the window; the ends are farther from the Sun.
@@ -197,7 +197,7 @@ class CometsSelectionTests {
         assertEquals(Double.NEGATIVE_INFINITY, SmallBodySelection.brightestPossible(parabolic, 2_461_340.0 + 60_000.0, 2_461_340.0 + 60_010.0))
         assertEquals(Double.NEGATIVE_INFINITY, SmallBodySelection.brightestPossible(parabolic, 2_461_340.0, 2_461_340.0 + 60_000.0))
         // An elliptic orbit that completes several revolutions in the window passes perihelion and aphelion.
-        val short = assertNotNull(OrbitalElements.create(1.0, 0.1, 5.0, 0.0, 0.0, 2_461_000.0)) // period 1.2 years
+        val short = assertNotNull(SmallBodyElements.create(1.0, 0.1, 5.0, 0.0, 0.0, 2_461_000.0)) // period 1.2 years
         val asteroid = assertNotNull(
             SmallBody.create("A", "", SmallBodyKind.ASTEROID, null, short, SmallBodyPhotometry.Asteroid(assertNotNull(AsteroidMagnitudes.create(10.0, 0.15)))),
         )
@@ -299,7 +299,7 @@ class CometsSelectionTests {
         // A negative elongation limit is clamped to 0.
         assertTrue(SmallBodySelection.brightNow(bodies, this.now, magnitudeLimit = 30.0, minimumElongation = -50.0).isNotEmpty())
         // Records without photometry are skipped.
-        val orbit = assertNotNull(OrbitalElements.create(0.3, 1.0, 20.0, 30.0, 40.0, 2_461_330.0))
+        val orbit = assertNotNull(SmallBodyElements.create(0.3, 1.0, 20.0, 30.0, 40.0, 2_461_330.0))
         val bare = assertNotNull(SmallBody.create("B", "", SmallBodyKind.COMET, null, orbit, null))
         assertEquals(emptyList(), SmallBodySelection.brightNow(listOf(bare), this.now, magnitudeLimit = 99.0))
         // A long interval is sampled coarsely but still works.
@@ -342,7 +342,7 @@ class CometsSelectionTests {
     @Test
     fun compareIdentifiersUsesScalarOrder() {
         // Equal magnitudes are ordered by identifier; identifiers are compared scalar by scalar.
-        val orbit = assertNotNull(OrbitalElements.create(2.0, 0.1, 5.0, 10.0, 20.0, 2_461_330.0))
+        val orbit = assertNotNull(SmallBodyElements.create(2.0, 0.1, 5.0, 10.0, 20.0, 2_461_330.0))
         val photometry = SmallBodyPhotometry.Comet(assertNotNull(CometMagnitudes.create(5.0, 10.0)))
         val bodies = listOf("C/B", "C/A", "C/AA", "C/é").map { assertNotNull(SmallBody.create(it, "", SmallBodyKind.COMET, null, orbit, photometry)) }
         val result = SmallBodySelection.brightNow(bodies, now, magnitudeLimit = 30.0, minimumElongation = 0.0)

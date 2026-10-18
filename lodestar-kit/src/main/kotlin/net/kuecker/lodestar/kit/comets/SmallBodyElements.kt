@@ -64,7 +64,7 @@ enum class OrbitShape(val rawValue: String) {
  * two-body motion is extrapolated), the position never depends on it.
  */
 @ConsistentCopyVisibility
-data class OrbitalElements private constructor(
+data class SmallBodyElements private constructor(
     val perihelionDistanceAU: Double,
     val eccentricity: Double,
     val inclination: Double,
@@ -132,7 +132,7 @@ data class OrbitalElements private constructor(
             longitudeOfAscendingNode: Double,
             perihelionJulianDayTT: Double,
             epochJulianDayTT: Double? = null,
-        ): OrbitalElements? {
+        ): SmallBodyElements? {
             val epoch = epochJulianDayTT ?: perihelionJulianDayTT
             if (!(perihelionDistanceAU >= minimumPerihelionDistanceAU && perihelionDistanceAU <= maximumPerihelionDistanceAU)) return null
             if (!(eccentricity >= 0 && eccentricity <= maximumEccentricity)) return null
@@ -140,7 +140,7 @@ data class OrbitalElements private constructor(
             if (!(argumentOfPerihelion.isFinite() && longitudeOfAscendingNode.isFinite())) return null
             if (!(perihelionJulianDayTT >= minimumJulianDay && perihelionJulianDayTT <= maximumJulianDay)) return null
             if (!(epoch >= minimumJulianDay && epoch <= maximumJulianDay)) return null
-            return OrbitalElements(
+            return SmallBodyElements(
                 perihelionDistanceAU = perihelionDistanceAU,
                 eccentricity = eccentricity,
                 inclination = inclination,
@@ -166,7 +166,7 @@ data class OrbitalElements private constructor(
             longitudeOfAscendingNode: Double,
             meanAnomaly: Double,
             epochJulianDayTT: Double,
-        ): OrbitalElements? {
+        ): SmallBodyElements? {
             if (!(eccentricity >= 0 && eccentricity < 1)) return null
             if (!(semiMajorAxisAU > 0 && semiMajorAxisAU.isFinite() && meanAnomaly.isFinite())) return null
             val motion = AstroMath.degrees(OrbitPropagator.gaussianGravitationalConstant / (semiMajorAxisAU * sqrt(semiMajorAxisAU)))

@@ -30,7 +30,7 @@ class CometsParsingTests {
         return line.substring(0, first - 1) + text.padEnd(width).take(width) + line.substring(last)
     }
 
-    private fun cometOrbit(body: SmallBody): OrbitalElements = body.orbit
+    private fun cometOrbit(body: SmallBody): SmallBodyElements = body.orbit
 
     private fun cometMagnitudes(body: SmallBody): CometMagnitudes =
         (assertNotNull(body.photometry) as SmallBodyPhotometry.Comet).magnitudes
@@ -668,7 +668,7 @@ class CometsParsingTests {
 
     @Test
     fun smallBodyCreationValidatesText() {
-        val orbit = assertNotNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
+        val orbit = assertNotNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
         val body = assertNotNull(SmallBody.create("  C/2030 A1  ", " Test ", SmallBodyKind.COMET, null, orbit))
         assertEquals("C/2030 A1", body.designation)
         assertEquals("Test", body.name)
@@ -689,7 +689,7 @@ class CometsParsingTests {
 
     @Test
     fun titlesFollowAstronomicalConvention() {
-        val orbit = assertNotNull(OrbitalElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
+        val orbit = assertNotNull(SmallBodyElements.create(1.0, 0.5, 0.0, 0.0, 0.0, 2_460_000.0))
         assertEquals("12P/Pons-Brooks", assertNotNull(SmallBody.create("12P", "Pons-Brooks", SmallBodyKind.COMET, 12, orbit)).title)
         assertEquals("12P", assertNotNull(SmallBody.create("12P", "", SmallBodyKind.COMET, 12, orbit)).title)
         assertEquals("C/2023 A3 (Tsuchinshan-ATLAS)", assertNotNull(SmallBody.create("C/2023 A3", "Tsuchinshan-ATLAS", SmallBodyKind.COMET, null, orbit)).title)

@@ -70,7 +70,7 @@ object SmallBodyEphemeris {
     fun geocentricJ2000(body: SmallBody, julianDate: JulianDate): Vector3? =
         geometry(body.orbit, EarthReference(julianDate))?.apparent
 
-    internal fun geometry(orbit: OrbitalElements, earth: EarthReference): Geometry? {
+    internal fun geometry(orbit: SmallBodyElements, earth: EarthReference): Geometry? {
         // Light-time: the body is seen where it was `lightTime` ago, the Earth where it is now.
         var lightTime = 0.0
         var position = Vector3.zero

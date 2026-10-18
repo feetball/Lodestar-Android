@@ -21,7 +21,7 @@ data class SmallBody private constructor(
     val name: String,
     val kind: SmallBodyKind,
     val number: Int?,
-    val orbit: OrbitalElements,
+    val orbit: SmallBodyElements,
     val photometry: SmallBodyPhotometry?,
 ) {
     /** The name if there is one, else the designation. */
@@ -59,7 +59,7 @@ data class SmallBody private constructor(
             name: String = "",
             kind: SmallBodyKind,
             number: Int? = null,
-            orbit: OrbitalElements,
+            orbit: SmallBodyElements,
             photometry: SmallBodyPhotometry? = null,
         ): SmallBody? {
             val cleanDesignation = cleaned(designation) ?: return null

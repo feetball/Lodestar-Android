@@ -30,7 +30,7 @@ internal class SyntheticOrbits(seed: Long) {
                 val axis = next(1.0, 4.5)
                 val eccentricity = next(0.0, 0.6)
                 val anomaly = next(0.0, 360.0)
-                val orbit = OrbitalElements.fromMeanAnomaly(axis, eccentricity, inclination % 40, argument, node, anomaly, 2_461_200.5)
+                val orbit = SmallBodyElements.fromMeanAnomaly(axis, eccentricity, inclination % 40, argument, node, anomaly, 2_461_200.5)
                 val magnitudes = AsteroidMagnitudes.create(next(3.0, 15.0), 0.15)
                 if (orbit == null || magnitudes == null) continue
                 SmallBody.create("S$index", "", SmallBodyKind.ASTEROID, index, orbit, SmallBodyPhotometry.Asteroid(magnitudes))
@@ -40,7 +40,7 @@ internal class SyntheticOrbits(seed: Long) {
                 val perihelion = Math.exp(next(Math.log(0.1), Math.log(6.0)))
                 val eccentricity = if (shape < 0.55) next(0.3, 0.999) else if (shape < 0.65) 1.0 else next(1.0, 1.02)
                 val time = 2_461_300.0 + next(-1_100.0, 1_100.0)
-                val orbit = OrbitalElements.create(perihelion, eccentricity, inclination, argument, node, time, 2_461_330.5)
+                val orbit = SmallBodyElements.create(perihelion, eccentricity, inclination, argument, node, time, 2_461_330.5)
                 val magnitudes = CometMagnitudes.create(next(4.0, 16.0), next(5.0, 20.0))
                 if (orbit == null || magnitudes == null) continue
                 SmallBody.create("C/S$index", "", SmallBodyKind.COMET, null, orbit, SmallBodyPhotometry.Comet(magnitudes))

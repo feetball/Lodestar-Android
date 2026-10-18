@@ -65,8 +65,8 @@ object CometElementsParser {
         val perihelionTime = RecordFields.julianDay(year, month, 1) + (day - 1.0)
 
         // Orbit.
-        val perihelionDistance = decimalField(columns, 31, 39, SmallBodyField.PERIHELION_DISTANCE, 0.0, OrbitalElements.maximumPerihelionDistanceAU)
-        val eccentricity = decimalField(columns, 42, 49, SmallBodyField.ECCENTRICITY, 0.0, OrbitalElements.maximumEccentricity)
+        val perihelionDistance = decimalField(columns, 31, 39, SmallBodyField.PERIHELION_DISTANCE, 0.0, SmallBodyElements.maximumPerihelionDistanceAU)
+        val eccentricity = decimalField(columns, 42, 49, SmallBodyField.ECCENTRICITY, 0.0, SmallBodyElements.maximumEccentricity)
         val argumentOfPerihelion = decimalField(columns, 52, 59, SmallBodyField.ARGUMENT_OF_PERIHELION, 0.0, 360.0)
         val ascendingNode = decimalField(columns, 62, 69, SmallBodyField.LONGITUDE_OF_ASCENDING_NODE, 0.0, 360.0)
         val inclination = decimalField(columns, 72, 79, SmallBodyField.INCLINATION, 0.0, 180.0)
@@ -90,7 +90,7 @@ object CometElementsParser {
             epoch = RecordFields.julianDay(epochYear, epochMonth, epochDay)
         }
 
-        val orbit = OrbitalElements.create(
+        val orbit = SmallBodyElements.create(
             perihelionDistanceAU = perihelionDistance,
             eccentricity = eccentricity,
             inclination = inclination,

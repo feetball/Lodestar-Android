@@ -32,7 +32,8 @@ camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" 
 camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
-maplibre-android = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
+# The OpenGL ES build: the default artifact is the Vulkan renderer, which makes Play require Vulkan.
+maplibre-android = { module = "org.maplibre.gl:android-sdk-opengl", version.ref = "maplibre" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

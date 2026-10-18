@@ -148,10 +148,16 @@ class MountService(
     // Commands
 
     /** Slews to [target]. The result arrives when the mount has accepted the move (not when it has arrived). */
-    suspend fun goto(target: MountTarget): MountResult = enqueue(isUrgent = false, key = null) { session.goto(target) }.await()
+    suspend fun goto(target: MountTarget): MountResult {
+        if (target.isSun) return MountResult.Failure(MountTargeting.SUN_REFUSAL)
+        return enqueue(isUrgent = false, key = null) { session.goto(target) }.await()
+    }
 
     /** Tells the mount it points at [target]. */
-    suspend fun sync(target: MountTarget): MountResult = enqueue(isUrgent = false, key = null) { session.sync(target) }.await()
+    suspend fun sync(target: MountTarget): MountResult {
+        if (target.isSun) return MountResult.Failure(MountTargeting.SUN_REFUSAL)
+        return enqueue(isUrgent = false, key = null) { session.sync(target) }.await()
+    }
 
     /** Stops every movement now; ahead of anything waiting in the queue. */
     fun stop() {

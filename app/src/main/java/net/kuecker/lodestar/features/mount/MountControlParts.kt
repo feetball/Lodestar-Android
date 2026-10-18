@@ -148,7 +148,8 @@ private val SAFETY_RULES = listOf(
         "Keep the mount's own controls or power switch in reach as well.",
     "Leaving the app stops the mount and disconnects it. It reconnects when you come back, without moving.",
     "Lodestar will not slew below the altitude limit, and the mount's own limits still apply.",
-    "Never point at the Sun without a certified solar filter over the lens.",
+    "Lodestar never slews to the Sun, but it does not check the path or the field of view. Do not use GoTo by day " +
+        "unless the optics have a certified solar filter.",
 )
 
 /** What each kind of mount works with, from the protocol list (so a newly supported kind shows up here too). */

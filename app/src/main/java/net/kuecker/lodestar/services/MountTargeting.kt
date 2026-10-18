@@ -22,7 +22,7 @@ data class MountTarget(
     val properMotion: ProperMotion?,
     /** Where the target stands now (geometric, no refraction: the frame of the mount's altitude limit). */
     val horizontal: HorizontalCoordinate,
-    /** The Sun: slewing there needs a certified solar filter on the optics. */
+    /** The Sun: Lodestar refuses to slew or sync there. */
     val isSun: Boolean,
 )
 
@@ -38,6 +38,10 @@ data class MountSlewSummary(
 
 /** Turning objects of the catalog into targets for the mount, and the checks the confirmation sheet shows before the engine's own. */
 object MountTargeting {
+    /** Why Lodestar never points a mount at the Sun (a sync on it is refused as well). */
+    const val SUN_REFUSAL = "Lodestar never slews a mount to the Sun. Looking at the Sun through a telescope or " +
+        "camera without a certified solar filter destroys eyesight and equipment."
+
     /** The target for [obj] at [date]: fixed objects keep their proper motion, moving ones are placed for this instant. */
     fun target(obj: CelestialObject, observer: Observer, date: Instant): MountTarget {
         val frame = SkyFrame(date, observer)

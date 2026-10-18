@@ -97,6 +97,18 @@ class MountServiceTest {
     }
 
     @Test
+    fun theSunIsRefusedForGotoAndSync() {
+        val (service, factory) = service()
+        service.connectAndWait()
+        val sun = MountTestSky.target("Sun", andromeda).copy(isSun = true)
+        val goto = runBlocking { service.goto(sun) }
+        val sync = runBlocking { service.sync(sun) }
+        assertEquals(MountTargeting.SUN_REFUSAL, assertIs<MountResult.Failure>(goto).message)
+        assertEquals(MountTargeting.SUN_REFUSAL, assertIs<MountResult.Failure>(sync).message)
+        assertEquals(0, factory.model.slewsStarted)
+    }
+
+    @Test
     fun gotoSlewsPollsAndArrives() {
         val (service, factory) = service()
         service.connectAndWait()

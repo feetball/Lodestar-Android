@@ -96,6 +96,28 @@ API docs for both languages are in `lodestar-kit/docs/API-*.md` (Android repo).
    - Android: `tools/capture_screenshots.sh` via the Emulator workflow.
    - iOS: `Tools/capture_screenshots.sh` on a Mac or a macOS runner.
 
+## Review findings so far (fix these before release)
+
+**iOS** (branch `features-1.1-review-ios` at `f45814c`, `features-1.1` merged in):
+- **Harness:** `.github/workflows/review.yml` and `Tools/review/`, with screens selected by `screen=` in ScreenshotMode
+  (DEBUG). The last run was 39179308131, and only part of it was reviewed. Merge the branch's watch and widget fixes
+  into `features-1.1` after a look.
+- **Night mode on iOS 26** (Theme / bar appearance):
+  - The tab bar's unselected icons and labels are white.
+  - The back chevron is white.
+  - The sheet "Done" capsule is grey.
+  - Examples: `events-calendar-n`, `aim-comet-n`, `mount-sheet-slewing-n`.
+- **Unselected segmented-control text** is nearly invisible at night: `star-trails-n` ("Time-Lapse"), `settings-n`
+  ("Gyro Lock").
+- **Aim:** the Mount strip covers the "On target" label (`aim-mount-d`).
+- **Large text:** the "Aim at …" button truncates on the comet detail (`small/comet-detail-n`).
+- **Widgets:**
+  - They follow the system appearance (no red night palette). That is acceptable but different from Android.
+  - The large-type fix (Home Screen text capped at xxxLarge) is not yet confirmed in a screenshot.
+- **Not yet looked at:** the online-data screens and the widgets of the final run.
+
+**Android** (branch `review-harness`): see that branch's last commits and the agent's notes in them.
+
 ## Known small differences and open items (1.2 candidates)
 
 - Parity items not yet aligned:

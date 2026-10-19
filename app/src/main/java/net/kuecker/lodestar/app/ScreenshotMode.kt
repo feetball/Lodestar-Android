@@ -17,31 +17,67 @@ import kotlin.math.sin
 /**
  * The sub-screens and sheets a screenshot can open after launch (`screen=<id>`). Each owner of a screen reacts to its
  * own ids with [ScreenshotScreenEffect]; a screen that is not asked for is never touched.
+ *
+ * There are two simulated mounts: the OnStep-like one (`mount-control` and the `aim-*` mount screens) and the
+ * Sky-Watcher AZ-GTi, which has to be aligned on stars first (`mount-sw-*` and `aim-sw-*`).
  */
 enum class ScreenshotScreen(val id: String) {
     /** Settings, Mount Control, not connected: the form to connect. */
     MOUNT_SETUP("mount-setup"),
 
-    /** Settings, Mount Control, connected to the built-in simulated mount. */
+    /** Settings, Mount Control, connected to the simulated OnStep-like mount. */
     MOUNT_CONTROL("mount-control"),
 
-    /** Aim with the simulated mount connected: the mount card. */
+    /** Aim with the simulated OnStep-like mount connected: the mount card. */
     AIM_MOUNT("aim-mount"),
 
-    /** Aim with the simulated mount slewing to the target. */
+    /** Aim with the simulated OnStep-like mount slewing to the target. */
     AIM_SLEW("aim-slew"),
 
-    /** Aim, simulated mount connected, the Mount sheet open. */
+    /** Aim, simulated OnStep-like mount connected, the Mount sheet open. */
     AIM_MOUNT_SHEET("aim-mount-sheet"),
 
-    /** Aim, simulated mount connected, the confirmation of Go to the target. */
+    /** Aim, simulated OnStep-like mount connected, the confirmation of Go to the target. */
     AIM_GOTO("aim-goto"),
 
-    /** Aim, simulated mount connected, the confirmation of Sync to the target. */
+    /** Aim, simulated OnStep-like mount connected, the confirmation of Sync to the target. */
     AIM_SYNC("aim-sync"),
 
-    /** Aim, simulated mount connected, the nudge pad. */
+    /** Aim, simulated OnStep-like mount connected, the nudge pad. */
     AIM_NUDGE("aim-nudge"),
+
+    /** Settings, Mount Control, not connected: the form on the Sky-Watcher mount type (both home positions drawn). */
+    MOUNT_SW_SETUP("mount-sw-setup"),
+
+    /** Settings, Mount Control, not connected: the Sky-Watcher form, Equatorial arrangement, advanced options open. */
+    MOUNT_SW_EQUATORIAL("mount-sw-equatorial"),
+
+    /** Settings, Mount Control, connected to the simulated Sky-Watcher mount, not aligned. */
+    MOUNT_SW_CONTROL("mount-sw-control"),
+
+    /** Settings, Mount Control, the simulated Sky-Watcher mount aligned on one star (the first the set-up suggests). */
+    MOUNT_SW_ALIGNED_1("mount-sw-aligned-1"),
+
+    /** Settings, Mount Control, the simulated Sky-Watcher mount aligned on two stars (the ones the set-up suggests). */
+    MOUNT_SW_ALIGNED_2("mount-sw-aligned-2"),
+
+    /** Aim, simulated Sky-Watcher mount connected and not aligned, the Mount sheet open. */
+    AIM_SW_MOUNT_SHEET("aim-sw-mount-sheet"),
+
+    /** Aim, simulated Sky-Watcher mount aligned on two stars, the Mount sheet open. */
+    AIM_SW_MOUNT_SHEET_ALIGNED("aim-sw-mount-sheet-aligned"),
+
+    /** Aim, simulated Sky-Watcher mount not aligned, the confirmation of Go to the target (with the banner). */
+    AIM_SW_GOTO("aim-sw-goto"),
+
+    /** Aim, simulated Sky-Watcher mount aligned on two stars, the confirmation of Go to the target. */
+    AIM_SW_GOTO_ALIGNED("aim-sw-goto-aligned"),
+
+    /** Aim, simulated Sky-Watcher mount not aligned, the confirmation of Sync to the target (the first star). */
+    AIM_SW_SYNC("aim-sw-sync"),
+
+    /** Aim, simulated Sky-Watcher mount aligned on two stars, the confirmation of Sync to the target. */
+    AIM_SW_SYNC_ALIGNED("aim-sw-sync-aligned"),
 
     /** Tonight, the calendar of astronomical events. */
     EVENTS("events"),

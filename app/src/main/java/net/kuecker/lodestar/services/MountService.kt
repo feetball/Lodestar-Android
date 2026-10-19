@@ -349,15 +349,15 @@ class MountService(
                 endSession(lost = true, problem = null)
                 return
             }
-            val now = System.nanoTime()
-            if (now >= nextPoll) {
+            val nowNanos = System.nanoTime()
+            if (nowNanos >= nextPoll) {
                 guarded { session.poll(); MountResult.Success() }
                 publish(notice = session.takeNotice()?.let { notice(it, isError = true) })
                 val interval = if (session.status.phase == MountPhase.NUDGING) nudgePollMillis else pollMillis
                 nextPoll = System.nanoTime() + interval * NANOS_PER_MILLI
                 continue
             }
-            withTimeoutOrNull((nextPoll - now) / NANOS_PER_MILLI + 1) { wake.receive() }
+            withTimeoutOrNull((nextPoll - nowNanos) / NANOS_PER_MILLI + 1) { wake.receive() }
         }
     }
 

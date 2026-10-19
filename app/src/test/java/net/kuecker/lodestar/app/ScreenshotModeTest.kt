@@ -38,6 +38,18 @@ class ScreenshotModeTest {
     }
 
     @Test
+    fun readsTheScreensOfTheSimulatedSkyWatcherMount() {
+        val form = assertNotNull(ScreenshotMode.parse("$base tab=settings screen=mount-sw-equatorial"))
+        assertEquals(ScreenshotScreen.MOUNT_SW_EQUATORIAL, form.screen)
+        assertEquals(AppTab.SETTINGS, form.tab)
+        val sync = assertNotNull(ScreenshotMode.parse("$base tab=aim target=dso.M8 screen=aim-sw-sync-aligned night=1"))
+        assertEquals(ScreenshotScreen.AIM_SW_SYNC_ALIGNED, sync.screen)
+        assertTrue(sync.nightMode)
+        // The OnStep-like mount keeps its own ids.
+        assertEquals(ScreenshotScreen.AIM_SYNC, assertNotNull(ScreenshotMode.parse("$base screen=aim-sync")).screen)
+    }
+
+    @Test
     fun readsTheOnlineFeedsAndTheSpacesOfATarget() {
         val mode = assertNotNull(ScreenshotMode.parse("$base online=satellites,comets target=comet.C/2026_T1"))
         assertEquals(setOf(OnlineFeed.SATELLITE_PASSES, OnlineFeed.COMETS), mode.onlineFeeds)

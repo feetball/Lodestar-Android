@@ -1,10 +1,10 @@
 #!/bin/bash
 # Captures every screen added in 1.1 from a running emulator (or device) with the debug build installed, for a visual
 # review: the events calendar and event details, the mosaic planner, skyline (horizon) recording, the star-trail and
-# time-lapse planners, GoTo mount control with the built-in simulated mount, and the Tonight widgets, each in the day
-# palette and, where it matters, the night one (red only). Screenshot mode (debug builds only, see ScreenshotMode.kt)
-# fixes the site, time, tab, target, pointing and the sub-screen to open; long screens are scrolled by swiping and
-# captured page by page (-p2, -p3, ...). Ends with a crash check, like capture_screenshots.sh.
+# time-lapse planners, GoTo mount control with the two simulated mounts (OnStep-like and Sky-Watcher), and the Tonight
+# widgets, each in the day palette and, where it matters, the night one (red only). Screenshot mode (debug builds only,
+# see ScreenshotMode.kt) fixes the site, time, tab, target, pointing and the sub-screen to open; long screens are
+# scrolled by swiping and captured page by page (-p2, -p3, ...). Ends with a crash check, like capture_screenshots.sh.
 #   tools/capture_review.sh <output-dir> [<width>x<height> <density>]   (default 1080x2160 at 420 dpi: a phone)
 set -euo pipefail
 out=${1:-review}
@@ -133,7 +133,8 @@ done
 MIN_WAIT=14 shot ev-05-detail-meteorShower-night 2 tab=tonight screen=event-detail event=meteorShower night=1
 MIN_WAIT=14 shot ev-06-detail-solarEclipse-night 2 tab=tonight screen=event-detail event=solarEclipse night=1
 
-# 2. Mount control: the entry in Settings, the form, the connected screen, and the Aim screen with the mount.
+# 2. Mount control with the OnStep-like simulated mount: the entry in Settings, the form, the connected screen, and the
+# Aim screen with the mount.
 MIN_WAIT=8 shot mt-01-settings 4 tab=settings
 MIN_WAIT=8 shot mt-02-setup 3 tab=settings screen=mount-setup
 MIN_WAIT=8 shot mt-03-setup-night 1 tab=settings screen=mount-setup night=1
@@ -149,6 +150,26 @@ MIN_WAIT=20 shot mt-12-aim-nudge 0 $aimed screen=aim-nudge
 MIN_WAIT=20 shot mt-13-aim-nudge-night 0 $aimed screen=aim-nudge night=1
 MIN_WAIT=20 shot mt-14-aim-sheet 2 $aimed screen=aim-mount-sheet
 MIN_WAIT=20 shot mt-15-aim-sheet-night 1 $aimed screen=aim-mount-sheet night=1
+
+# 2b. The simulated Sky-Watcher mount, which has to be aligned on stars first: the form with its mount type chosen (both
+# home positions drawn, then the Equatorial arrangement with the advanced options open), Mount Control connected (not
+# aligned, after one star, after two) and the Aim sheets in the same states. The stars are the ones the set-up suggests
+# for the frozen time, centred by the simulated mount and synced the way a user does.
+MIN_WAIT=8 shot mt-16-sw-setup 3 tab=settings screen=mount-sw-setup
+MIN_WAIT=8 shot mt-17-sw-setup-night 2 tab=settings screen=mount-sw-setup night=1
+MIN_WAIT=8 shot mt-18-sw-setup-equatorial 5 tab=settings screen=mount-sw-equatorial
+MIN_WAIT=14 shot mt-19-sw-control 3 tab=settings screen=mount-sw-control
+MIN_WAIT=16 shot mt-20-sw-aligned-1 3 tab=settings screen=mount-sw-aligned-1
+MIN_WAIT=16 shot mt-21-sw-aligned-2 4 tab=settings screen=mount-sw-aligned-2
+MIN_WAIT=16 shot mt-22-sw-aligned-2-night 3 tab=settings screen=mount-sw-aligned-2 night=1
+MIN_WAIT=20 shot mt-23-sw-aim-sheet 0 $aimed screen=aim-sw-mount-sheet
+MIN_WAIT=20 shot mt-24-sw-aim-sheet-aligned 0 $aimed screen=aim-sw-mount-sheet-aligned
+MIN_WAIT=20 shot mt-25-sw-aim-goto 1 $aimed screen=aim-sw-goto
+MIN_WAIT=20 shot mt-26-sw-aim-goto-aligned 1 $aimed screen=aim-sw-goto-aligned
+MIN_WAIT=20 shot mt-27-sw-aim-sync 1 $aimed screen=aim-sw-sync
+MIN_WAIT=20 shot mt-28-sw-aim-sync-aligned 1 $aimed screen=aim-sw-sync-aligned
+MIN_WAIT=20 shot mt-29-sw-aim-goto-night 1 $aimed screen=aim-sw-goto night=1
+MIN_WAIT=20 shot mt-30-sw-aim-sync-aligned-night 1 $aimed screen=aim-sw-sync-aligned night=1
 
 # 3. The planners of Settings > Tools.
 MIN_WAIT=8 shot tl-01-star-trails 5 tab=settings screen=star-trails pointing=355,36

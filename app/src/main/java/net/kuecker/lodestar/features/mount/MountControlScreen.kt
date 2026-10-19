@@ -26,8 +26,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import net.kuecker.lodestar.app.ScreenshotScreen
-import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.features.settings.SettingsActionRow
 import net.kuecker.lodestar.features.settings.SettingsSegmentedPicker
 import net.kuecker.lodestar.features.settings.SettingsSubScreen
@@ -59,8 +57,7 @@ import net.kuecker.lodestar.theme.LocalPalette
 /** Settings ▸ Mount Control: connect to a GoTo mount, see what it can do, nudge it, and set the safety limits. */
 @Composable
 fun MountControlScreen(onBack: () -> Unit) {
-    val service = rememberMountService()
-    ScreenshotScreenEffect(ScreenshotScreen.MOUNT_CONTROL) { service.connectDemoAndWait() }
+    MountControlScreenshotEffect()
     SettingsSubScreen("Mount Control", onBack) { MountControlContent() }
 }
 

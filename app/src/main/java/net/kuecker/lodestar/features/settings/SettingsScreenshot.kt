@@ -34,7 +34,8 @@ internal fun SettingsScreenshotEffect(stack: NavStack<SettingsRoute>) {
     ScreenshotScreenEffect(
         ScreenshotScreen.MOUNT_SETUP, ScreenshotScreen.MOUNT_CONTROL, ScreenshotScreen.STAR_TRAILS,
         ScreenshotScreen.TIME_LAPSE, ScreenshotScreen.SKYLINE, ScreenshotScreen.SITE_EDITOR,
-        ScreenshotScreen.SETTINGS_BOTTOM,
+        ScreenshotScreen.SETTINGS_BOTTOM, ScreenshotScreen.MOUNT_SW_SETUP, ScreenshotScreen.MOUNT_SW_EQUATORIAL,
+        ScreenshotScreen.MOUNT_SW_CONTROL, ScreenshotScreen.MOUNT_SW_ALIGNED_1, ScreenshotScreen.MOUNT_SW_ALIGNED_2,
     ) { screen ->
         when (screen) {
             ScreenshotScreen.SETTINGS_BOTTOM -> {
@@ -43,7 +44,9 @@ internal fun SettingsScreenshotEffect(stack: NavStack<SettingsRoute>) {
                 delay(SETTLE_MS)
                 scroll.scrollTo(scroll.maxValue)
             }
-            ScreenshotScreen.MOUNT_SETUP, ScreenshotScreen.MOUNT_CONTROL -> stack.push(SettingsRoute.MountControl)
+            ScreenshotScreen.MOUNT_SETUP, ScreenshotScreen.MOUNT_CONTROL, ScreenshotScreen.MOUNT_SW_SETUP,
+            ScreenshotScreen.MOUNT_SW_EQUATORIAL, ScreenshotScreen.MOUNT_SW_CONTROL, ScreenshotScreen.MOUNT_SW_ALIGNED_1,
+            ScreenshotScreen.MOUNT_SW_ALIGNED_2 -> stack.push(SettingsRoute.MountControl)
             ScreenshotScreen.STAR_TRAILS, ScreenshotScreen.TIME_LAPSE -> stack.push(SettingsRoute.TrailsTimeLapse)
             ScreenshotScreen.SITE_EDITOR -> editsSite = true
             else -> recordsSkyline = true

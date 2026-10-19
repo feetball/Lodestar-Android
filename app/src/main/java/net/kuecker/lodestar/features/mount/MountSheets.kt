@@ -43,8 +43,10 @@ import net.kuecker.lodestar.kit.mount.MountPhase
 import net.kuecker.lodestar.kit.pointing.AlignmentError
 import net.kuecker.lodestar.kit.pointing.AlignmentPoint
 import net.kuecker.lodestar.services.MountConnectionState
+import net.kuecker.lodestar.services.MountDemoKind
 import net.kuecker.lodestar.services.MountResult
 import net.kuecker.lodestar.services.MountService
+import net.kuecker.lodestar.services.MountSkyWatcherInfo
 import net.kuecker.lodestar.services.MountTarget
 import net.kuecker.lodestar.services.MountTargeting
 import net.kuecker.lodestar.shared.AppFormat
@@ -86,7 +88,9 @@ fun MountAimSheets(target: CelestialObject?) {
     DisposableEffect(sheets) { onDispose { sheets.close() } }
     when (sheets.sheet) {
         MountSheetKind.CONTROL -> LodestarSheet(onDismiss = sheets::close) {
-            MountSheetFrame("Mount", CONTROL_SHEET_HEIGHT, LocalSheetDismiss.current) { MountControlContent() }
+            MountSheetFrame("Mount", CONTROL_SHEET_HEIGHT, LocalSheetDismiss.current) {
+                MountControlContent(onSync = { sheets.open(MountSheetKind.SYNC) })
+            }
         }
         MountSheetKind.GOTO -> LodestarSheet(onDismiss = sheets::close) {
             MountActionContent(MountAction.GOTO, target, LocalSheetDismiss.current)
@@ -226,7 +230,8 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
             } else {
                 null
             }
-            val canConfirm = !isWorking && problem == null && !resolved.isSun
+            val notAligned = if (action == MountAction.GOTO) MountText.notAlignedBanner(snapshot) else null
+            val canConfirm = !isWorking && problem == null && notAligned == null && !resolved.isSun
 
             // The sections bring a margin of their own; everything else is given the same one.
             val inset = Modifier.padding(horizontal = 16.dp)
@@ -235,9 +240,27 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
                 if (action == MountAction.GOTO) {
                     GotoDetails(resolved, service, limit, inset)
                 } else {
-                    SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), inset)
+                    SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), snapshot.skyWatcher, inset)
                 }
                 problem?.let { Box(inset) { MountMessage(it.userMessage, isError = true) } }
+                notAligned?.let { Box(inset) { MountMessage(it, isError = true) } }
+                if (action == MountAction.SYNC && snapshot.demo == MountDemoKind.SKYWATCHER) {
+                    LodestarButton(
+                        "Centre the simulated mount on ${target.name}",
+                        onClick = {
+                            isWorking = true
+                            failure = null
+                            scope.launch {
+                                val result = service.centreDemo(resolved)
+                                isWorking = false
+                                if (result is MountResult.Failure) failure = result.message
+                            }
+                        },
+                        modifier = inset.fillMaxWidth(),
+                        kind = LodestarButtonKind.SECONDARY,
+                        enabled = !isWorking,
+                    )
+                }
                 if (resolved.isSun) Box(inset) { MountMessage(MountTargeting.SUN_REFUSAL, isError = true) }
                 if (action == MountAction.SYNC && !resolved.isSun) {
                     SettingsSection(title = "Phone alignment") {
@@ -322,18 +345,24 @@ private fun GotoDetails(resolved: MountTarget, service: MountService, limit: Dou
 }
 
 @Composable
-private fun SyncDetails(resolved: MountTarget, mountOffset: Double?, modifier: Modifier) {
+private fun SyncDetails(resolved: MountTarget, mountOffset: Double?, skyWatcher: MountSkyWatcherInfo?, modifier: Modifier) {
     val palette = LocalPalette.current
     Column(modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CardTitle("Sync")
         Text(
-            "Tells the mount that it points at ${resolved.name} right now.",
+            if (skyWatcher == null) {
+                "Tells the mount that it points at ${resolved.name} right now."
+            } else {
+                "Adds ${resolved.name} to the star alignment: Lodestar learns from it where the mount really points. The " +
+                    "first star also shows how far off the home position was."
+            },
             color = palette.secondaryText,
             style = MaterialTheme.typography.bodyMedium,
         )
         if (mountOffset != null) {
             InfoRow("Mount believes it is", "${AppFormat.separation(mountOffset)} away")
         }
+        if (skyWatcher != null) InfoRow("Stars in the alignment", "${skyWatcher.stars.size}")
     }
 }
 

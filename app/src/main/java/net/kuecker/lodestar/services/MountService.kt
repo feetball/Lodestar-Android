@@ -29,6 +29,15 @@ import java.util.concurrent.atomic.AtomicLong
 /** Where the connection to the mount stands. */
 enum class MountConnectionState { DISCONNECTED, CONNECTING, CONNECTED }
 
+/** The simulated mounts the form offers in place of hardware. */
+enum class MountDemoKind(val title: String) {
+    /** An OnStep-like LX200 mount that slews at 4° per second. */
+    LX200("Simulated OnStep mount"),
+
+    /** A Sky-Watcher AZ-GTi that has to be aligned on stars first, with a few degrees of set-up error. */
+    SKYWATCHER("Simulated Sky-Watcher mount"),
+}
+
 /** A message about something that just happened, for the user to read. [id] changes with every new one. */
 data class MountNotice(val id: Long, val text: String, val isError: Boolean)
 
@@ -40,8 +49,10 @@ data class MountSnapshot(
     val capabilities: MountCapabilities? = null,
     /** What the session is, or is being, connected to. */
     val connection: MountConnection? = null,
-    /** True while the session is the built-in simulated mount. */
-    val isDemo: Boolean = false,
+    /** Which simulated mount the session is, if it is one. */
+    val demo: MountDemoKind? = null,
+    /** The set-up and alignment of a Sky-Watcher Wi-Fi mount; null for the others. */
+    val skyWatcher: MountSkyWatcherInfo? = null,
     /** The last session ended without the user asking: the link failed. */
     val lostConnection: Boolean = false,
     /** Why the last attempt to connect failed. */
@@ -53,6 +64,15 @@ data class MountSnapshot(
     val notice: MountNotice? = null,
 ) {
     val isConnected: Boolean get() = state == MountConnectionState.CONNECTED
+
+    /** True while the session is a simulated mount. */
+    val isDemo: Boolean get() = demo != null
+
+    /**
+     * Whether the mount knows where it points: a Sky-Watcher mount after its first sync (the engine's flag is never reset
+     * by clearing the alignment), the others as the mount reports it.
+     */
+    val isAligned: Boolean? get() = skyWatcher?.isAligned ?: status.isAligned
 
     /** True while the mount is under Lodestar's command and moving. */
     val isMoving: Boolean get() = status.phase == MountPhase.SLEWING || status.phase == MountPhase.NUDGING
@@ -73,7 +93,7 @@ class MountService(
     private val session: MountSession,
     val preferences: MountPreferences,
     private val observerProvider: () -> Observer?,
-    private val demoFactory: MountLinkFactory,
+    private val demoFactory: (MountDemoKind) -> MountLinkFactory,
     private val sockets: MountSocketProvider = MountSocketProvider.System,
     private val pollMillis: Long = POLL_MILLIS,
     private val nudgePollMillis: Long = NUDGE_POLL_MILLIS,
@@ -106,27 +126,27 @@ class MountService(
     private var isForeground = true
 
     @Volatile
-    private var resumeAfterBackground: Pair<MountConnection, Boolean>? = null
+    private var resumeAfterBackground: Pair<MountConnection, MountDemoKind?>? = null
     private var slewStart: Double? = null
 
     // Connecting
 
-    /** Starts connecting to [connection] (or to the built-in simulated mount when [demo]); ignored while a session exists. */
-    fun connect(connection: MountConnection, demo: Boolean = false) {
+    /** Starts connecting to [connection] (or to the built-in simulated mount of kind [demo]); ignored while a session exists. */
+    fun connect(connection: MountConnection, demo: MountDemoKind? = null) {
         synchronized(lock) {
             if (isSessionActive) return
             isSessionActive = true
         }
         resumeAfterBackground = null
-        if (!demo) preferences.remember(connection)
-        snapshot = MountSnapshot(state = MountConnectionState.CONNECTING, connection = connection, isDemo = demo)
+        if (demo == null) preferences.remember(connection)
+        snapshot = MountSnapshot(state = MountConnectionState.CONNECTING, connection = connection, demo = demo)
         scope.launch(worker) { runSession(connection, demo) }
     }
 
     /** Connects again to the connection used last, or the demo if that was the session. */
     fun reconnect() {
         val last = snapshot
-        connect(last.connection ?: preferences.lastConnection, last.isDemo)
+        connect(last.connection ?: preferences.lastConnection, last.demo)
     }
 
     /** Stops an attempt to connect that is still waiting for the mount. */
@@ -176,6 +196,19 @@ class MountService(
         enqueue(isUrgent = true, key = KEY_NUDGE, endsSession = false) { session.stopNudge() }
     }
 
+    /** Declares that the Sky-Watcher mount stands at its home position now (the alignment is forgotten). */
+    suspend fun declareHome(): MountResult = enqueue(isUrgent = false, key = null) { session.declareHome() }.await()
+
+    /** Forgets the star alignment of the Sky-Watcher mount. */
+    suspend fun clearAlignment(): MountResult = enqueue(isUrgent = false, key = null) { session.clearAlignment() }.await()
+
+    /** Drops the alignment star at [index] of [MountSkyWatcherInfo.stars]. */
+    suspend fun removeAlignmentStar(index: Int): MountResult =
+        enqueue(isUrgent = false, key = null) { session.removeAlignmentStar(index) }.await()
+
+    /** The simulated Sky-Watcher mount stands where the user would have centred [target]. */
+    suspend fun centreDemo(target: MountTarget): MountResult = enqueue(isUrgent = false, key = null) { session.centreDemo(target) }.await()
+
     suspend fun setTracking(enabled: Boolean): MountResult =
         enqueue(isUrgent = false, key = null) { session.setTracking(enabled) }.await()
 
@@ -190,8 +223,11 @@ class MountService(
         }
     }
 
-    /** Looks for Alpaca telescopes on the local network (about two seconds). */
-    suspend fun discoverAlpaca(): List<MountFoundTelescope> = MountAlpacaDiscovery(sockets).discover()
+    /** Looks on the local network for mounts of the kind [kind] (about two seconds). */
+    suspend fun discover(kind: MountDiscoveryKind): List<MountFoundTelescope> = when (kind) {
+        MountDiscoveryKind.ALPACA -> MountAlpacaDiscovery(sockets).discover()
+        MountDiscoveryKind.SKYWATCHER -> MountSkyWatcherProbe(sockets).discover()
+    }
 
     /** Forgets a lost connection or a failed attempt (and its message) so the screens stop showing it. */
     fun dismissProblem() {
@@ -220,7 +256,7 @@ class MountService(
             val current = snapshot
             val connection = current.connection
             if (current.state != MountConnectionState.DISCONNECTED && connection != null) {
-                resumeAfterBackground = connection to current.isDemo
+                resumeAfterBackground = connection to current.demo
             }
             disconnectForBackground()
         } else {
@@ -286,8 +322,8 @@ class MountService(
 
     private fun takeTask(): Task? = synchronized(lock) { tasks.removeFirstOrNull() }
 
-    private suspend fun runSession(connection: MountConnection, demo: Boolean) {
-        val factoryOverride = if (demo) demoFactory else null
+    private suspend fun runSession(connection: MountConnection, demo: MountDemoKind?) {
+        val factoryOverride = demo?.let(demoFactory)
         val connected = guarded { session.connect(connection, preferences.settings, factoryOverride) }
         if (connected is MountResult.Failure) {
             endSession(lost = false, problem = connected.message.takeUnless { it == CANCELLED })
@@ -316,7 +352,7 @@ class MountService(
             val now = System.nanoTime()
             if (now >= nextPoll) {
                 guarded { session.poll(); MountResult.Success() }
-                publish()
+                publish(notice = session.takeNotice()?.let { notice(it, isError = true) })
                 val interval = if (session.status.phase == MountPhase.NUDGING) nudgePollMillis else pollMillis
                 nextPoll = System.nanoTime() + interval * NANOS_PER_MILLI
                 continue
@@ -356,7 +392,7 @@ class MountService(
             state = MountConnectionState.CONNECTED,
             status = status,
             capabilities = session.capabilities,
-            isDemo = session.isDemo,
+            skyWatcher = session.skyWatcherInfo(),
             lostConnection = false,
             connectProblem = null,
             linkProblem = status.lastError?.userMessage,
@@ -383,7 +419,7 @@ class MountService(
         val previous = snapshot
         snapshot = MountSnapshot(
             connection = previous.connection,
-            isDemo = previous.isDemo,
+            demo = previous.demo,
             lostConnection = lost,
             connectProblem = problem,
             notice = if (lost) notice(LOST_TEXT, isError = true) else null,
@@ -417,7 +453,7 @@ class MountService(
                 session = session,
                 preferences = MountPreferences(store),
                 observerProvider = observerProvider,
-                demoFactory = MountDemoLinkFactory(observerProvider, now),
+                demoFactory = { kind -> MountDemoLinkFactory(kind, observerProvider, now) },
                 sockets = network,
                 now = now,
             )

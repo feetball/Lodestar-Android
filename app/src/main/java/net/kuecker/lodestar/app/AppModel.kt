@@ -205,6 +205,20 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
                 }
             }
             evaluateSun(force = true)
+            followRefreshedSmallBodies()
+        }
+    }
+
+    /**
+     * A comet or asteroid download replaces the catalog's small bodies: a target that is one of them follows its
+     * refreshed object (newer elements). One that dropped out of the data keeps the elements it had.
+     */
+    private fun followRefreshedSmallBodies() {
+        scope.launch {
+            snapshotFlow { catalog.catalog }.collect {
+                val current = target?.takeIf { it.smallBody != null } ?: return@collect
+                catalog.objectWithID(current.id)?.takeIf { it != current }?.let { target = it }
+            }
         }
     }
 

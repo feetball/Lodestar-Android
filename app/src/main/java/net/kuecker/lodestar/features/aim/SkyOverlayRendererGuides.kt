@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.font.FontWeight
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.pointing.GuidanceState
@@ -126,7 +127,8 @@ private const val EDGE_BOTTOM_INSET = 240f
 internal fun SkyOverlayRenderer.drawTarget() {
     val target = frame.target
     if (target != null) {
-        drawAimMarker(target.direction, target.obj.name)
+        // A comet's compact name ("Pons-Brooks"): its full designation would not fit beside the ring.
+        drawAimMarker(target.direction, SmallBodyText.displayName(target.obj))
         return
     }
     frame.satellite?.let {

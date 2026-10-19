@@ -408,6 +408,43 @@ class MountTransportsTest {
     }
 
     @Test
+    fun theSkyWatcherProbeFindsAMountThatAnswers() {
+        var request: ByteArray? = null
+        val udp = udpEcho { datagram ->
+            request = datagram
+            listOf("=0322A5\r".toByteArray())
+        }
+        val probe = MountSkyWatcherProbe(targets = { listOf(loopback) }, port = udp.localPort, listenMillis = 500)
+        val found = runBlocking { probe.discover() }
+        assertContentEquals(net.kuecker.lodestar.kit.mount.SkyWatcherDiscovery.probePayload, request)
+        assertEquals(listOf(MountFoundTelescope("127.0.0.1", udp.localPort, "Sky-Watcher AZ-GTi 3.22", 0, "")), found)
+    }
+
+    @Test
+    fun theSkyWatcherProbeIgnoresOtherAnswersAndSilence() {
+        val garbage = udpEcho { listOf("hello".toByteArray(), "!4\r".toByteArray()) }
+        val probe = MountSkyWatcherProbe(targets = { listOf(loopback) }, port = garbage.localPort, listenMillis = 300)
+        assertEquals(emptyList(), runBlocking { probe.discover() })
+        val silent = udpEcho { emptyList() }
+        assertEquals(
+            emptyList(),
+            runBlocking { MountSkyWatcherProbe(targets = { listOf(loopback) }, port = silent.localPort, listenMillis = 200).discover() },
+        )
+    }
+
+    @Test
+    fun theProbeTargetsFollowThePhonesNetwork() {
+        fun targets(local: Pair<String, Int>?): List<String> = MountSkyWatcherProbe.defaultTargets(
+            object : MountSocketProvider by MountSocketProvider.System {
+                override val localAddress: Pair<String, Int>? = local
+            },
+        ).map { it.hostAddress.orEmpty() }
+        assertEquals(listOf("192.168.4.1"), targets("192.168.4.2" to 24))
+        assertEquals(listOf("192.168.1.255", "192.168.4.1"), targets("192.168.1.23" to 24))
+        assertEquals(listOf("192.168.4.1"), targets(null))
+    }
+
+    @Test
     fun theBroadcastAddressesAlwaysEndWithTheLimitedBroadcast() {
         val addresses = MountBroadcast.addresses(null)
         assertContentEquals(byteArrayOf(-1, -1, -1, -1), addresses.last().address)

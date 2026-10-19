@@ -12,6 +12,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import net.kuecker.lodestar.kit.mount.MountProtocol
 import net.kuecker.lodestar.services.MountConnection
+import net.kuecker.lodestar.services.MountDiscoveryKind
 import net.kuecker.lodestar.services.MountFoundTelescope
 import net.kuecker.lodestar.services.MountLinkKind
 import net.kuecker.lodestar.services.MountProtocolOption
@@ -139,18 +140,23 @@ class MountDraft(private val service: MountService) {
     fun choose(telescope: MountFoundTelescope) {
         host = telescope.host
         port = telescope.port
-        deviceNumber = telescope.deviceNumber
-        deviceName = telescope.deviceName
+        if (option.discovery == MountDiscoveryKind.ALPACA) {
+            deviceNumber = telescope.deviceNumber
+            deviceName = telescope.deviceName
+        } else {
+            forgetTelescope()
+        }
     }
 
-    /** Searches the local network for Alpaca telescopes; a search already running is replaced. */
+    /** Searches the local network for mounts of the selected kind; a search already running is replaced. */
     fun search(scope: CoroutineScope) {
+        val kind = option.discovery ?: return
         searchJob?.cancel()
         isSearching = true
         found = null
         searchJob = scope.launch {
             try {
-                found = service.discoverAlpaca()
+                found = service.discover(kind)
             } finally {
                 isSearching = false
             }

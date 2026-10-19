@@ -12,6 +12,7 @@ import net.kuecker.lodestar.kit.mount.AlpacaEndpoint
 import net.kuecker.lodestar.kit.mount.AlpacaRequestBuilder
 import net.kuecker.lodestar.kit.mount.AlpacaResponseParser
 import net.kuecker.lodestar.kit.mount.MountError
+import net.kuecker.lodestar.kit.mount.SkyWatcherDiscovery
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -118,6 +119,89 @@ class MountAlpacaDiscovery(
         const val SLICE_MILLIS = 250L
         const val MAXIMUM_SERVERS = 16
         const val MAXIMUM_TARGETS = 16
+    }
+}
+
+/**
+ * Finds Sky-Watcher Wi-Fi mounts: sends the version probe (`:e1`) to the mount's access point address and, when the phone is
+ * on another network, to that network's broadcast address, and collects the replies for about a second and a half. A mount
+ * in access point mode answers at 192.168.4.1; one that joined the home network answers the broadcast.
+ */
+class MountSkyWatcherProbe(
+    private val sockets: MountSocketProvider = MountSocketProvider.System,
+    private val targets: () -> List<InetAddress> = { defaultTargets(sockets) },
+    private val port: Int = SkyWatcherDiscovery.port,
+    private val listenMillis: Int = 1_500,
+) {
+    /** The mounts that answered, ordered by address; empty when none did. Never throws except for cancellation. */
+    suspend fun discover(): List<MountFoundTelescope> = withContext(Dispatchers.IO) {
+        try {
+            listen()
+        } catch (_: IOException) {
+            emptyList()
+        }
+    }
+
+    private suspend fun listen(): List<MountFoundTelescope> {
+        val socket = DatagramSocket(null)
+        try {
+            socket.reuseAddress = true
+            sockets.bind(socket)
+            socket.bind(InetSocketAddress(0))
+            socket.broadcast = true
+            val payload = SkyWatcherDiscovery.probePayload
+            for (address in targets().take(MAXIMUM_TARGETS)) {
+                try {
+                    socket.send(DatagramPacket(payload, payload.size, address, port))
+                } catch (_: IOException) {
+                    // One unreachable address must not stop the others.
+                }
+            }
+            val found = LinkedHashMap<String, MountFoundTelescope>()
+            val buffer = ByteArray(64)
+            val end = System.nanoTime() + listenMillis * 1_000_000L
+            while (found.size < MAXIMUM_MOUNTS) {
+                currentCoroutineContext().ensureActive()
+                val remaining = (end - System.nanoTime()) / 1_000_000
+                if (remaining <= 0) break
+                socket.soTimeout = minOf(remaining, SLICE_MILLIS).toInt().coerceAtLeast(1)
+                val packet = DatagramPacket(buffer, buffer.size)
+                try {
+                    socket.receive(packet)
+                } catch (_: SocketTimeoutException) {
+                    continue
+                }
+                val host = packet.address?.hostAddress ?: continue
+                val version = try {
+                    SkyWatcherDiscovery.parseProbeReply(packet.data.copyOf(packet.length))
+                } catch (_: MountError) {
+                    continue
+                }
+                found.getOrPut(host) {
+                    MountFoundTelescope(host, port, "Sky-Watcher ${version.mountName} ${version.description}", 0, "")
+                }
+            }
+            return found.values.sortedBy { it.host }
+        } finally {
+            socket.close()
+        }
+    }
+
+    companion object {
+        private const val SLICE_MILLIS = 250L
+        private const val MAXIMUM_MOUNTS = 8
+        private const val MAXIMUM_TARGETS = 4
+
+        /** The addresses worth probing from the phone's address on its Wi-Fi network (just the access point if that is unknown). */
+        fun defaultTargets(sockets: MountSocketProvider): List<InetAddress> {
+            val local = sockets.localAddress
+            val names = if (local == null) {
+                listOf(SkyWatcherDiscovery.accessPointAddress)
+            } else {
+                SkyWatcherDiscovery.probeTargets(local.first, local.second)
+            }
+            return names.mapNotNull { name -> if (name.isEmpty()) null else runCatching { InetAddress.getByName(name) }.getOrNull() }
+        }
     }
 }
 

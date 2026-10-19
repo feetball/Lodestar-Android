@@ -32,7 +32,10 @@ import net.kuecker.lodestar.features.settings.SettingsActionRow
 import net.kuecker.lodestar.features.settings.SettingsSegmentedPicker
 import net.kuecker.lodestar.features.settings.SettingsSubScreen
 import net.kuecker.lodestar.kit.mount.MountPhase
+import net.kuecker.lodestar.kit.mount.MountProtocol
 import net.kuecker.lodestar.services.MountConnectionState
+import net.kuecker.lodestar.services.MountDemoKind
+import net.kuecker.lodestar.services.MountDiscoveryKind
 import net.kuecker.lodestar.services.MountFoundTelescope
 import net.kuecker.lodestar.services.MountProtocols
 import net.kuecker.lodestar.services.MountService
@@ -67,7 +70,7 @@ fun MountControlScreen(onBack: () -> Unit) {
  * of mount works with.
  */
 @Composable
-internal fun MountControlContent() {
+internal fun MountControlContent(onSync: (() -> Unit)? = null) {
     val service = rememberMountService()
     val draft = rememberMountDraft(service)
     val snapshot = service.snapshot
@@ -75,7 +78,7 @@ internal fun MountControlContent() {
     when (snapshot.state) {
         MountConnectionState.DISCONNECTED -> MountConnectionSection(service, draft, snapshot)
         MountConnectionState.CONNECTING -> Unit
-        MountConnectionState.CONNECTED -> MountOperateSection(service, snapshot)
+        MountConnectionState.CONNECTED -> MountOperateSection(service, snapshot, onSync)
     }
     MountLimitsSection(service, draft)
     MountSafetySection()
@@ -136,18 +139,27 @@ private fun MountStatusSection(service: MountService, snapshot: MountSnapshot) {
                     InfoRow("State", MountText.phaseLine(snapshot))
                     InfoRow(
                         "Alignment",
-                        when (snapshot.status.isAligned ?: capabilities.isAligned) {
-                            true -> "Aligned"
-                            false -> "Not aligned"
-                            null -> "Not reported"
-                        },
+                        snapshot.skyWatcher?.let(MountText::alignmentLine)
+                            ?: when (snapshot.isAligned ?: capabilities.isAligned) {
+                                true -> "Aligned"
+                                false -> "Not aligned"
+                                null -> "Not reported"
+                            },
                     )
+                    snapshot.skyWatcher?.let { info ->
+                        info.pierSide?.let { InfoRow("Pier side", MountText.pierSideLine(it)) }
+                        MountText.trackingLine(snapshot)?.let { InfoRow("Tracking", it) }
+                    }
                     InfoRow("Can", MountText.abilities(capabilities).joinToString(", "))
                 }
             }
-            if (snapshot.status.isAligned == false) {
+            MountText.notAlignedBanner(snapshot)?.let {
                 SettingsDivider()
-                SettingsRow { MountMessage("The mount is not aligned. Align it on the hand controller, then continue.", isError = true) }
+                SettingsRow { MountMessage(it, isError = true) }
+            }
+            MountText.trackingStopLine(snapshot)?.let {
+                SettingsDivider()
+                SettingsRow { MountMessage(it, isError = true) }
             }
         }
         snapshot.linkProblem?.let {
@@ -234,6 +246,9 @@ private fun MountConnectionSection(service: MountService, draft: MountDraft, sna
             fractionDigits = 0,
         )
         if (option.supportsDiscovery) MountDiscoveryRows(draft)
+        if (option.protocol == MountProtocol.SKYWATCHER) {
+            MountSkyWatcherHomeRows(service.preferences.settings.advanced.skyWatcherMode)
+        }
         SettingsDivider()
         SettingsRow {
             LodestarButton(
@@ -246,10 +261,15 @@ private fun MountConnectionSection(service: MountService, draft: MountDraft, sna
             snapshot.connectProblem?.let { MountMessage(it, isError = true) }
             SettingsCaption("Join the mount's Wi-Fi network first. Connecting never moves the mount.")
         }
-        SettingsDivider()
-        SettingsActionRow("Try a simulated mount", onClick = { service.connect(draft.connection(), demo = true) }, icon = Icons.Outlined.PlayCircle)
+        for (kind in MountDemoKind.entries) {
+            SettingsDivider()
+            SettingsActionRow(kind.title, onClick = { service.connect(demoConnection(kind), demo = kind) }, icon = Icons.Outlined.PlayCircle)
+        }
         SettingsRow {
-            SettingsCaption("A mount without hardware, to see how Go to, Sync and the nudge arrows work.")
+            SettingsCaption(
+                "A mount without hardware, to see how Go to, Sync and the nudge arrows work. The Sky-Watcher one also " +
+                    "shows the set-up and the alignment on stars.",
+            )
         }
     }
 }
@@ -258,9 +278,11 @@ private fun MountConnectionSection(service: MountService, draft: MountDraft, sna
 private fun MountDiscoveryRows(draft: MountDraft) {
     val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
+    val kind = draft.option.discovery ?: return
+    val isAlpaca = kind == MountDiscoveryKind.ALPACA
     SettingsDivider()
     SettingsActionRow(
-        if (draft.isSearching) "Searching…" else "Find Alpaca devices",
+        if (draft.isSearching) "Searching…" else kind.buttonTitle,
         onClick = { draft.search(scope) },
         icon = Icons.Outlined.Search,
         enabled = !draft.isSearching,
@@ -276,34 +298,38 @@ private fun MountDiscoveryRows(draft: MountDraft) {
     val found = draft.found
     if (found != null && found.isEmpty() && !draft.isSearching) {
         SettingsRow {
-            SettingsCaption("No Alpaca telescope answered. Check that the server is running on this Wi-Fi network, or type its address and port.")
+            SettingsCaption(kind.emptyText)
         }
     }
     for (telescope in found.orEmpty()) {
         SettingsDivider()
-        MountFoundRow(telescope, isChosen = telescope.host == draft.host && telescope.port == draft.port && telescope.deviceNumber == draft.deviceNumber) {
+        MountFoundRow(
+            telescope,
+            showsDevice = isAlpaca,
+            isChosen = telescope.host == draft.host && telescope.port == draft.port && (!isAlpaca || telescope.deviceNumber == draft.deviceNumber),
+        ) {
             draft.choose(telescope)
         }
     }
     val name = draft.deviceName
-    if (name != null) {
+    if (isAlpaca && name != null) {
         SettingsDivider()
         SettingsRow { InfoRow("Telescope", "$name (device ${draft.deviceNumber})") }
     }
-    if (draft.option.supportsDiscovery && found == null && name == null) {
+    if (isAlpaca && found == null && name == null) {
         SettingsRow { Text("Device 0 is used unless you pick a telescope.", color = palette.tertiaryText, style = MaterialTheme.typography.bodySmall) }
     }
 }
 
 @Composable
-private fun MountFoundRow(telescope: MountFoundTelescope, isChosen: Boolean, onClick: () -> Unit) {
+private fun MountFoundRow(telescope: MountFoundTelescope, showsDevice: Boolean, isChosen: Boolean, onClick: () -> Unit) {
     val palette = LocalPalette.current
     SettingsRow(onClick = onClick, modifier = Modifier.semantics(mergeDescendants = true) { role = Role.Button }) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(telescope.deviceName, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "${telescope.host}:${telescope.port} · device ${telescope.deviceNumber}",
+                    "${telescope.host}:${telescope.port}" + if (showsDevice) " · device ${telescope.deviceNumber}" else "",
                     color = palette.secondaryText,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -316,10 +342,11 @@ private fun MountFoundRow(telescope: MountFoundTelescope, isChosen: Boolean, onC
 // Connected
 
 @Composable
-private fun MountOperateSection(service: MountService, snapshot: MountSnapshot) {
+private fun MountOperateSection(service: MountService, snapshot: MountSnapshot, onSync: (() -> Unit)?) {
     val capabilities = snapshot.capabilities ?: return
     val scope = rememberCoroutineScope()
     val settings = service.preferences.settings
+    snapshot.skyWatcher?.let { MountSkyWatcherSetupSection(service, snapshot, it, onSync) }
     SettingsSection(title = "Controls") {
         if (capabilities.canSetTracking) {
             SettingsToggleRow(
@@ -330,7 +357,7 @@ private fun MountOperateSection(service: MountService, snapshot: MountSnapshot) 
             )
             SettingsDivider()
         }
-        if (capabilities.canSetSiteAndTime) {
+        if (capabilities.canSetSiteAndTime && snapshot.skyWatcher == null) {
             SettingsActionRow("Send location and time now", onClick = { scope.launch { service.sendSiteAndTime() } })
             SettingsRow { SettingsCaption("Sends your observing location and the phone's time (UTC) to the mount.") }
             SettingsDivider()
@@ -385,16 +412,27 @@ private fun MountLimitsSection(service: MountService, draft: MountDraft) {
             )
         }
         SettingsDivider()
-        SettingsToggleRow(
-            title = "Send location and time when connecting",
-            checked = settings.sendsSiteAndTime,
-            onCheckedChange = { enabled ->
-                preferences.update { it.copy(sendsSiteAndTime = enabled) }
-                service.settingsChanged()
-            },
-            caption = "Mounts that work out their own sky need the right place and UTC time. Turn this off if the mount's " +
-                "hand controller or another app already sets them.",
-        )
+        if (option.protocol == MountProtocol.SKYWATCHER) {
+            SettingsRow {
+                Text(
+                    "Location and time",
+                    color = LocalPalette.current.primaryText,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                SettingsCaption(SITE_AND_TIME_TEXT)
+            }
+        } else {
+            SettingsToggleRow(
+                title = "Send location and time when connecting",
+                checked = settings.sendsSiteAndTime,
+                onCheckedChange = { enabled ->
+                    preferences.update { it.copy(sendsSiteAndTime = enabled) }
+                    service.settingsChanged()
+                },
+                caption = "Mounts that work out their own sky need the right place and UTC time. Turn this off if the mount's " +
+                    "hand controller or another app already sets them.",
+            )
+        }
         SettingsDivider()
         SettingsMenuPicker(
             title = "Largest sync correction",
@@ -406,7 +444,10 @@ private fun MountLimitsSection(service: MountService, draft: MountDraft) {
             },
         )
         SettingsRow {
-            SettingsCaption("A sync that would move the mount's idea of its position by more than this is refused, which catches a wrong star.")
+            SettingsCaption(
+                "A sync that would move the mount's idea of its position by more than this is refused, which catches a wrong " +
+                    "star. Sky-Watcher Wi-Fi mounts ignore this: they judge a star by how well it fits the others.",
+            )
         }
         if (option.advancedFields.isNotEmpty()) {
             SettingsDivider()
@@ -418,3 +459,11 @@ private fun MountLimitsSection(service: MountService, draft: MountDraft) {
         }
     }
 }
+
+/** The connection a simulated mount of [kind] shows in the status (it never touches the network). */
+private fun demoConnection(kind: MountDemoKind) = MountProtocols.option(
+    when (kind) {
+        MountDemoKind.LX200 -> MountProtocol.LX200
+        MountDemoKind.SKYWATCHER -> MountProtocol.SKYWATCHER
+    },
+).defaultConnection()

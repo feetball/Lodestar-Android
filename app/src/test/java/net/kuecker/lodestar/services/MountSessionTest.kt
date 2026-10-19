@@ -230,7 +230,7 @@ class MountSessionTest {
     @Test
     fun cancellingTheConnectUnblocksAndReportsCancelled() {
         val opened = CountDownLatch(1)
-        val blocking = MountLinkFactory { _, _, _, track ->
+        val blocking = MountLinkFactory { _, _, _, _, track ->
             val closed = CountDownLatch(1)
             track(Closeable { closed.countDown() })
             opened.countDown()

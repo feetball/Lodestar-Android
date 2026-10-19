@@ -3,6 +3,7 @@ package net.kuecker.lodestar.services
 import net.kuecker.lodestar.kit.mount.AlpacaConfiguration
 import net.kuecker.lodestar.kit.mount.AlpacaDriver
 import net.kuecker.lodestar.kit.mount.AlpacaEndpoint
+import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.mount.AlpacaTransport
 import net.kuecker.lodestar.kit.mount.LX200Configuration
 import net.kuecker.lodestar.kit.mount.LX200Driver
@@ -14,6 +15,10 @@ import net.kuecker.lodestar.kit.mount.MountProtocol
 import net.kuecker.lodestar.kit.mount.MountTransport
 import net.kuecker.lodestar.kit.mount.NexStarConfiguration
 import net.kuecker.lodestar.kit.mount.NexStarDriver
+import net.kuecker.lodestar.kit.mount.SkyWatcherConfiguration
+import net.kuecker.lodestar.kit.mount.SkyWatcherDiscovery
+import net.kuecker.lodestar.kit.mount.SkyWatcherDriver
+import net.kuecker.lodestar.kit.mount.SkyWatcherMountMode
 
 /** How the phone reaches the mount. */
 enum class MountLinkKind(val rawValue: String, val title: String) {
@@ -49,16 +54,40 @@ data class MountAdvanced(
     val swapEastWest: Boolean = false,
     /** Reverses north and south for fast moves. */
     val swapNorthSouth: Boolean = false,
+    /** Sky-Watcher Wi-Fi: how the mount is set up, for mounts that can be either; null takes it from the mount model. */
+    val skyWatcherMode: SkyWatcherMountMode? = null,
+    /** Sky-Watcher Wi-Fi: the first axis counts the other way round. */
+    val reverseAxis1: Boolean = false,
+    /** Sky-Watcher Wi-Fi: the second axis counts the other way round. */
+    val reverseAxis2: Boolean = false,
 )
 
 /** Which advanced options a protocol offers. */
-enum class MountAdvancedField { EPOCH, SWAP_EAST_WEST, SWAP_NORTH_SOUTH }
+enum class MountAdvancedField { EPOCH, SWAP_EAST_WEST, SWAP_NORTH_SOUTH, ARRANGEMENT, REVERSE_AXIS_1, REVERSE_AXIS_2 }
+
+/** The ways the form can look for mounts on the network, with the words for its button and for finding nothing. */
+enum class MountDiscoveryKind(val buttonTitle: String, val emptyText: String) {
+    /** ASCOM Alpaca servers answering the discovery broadcast. */
+    ALPACA(
+        "Find Alpaca devices",
+        "No Alpaca telescope answered. Check that the server is running on this Wi-Fi network, or type its address and port.",
+    ),
+
+    /** Sky-Watcher Wi-Fi mounts answering a probe datagram. */
+    SKYWATCHER(
+        "Find mount",
+        "No Sky-Watcher mount answered. Check that the mount is switched on and the phone is on its Wi-Fi network, " +
+            "or type its address.",
+    ),
+}
 
 /** What a protocol's driver is built from: the connection options, the clock and the opened transport. */
 class MountDriverContext(
     val connection: MountConnection,
     val advanced: MountAdvanced,
     val clock: MountClock,
+    /** Where the phone is: mounts that work out the sky themselves (Sky-Watcher Wi-Fi) need the site. */
+    val location: GeographicLocation,
     /** The byte stream for [MountLinkKind.TCP] and [MountLinkKind.UDP] links. */
     val stream: MountTransport?,
     /** The HTTP client for [MountLinkKind.HTTP] links. */
@@ -86,11 +115,14 @@ class MountProtocolOption(
     val links: List<MountLinkKind>,
     /** The default address of each connection type. */
     val defaults: Map<MountLinkKind, MountEndpoint>,
-    /** Whether the form can search the local network for devices (Alpaca). */
-    val supportsDiscovery: Boolean = false,
+    /** How the form can search the local network for this kind of mount, if it can. */
+    val discovery: MountDiscoveryKind? = null,
     val advancedFields: Set<MountAdvancedField> = emptySet(),
     val createDriver: (MountDriverContext) -> MountDriver,
 ) {
+    /** Whether the form offers a search for this kind of mount. */
+    val supportsDiscovery: Boolean get() = discovery != null
+
     init {
         require(links.isNotEmpty() && links.all { it in defaults }) { "every connection type needs a default address" }
     }
@@ -119,14 +151,44 @@ object MountProtocols {
         },
     )
 
+    private val skyWatcher = MountProtocolOption(
+        protocol = MountProtocol.SKYWATCHER,
+        title = SkyWatcherDriver.menuTitle,
+        summary = "Sky-Watcher mounts with built-in Wi-Fi, and EQ mounts with the Sky-Watcher Wi-Fi adapter",
+        explanation = "Works with the Wi-Fi built into the Sky-Watcher AZ-GTi and AZ-GTe (on their tripod, or on a " +
+            "wedge as an equatorial mount), the Star Adventurer GTi, and EQ mounts with the Sky-Watcher Wi-Fi " +
+            "adapter. Join the mount's own Wi-Fi network first. These mounts know nothing about the sky: Lodestar " +
+            "does the pointing from your location and the phone's clock, and sends the mount nothing but motor " +
+            "commands. So switch the mount on at its home position (the pictures show it) and align it on one to " +
+            "three stars before the first Go to.",
+        links = listOf(MountLinkKind.UDP),
+        defaults = mapOf(MountLinkKind.UDP to MountEndpoint(SkyWatcherDiscovery.accessPointAddress, SkyWatcherDiscovery.port)),
+        discovery = MountDiscoveryKind.SKYWATCHER,
+        advancedFields = setOf(
+            MountAdvancedField.ARRANGEMENT, MountAdvancedField.REVERSE_AXIS_1, MountAdvancedField.REVERSE_AXIS_2,
+        ),
+        createDriver = { context ->
+            SkyWatcherDriver(
+                context.requireStream(),
+                context.clock,
+                SkyWatcherConfiguration(
+                    location = context.location,
+                    mode = context.advanced.skyWatcherMode,
+                    invertsAxis1 = context.advanced.reverseAxis1,
+                    invertsAxis2 = context.advanced.reverseAxis2,
+                ),
+            )
+        },
+    )
+
     private val nexstar = MountProtocolOption(
         protocol = MountProtocol.NEXSTAR,
         title = "Celestron NexStar / SynScan",
         summary = "NexStar and SynScan hand controllers with a Wi-Fi adapter",
         explanation = "Works with Celestron NexStar hand controls behind a Wi-Fi bridge (TCP, usually port 2000) and " +
-            "Sky-Watcher SynScan hand controls with the SynScan Wi-Fi adapter (UDP, usually port 11880). It does not " +
-            "talk to the Wi-Fi built into Star Adventurer GTi or AZ-GTi mounts. Do the star alignment on the hand " +
-            "controller first: it refuses to slew before that.",
+            "Sky-Watcher SynScan hand controls with the SynScan Wi-Fi adapter (UDP, usually port 11880). For the " +
+            "Wi-Fi built into Star Adventurer GTi and AZ-GTi mounts choose Sky-Watcher Wi-Fi instead. Do the star " +
+            "alignment on the hand controller first: it refuses to slew before that.",
         links = listOf(MountLinkKind.UDP, MountLinkKind.TCP),
         defaults = mapOf(
             MountLinkKind.UDP to MountEndpoint("192.168.4.1", 11880),
@@ -151,7 +213,7 @@ object MountProtocols {
             "(ASCOM Remote uses 11111).",
         links = listOf(MountLinkKind.HTTP),
         defaults = mapOf(MountLinkKind.HTTP to MountEndpoint("192.168.1.10", 11111)),
-        supportsDiscovery = true,
+        discovery = MountDiscoveryKind.ALPACA,
         advancedFields = setOf(MountAdvancedField.SWAP_EAST_WEST, MountAdvancedField.SWAP_NORTH_SOUTH),
         createDriver = { context ->
             AlpacaDriver(
@@ -166,7 +228,7 @@ object MountProtocols {
     )
 
     /** The protocols in the order of the picker. */
-    val all: List<MountProtocolOption> = listOf(lx200, nexstar, alpaca)
+    val all: List<MountProtocolOption> = listOf(lx200, skyWatcher, nexstar, alpaca)
 
     /** The option of [protocol], or the first one when the engine knows a protocol this list does not. */
     fun option(protocol: MountProtocol?): MountProtocolOption = all.firstOrNull { it.protocol == protocol } ?: all.first()

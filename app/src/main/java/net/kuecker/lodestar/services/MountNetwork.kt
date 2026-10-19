@@ -8,6 +8,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import java.io.IOException
 import java.net.DatagramSocket
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.Socket
 import java.net.UnknownHostException
@@ -82,6 +83,14 @@ class MountWifiNetwork(context: Context) : MountSocketProvider {
     }
 
     override val interfaceName: String? get() = interfaceNameValue
+
+    override val localAddress: Pair<String, Int>?
+        get() {
+            val network = wifi ?: return null
+            val entry = manager?.getLinkProperties(network)?.linkAddresses?.firstOrNull { it.address is Inet4Address } ?: return null
+            val host = entry.address.hostAddress ?: return null
+            return host to entry.prefixLength
+        }
 
     override fun createTcpSocket(): Socket = wifi?.socketFactory?.createSocket() ?: Socket()
 

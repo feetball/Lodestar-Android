@@ -3,6 +3,7 @@ package net.kuecker.lodestar.services
 import net.kuecker.lodestar.kit.mount.MountEpoch
 import net.kuecker.lodestar.kit.mount.MountNudgeRate
 import net.kuecker.lodestar.kit.mount.MountProtocol
+import net.kuecker.lodestar.kit.mount.SkyWatcherMountMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -74,6 +75,24 @@ class MountPreferencesTest {
         assertEquals(MountNudgeRate.FIND, restarted.nudgeRate)
         assertFalse(restarted.sendsSiteAndTime)
         assertEquals(MountAdvanced(MountEpoch.J2000, swapEastWest = true, swapNorthSouth = false), restarted.advanced)
+    }
+
+    @Test
+    fun theSkyWatcherOptionsAreKept() {
+        val preferences = MountPreferences(store)
+        preferences.update {
+            it.copy(advanced = it.advanced.copy(skyWatcherMode = SkyWatcherMountMode.EQUATORIAL, reverseAxis1 = true, reverseAxis2 = true))
+        }
+        val restarted = MountPreferences(store).settings.advanced
+        assertEquals(SkyWatcherMountMode.EQUATORIAL, restarted.skyWatcherMode)
+        assertTrue(restarted.reverseAxis1 && restarted.reverseAxis2)
+        preferences.update { it.copy(advanced = it.advanced.copy(skyWatcherMode = null, reverseAxis1 = false)) }
+        val automatic = MountPreferences(store).settings.advanced
+        assertNull(automatic.skyWatcherMode)
+        assertFalse(automatic.reverseAxis1)
+        assertTrue(automatic.reverseAxis2)
+        store.putString("skyWatcherArrangement", "sideways")
+        assertNull(MountPreferences(store).settings.advanced.skyWatcherMode)
     }
 
     @Test

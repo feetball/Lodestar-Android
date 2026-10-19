@@ -54,6 +54,9 @@ interface MountSocketProvider {
     /** The name of the network interface the sockets use, if known (to find its broadcast address). */
     val interfaceName: String? get() = null
 
+    /** The phone's IPv4 address on that network and the length of its network prefix, if known. */
+    val localAddress: Pair<String, Int>? get() = null
+
     /** The system's default network. */
     object System : MountSocketProvider {
         override fun createTcpSocket(): Socket = Socket()

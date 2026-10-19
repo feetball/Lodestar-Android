@@ -11,6 +11,7 @@ import net.kuecker.lodestar.app.ScreenshotScreen
 import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.services.MountConnectionState
+import net.kuecker.lodestar.services.MountDemoKind
 import net.kuecker.lodestar.services.MountService
 import net.kuecker.lodestar.services.MountTargeting
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -23,7 +24,7 @@ private const val CONNECT_TIMEOUT_MS = 30_000L
  * Nothing is remembered of the connection.
  */
 internal suspend fun MountService.connectDemoAndWait() {
-    if (snapshot.state == MountConnectionState.DISCONNECTED) connect(preferences.lastConnection, demo = true)
+    if (snapshot.state == MountConnectionState.DISCONNECTED) connect(preferences.lastConnection, demo = MountDemoKind.LX200)
     withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
         snapshotFlow { snapshot }.first { it.isConnected && it.status.position != null }
     }

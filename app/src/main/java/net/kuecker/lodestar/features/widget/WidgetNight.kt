@@ -189,7 +189,8 @@ internal object WidgetCalculator {
         val core = summary.milkyWayCore
         return WidgetCore(
             hasDarkness = summary.hasAstronomicalDarkness,
-            visibleWindows = core.visibleIntervals,
+            // A sliver of a few minutes (the core just grazing the darkness) is not worth announcing.
+            visibleWindows = core.visibleIntervals.filter { it.duration >= MINIMUM_CORE_SECONDS },
             bestTime = core.bestTime,
             maxAltitude = core.maxAltitude,
             bestAzimuth = core.bestAzimuth,
@@ -293,3 +294,6 @@ internal object WidgetCalculator {
         return nextRefresh(now, moments)
     }
 }
+
+/** The shortest Milky Way core window the widgets show, in seconds (as on iPhone). */
+private const val MINIMUM_CORE_SECONDS = 900.0

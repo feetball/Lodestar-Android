@@ -12,8 +12,8 @@ android {
         applicationId = "net.kuecker.lodestar"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.1"
     }
 
     // Release signing comes from Gradle properties (e.g. ~/.gradle/gradle.properties or -P on the command line),

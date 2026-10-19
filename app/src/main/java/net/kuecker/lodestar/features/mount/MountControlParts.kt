@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.kit.mount.MountEpoch
+import net.kuecker.lodestar.kit.mount.SkyWatcherMountMode
 import net.kuecker.lodestar.services.MountAdvanced
 import net.kuecker.lodestar.services.MountAdvancedField
 import net.kuecker.lodestar.services.MountProtocols
@@ -101,6 +102,52 @@ internal fun MountAdvancedRows(service: MountService, draft: MountDraft) {
             checked = advanced.swapEastWest,
             onCheckedChange = { value -> change { it.copy(swapEastWest = value) } },
             caption = "Turn on if the east and west arrows move the mount the wrong way. Applies the next time you connect.",
+        )
+    }
+    if (MountAdvancedField.ARRANGEMENT in fields) {
+        val modes = buildList<SettingsMenuOption<SkyWatcherMountMode?>> {
+            add(SettingsMenuOption("Automatic", null))
+            for (mode in SkyWatcherMountMode.entries) add(SettingsMenuOption(mountArrangementTitle(mode), mode))
+        }
+        SettingsDivider()
+        SettingsMenuPicker("Mount arrangement", advanced.skyWatcherMode, modes) { value -> change { it.copy(skyWatcherMode = value) } }
+        SettingsRow {
+            SettingsCaption(
+                "Automatic takes it from the mount model when it connects: the AZ-GTi and AZ-GTe are alt-azimuth, the Star " +
+                    "Adventurer GTi and EQ mounts equatorial. Choose Equatorial for an AZ-GTi on a wedge. Applies the next " +
+                    "time you connect.",
+            )
+        }
+    }
+    if (MountAdvancedField.REVERSE_AXIS_1 in fields || MountAdvancedField.REVERSE_AXIS_2 in fields) {
+        SettingsDivider()
+        SettingsRow {
+            SettingsCaption(
+                "Check after the first star, with tracking on: tap East on the nudge pad. The view must move east, so the " +
+                    "stars drift west in the camera. Tap North: the view must move north. If East and North are swapped, or " +
+                    "one of them runs backwards, reverse an axis here. Changing these applies the next time you connect " +
+                    "and clears the alignment.",
+            )
+        }
+    }
+    if (MountAdvancedField.REVERSE_AXIS_1 in fields) {
+        SettingsDivider()
+        SettingsToggleRow(
+            title = "Reverse axis 1",
+            checked = advanced.reverseAxis1,
+            onCheckedChange = { value -> change { it.copy(reverseAxis1 = value) } },
+            caption = "The azimuth axis of an alt-azimuth mount, the right ascension axis of an equatorial one. Turn on if East " +
+                "and West move the view the wrong way.",
+        )
+    }
+    if (MountAdvancedField.REVERSE_AXIS_2 in fields) {
+        SettingsDivider()
+        SettingsToggleRow(
+            title = "Reverse axis 2",
+            checked = advanced.reverseAxis2,
+            onCheckedChange = { value -> change { it.copy(reverseAxis2 = value) } },
+            caption = "The altitude axis of an alt-azimuth mount, the declination axis of an equatorial one. Turn on if North " +
+                "and South move the view the wrong way.",
         )
     }
     if (MountAdvancedField.SWAP_NORTH_SOUTH in fields) {

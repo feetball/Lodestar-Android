@@ -35,6 +35,7 @@ fun OnlineScreenshotEffect() {
     if (feeds.isEmpty()) return
     LaunchedEffect(feeds) {
         val online = app.online
+        online.awaitFlags()
         for (feed in feeds) online.setEnabled(feed, true)
         for (feed in feeds) {
             for (resource in feed.resources) {

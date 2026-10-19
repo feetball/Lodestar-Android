@@ -68,6 +68,9 @@ internal enum class WidgetLayoutKind {
     LIST_TALL,
 }
 
+/** From this height the narrow list gives a time window two lines. */
+private val NARROW_TWO_LINES_FROM = 200.dp
+
 /** The sizes the widgets are laid out for (Glance picks the largest that fits) and what shows at each. */
 internal object WidgetSizes {
     val small = DpSize(100.dp, 90.dp)
@@ -258,21 +261,18 @@ private fun NeedsLocation(kind: WidgetLayoutKind) {
     }
 }
 
-/** As small as a widget gets (100 × 90): the Moon's lit part, and the darkness window under it. */
+/** As small as a widget gets (100 × 90): the Moon's lit part on one line, and the darkness window, two lines at most, under it. */
 @Composable
 private fun SmallLayout(copy: WidgetCopy, moonImage: Bitmap?) {
-    Column(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)) {
+    Column(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            MoonPicture(moonImage, 26.dp)
+            MoonPicture(moonImage, 24.dp)
             Spacer(GlanceModifier.width(6.dp))
-            Column {
-                Text(copy.moon.trailing.orEmpty(), style = primaryStyle(14.sp, bold = true), maxLines = 1)
-                Text("lit", style = secondaryStyle(11.sp), maxLines = 1)
-            }
+            Text("${copy.moon.trailing.orEmpty()} lit", style = primaryStyle(12.sp, bold = true), maxLines = 1)
         }
         Spacer(GlanceModifier.defaultWeight())
         LabelLine(Slot.DARK, copy.dark, null, short = true)
-        Text(copy.dark.value, style = accentStyle(13.sp), maxLines = 2)
+        Text(copy.dark.value, style = accentStyle(12.sp), maxLines = 2)
     }
 }
 
@@ -329,10 +329,12 @@ private fun RowScope.Tile(slot: Slot, copy: WidgetCopy, moonImage: Bitmap?, show
 /** 2×3 and taller but narrow: the four items one under the other, a label and one line each. */
 @Composable
 private fun NarrowListLayout(copy: WidgetCopy, moonImage: Bitmap?) {
+    // A time window wraps to a second line when the widget is tall enough for four items with two lines each.
+    val valueLines = if (LocalSize.current.height >= NARROW_TWO_LINES_FROM) 2 else 1
     Column(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)) {
         for ((index, slot) in Slot.entries.withIndex()) {
             if (index > 0) Spacer(GlanceModifier.defaultWeight())
-            Entry(slot, copy, moonImage, short = true, detail = false, extra = false)
+            Entry(slot, copy, moonImage, short = true, detail = false, extra = false, valueSize = 13.sp, valueLines = valueLines)
         }
     }
 }
@@ -363,11 +365,12 @@ private fun Entry(
     detail: Boolean,
     extra: Boolean,
     valueSize: TextUnit = 14.sp,
+    valueLines: Int = 1,
 ) {
     val item = copy.item(slot)
     Column(GlanceModifier.fillMaxWidth()) {
         LabelLine(slot, item, moonImage, short)
-        Text(item.value, style = valueStyle(slot, valueSize), maxLines = 1)
+        Text(item.value, style = valueStyle(slot, valueSize), maxLines = valueLines)
         if (detail) item.detail?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }
         if (extra) item.extra?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }
     }

@@ -93,6 +93,9 @@ class OnlineDataService(
         }
     }
 
+    /** Returns once the saved switches have been read at start (a switch made before would be overwritten by them). */
+    suspend fun awaitFlags() = flagsRead.await()
+
     /** Whether [feed] is switched on. */
     fun isEnabled(feed: OnlineFeed): Boolean = statuses.getValue(feed).isEnabled
 

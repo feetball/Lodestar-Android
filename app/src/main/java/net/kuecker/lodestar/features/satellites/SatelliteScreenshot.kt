@@ -11,6 +11,7 @@ import net.kuecker.lodestar.app.AppModel
 import net.kuecker.lodestar.app.ScreenshotScreen
 import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.features.aim.AimViewModel
+import net.kuecker.lodestar.features.mosaic.awaitScreenshotAim
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.services.SatellitePassItem
 import net.kuecker.lodestar.services.SatellitePasses
@@ -56,6 +57,8 @@ private const val CAMERA_OFFSET_ALTITUDE = 9.0
 fun SatelliteAimScreenshotEffect(model: AimViewModel) {
     val app = LocalAppModel.current
     ScreenshotScreenEffect(ScreenshotScreen.AIM_SATELLITE) {
+        // Choosing a target ends the satellite guidance: let the screenshot's target settle first.
+        awaitScreenshotAim(app)
         val first = firstPass(app) ?: return@ScreenshotScreenEffect
         val observer = app.observerContext?.observer ?: return@ScreenshotScreenEffect
         val source = SatelliteFollowSource(first.satellite, first.name, observer, first)

@@ -116,7 +116,19 @@ API docs for both languages are in `lodestar-kit/docs/API-*.md` (Android repo).
   - The large-type fix (Home Screen text capped at xxxLarge) is not yet confirmed in a screenshot.
 - **Not yet looked at:** the online-data screens and the widgets of the final run.
 
-**Android** (branch `review-harness`): see that branch's last commits and the agent's notes in them.
+**Android** (branch `review-harness`, HEAD `77226ab`, includes main up to `f90c5b6`):
+- **Run it:** `gh workflow run emulator.yml --ref review-harness -f set=review`. It takes about 33 min and produces
+  about 226 images per size, plus a crash check.
+- **Harness:** `screen=` / `online=` / `event=` keys in `ScreenshotMode.kt`, fixtures in
+  `app/src/debug/assets/screenshot`, and the widget host in `app/src/debug`.
+- **Already fixed on the branch:**
+  - The mount nudge, Sync and Go to sheets: height, alignment, and scrolling at 360 dp.
+  - Widget layouts at small sizes.
+  - The cloud card labels.
+  - Use of the app clock.
+- **Not yet verified:** the last run (39179236037). Re-run, check `wg-*`, `sa-01`, `sa-04` and `od-02`, then merge
+  the branch into `main`.
+- **Open defect:** Objects list rows cut the small-body subtitle ("Asteroid · ma…", `hz-10-objects`).
 
 ## Known small differences and open items (1.2 candidates)
 

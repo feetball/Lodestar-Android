@@ -28,6 +28,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
@@ -75,7 +77,7 @@ internal fun GuidanceHUD(
                 val layoutSize = if (rotation.swapsAxes) DpSize(maxHeight, maxWidth) else DpSize(maxWidth, maxHeight)
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Box(Modifier.requiredSize(layoutSize).rotate(rotation.degrees.toFloat())) {
-                        AimHUDLayout(model, onSheet, isActive, isWide = layoutSize.width > layoutSize.height)
+                        AimHUDLayout(model, onSheet, isActive, rotation, isWide = layoutSize.width > layoutSize.height)
                     }
                 }
             }
@@ -87,22 +89,33 @@ private const val ROTATION_FADE_MS = 200
 
 /** The HUD's content for a given shape: controls under the readout in a tall layout, beside it in a wide one. */
 @Composable
-private fun AimHUDLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActive: Boolean, isWide: Boolean) {
+private fun AimHUDLayout(
+    model: AimViewModel,
+    onSheet: (AimSheet) -> Unit,
+    isActive: Boolean,
+    rotation: AimHUDRotation,
+    isWide: Boolean,
+) {
     val palette = LocalPalette.current
     CompositionLocalProvider(LocalContentColor provides palette.primaryText) {
         Box(Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp)) {
-            if (isWide) WideLayout(model, onSheet, isActive) else TallLayout(model, onSheet, isActive)
+            if (isWide) WideLayout(model, onSheet, isActive, rotation) else TallLayout(model, onSheet, isActive, rotation)
         }
     }
 }
 
 @Composable
-private fun TallLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActive: Boolean) {
+private fun TallLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActive: Boolean, rotation: AimHUDRotation) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             AimStatusChips(model)
             Spacer(Modifier.weight(1f))
-            AimReadout(model, onSheet, isActive)
+            // The readout is the top of the stack of panels; the arrow keeps its distance readout clear of it. A
+            // layout that is fading out after a turn of the HUD must not publish its stale place.
+            AimReadout(
+                model, onSheet, isActive,
+                Modifier.onGloballyPositioned { if (model.hudRotation == rotation) model.hudPanels = it.boundsInRoot() },
+            )
             MountHudCard(model.guidanceTarget)
             AimControlsBar(model, onSheet)
         }
@@ -112,7 +125,7 @@ private fun TallLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
 }
 
 @Composable
-private fun WideLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActive: Boolean) {
+private fun WideLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActive: Boolean, rotation: AimHUDRotation) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(
             Modifier.weight(1f, fill = false).widthIn(max = WIDE_READOUT_WIDTH).fillMaxHeight().padding(end = 10.dp),
@@ -120,7 +133,10 @@ private fun WideLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
         ) {
             AimStatusChips(model)
             Spacer(Modifier.weight(1f))
-            AimReadout(model, onSheet, isActive)
+            AimReadout(
+                model, onSheet, isActive,
+                Modifier.onGloballyPositioned { if (model.hudRotation == rotation) model.hudPanels = null },
+            )
             MountHudCard(model.guidanceTarget)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {

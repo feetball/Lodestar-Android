@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
@@ -22,6 +26,8 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
@@ -57,12 +63,28 @@ internal fun GuidanceArrowView(model: AimViewModel, isActive: Boolean, modifier:
         guidance = frame?.guidance,
         rotation = model.hudRotation,
         axes = model.screenAxes,
+        panels = model.hudPanels,
         modifier = modifier.fillMaxSize().clearAndSetSemantics {},
     )
 }
 
 /** Distance of the texts from the reticle: inside the ring, below the reticle as the reader sees it. */
 private val LABEL_OFFSET = 50.dp
+
+/** Half the height of the distance readout with its backing, and the space kept between it and the panels. */
+private val READOUT_HALF_HEIGHT = 17.dp
+private val READOUT_GAP = 6.dp
+
+/**
+ * Where the distance readout goes, in dp below the reticle as the reader sees it: in its place below the reticle when
+ * there are at least [room] dp before the panels begin, above the reticle when the panels leave less (the cards at
+ * the bottom of the HUD cover the middle of a small screen), and then no lower than the panels' top edge.
+ */
+private fun readoutOffset(room: Dp): Dp {
+    if (room >= LABEL_OFFSET + READOUT_HALF_HEIGHT + READOUT_GAP) return LABEL_OFFSET
+    val clearOfPanels = room - READOUT_GAP - READOUT_HALF_HEIGHT
+    return if (clearOfPanels < -LABEL_OFFSET) clearOfPanels else -LABEL_OFFSET
+}
 
 /** The check mark's badge sits on the ring; this is its radius. */
 private val BADGE_RADIUS = 15.dp
@@ -73,15 +95,27 @@ private fun Density.ringRadius(heightPx: Float): Float = min(100.dp.toPx(), max(
 /**
  * The ring and arrow around the middle of the available space, and the texts. [rotation] turns the texts so they read
  * upright; the arrow lives in the phone's own screen axes ([axes]), so it ignores the HUD rotation: it always points
- * the way on the glass.
+ * the way on the glass. [panels] is where the HUD's stack of panels lies (in window pixels): the distance readout
+ * keeps clear of it.
  */
 @Composable
-private fun AimArrowContent(guidance: Guidance?, rotation: AimHUDRotation, axes: ScreenAxes, modifier: Modifier) {
+private fun AimArrowContent(
+    guidance: Guidance?,
+    rotation: AimHUDRotation,
+    axes: ScreenAxes,
+    panels: Rect?,
+    modifier: Modifier,
+) {
     val palette = LocalPalette.current
     val density = LocalDensity.current
     val arrow = remember { Path() }
     val checkMark = remember { Path() }
-    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+    // Where the middle of this stage, and so the reticle, lies in the window.
+    var centerY by remember { mutableFloatStateOf(Float.NaN) }
+    BoxWithConstraints(
+        modifier.onGloballyPositioned { centerY = it.positionInRoot().y + it.size.height / 2f },
+        contentAlignment = Alignment.Center,
+    ) {
         if (guidance == null) return@BoxWithConstraints
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2, size.height / 2)
@@ -124,7 +158,15 @@ private fun AimArrowContent(guidance: Guidance?, rotation: AimHUDRotation, axes:
             val ringDp = with(density) { ringRadius(constraints.maxHeight.toFloat()).toDp() }
             ArrowLabel("On target", palette.positive, 22.sp, rotation, offset = -(ringDp + BADGE_RADIUS + 19.dp))
         } else {
-            ArrowLabel(AimFormat.angle(guidance.separation), palette.guidance, 26.sp, rotation)
+            // The room between the reticle and the panels, as the reader sees it: the panels lie at the bottom of an
+            // upright HUD and at the top of the screen when it is upside down. A sideways HUD has them at the side.
+            val roomPx = if (panels == null || centerY.isNaN()) Float.POSITIVE_INFINITY else when (rotation) {
+                AimHUDRotation.UPRIGHT -> panels.top - centerY
+                AimHUDRotation.UPSIDE_DOWN -> centerY - panels.bottom
+                AimHUDRotation.CLOCKWISE, AimHUDRotation.COUNTERCLOCKWISE -> Float.POSITIVE_INFINITY
+            }
+            val offset = readoutOffset(with(density) { roomPx.toDp() })
+            ArrowLabel(AimFormat.angle(guidance.separation), palette.guidance, 26.sp, rotation, offset)
         }
     }
 }

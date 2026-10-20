@@ -13,20 +13,24 @@ import androidx.compose.ui.unit.dp
 /**
  * Lays its children out in rows that wrap when the width runs out, each row centred. Children get their natural size
  * (up to the available width); the layout is as wide as its widest row, or as the constraints demand (use
- * `fillMaxWidth()` to centre the rows in the full width).
+ * `fillMaxWidth()` to centre the rows in the full width). A row may reach [bleed] beyond each side of the available
+ * width, into the margin around the layout, before the next child starts a new row.
  */
 @Composable
 internal fun AimFlowLayout(
     modifier: Modifier = Modifier,
     spacing: Dp = 6.dp,
     lineSpacing: Dp = 6.dp,
+    bleed: Dp = 0.dp,
     content: @Composable () -> Unit,
 ) {
     Layout(content, modifier) { measurables, constraints ->
         val spacingPx = spacing.roundToPx()
         val lineSpacingPx = lineSpacing.roundToPx()
+        val rowLimit =
+            if (constraints.hasBoundedWidth) constraints.maxWidth + 2 * bleed.roundToPx() else constraints.maxWidth
         val placeables = measurables.map { it.measure(Constraints(maxWidth = constraints.maxWidth)) }
-        val rows = rows(placeables, constraints.maxWidth, spacingPx)
+        val rows = rows(placeables, rowLimit, spacingPx)
         val rowWidths = rows.map { row -> rowWidth(row, spacingPx) }
         val rowHeights = rows.map { row -> row.maxOfOrNull { it.height } ?: 0 }
         val width = constraints.constrainWidth(rowWidths.maxOrNull() ?: 0)

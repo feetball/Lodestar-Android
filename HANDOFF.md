@@ -84,6 +84,9 @@ A pixel scan checks that night mode is pure red (no green or blue).
 3. **Android release 1.1 (3)**
    - Build a signed bundle:
      `./gradlew :app:bundleRelease -Plodestar.signing.storeFile=<keystore> -Plodestar.signing.storePassword=<pw> -Plodestar.signing.keyAlias=upload -Plodestar.signing.keyPassword=<pw> --no-configuration-cache`
+     Without a JDK or the keystore on the machine: Actions > **Release bundle** > Run workflow builds, signs and verifies the same
+     bundle from the repository secrets listed in `.github/workflows/release.yml` and offers it as the `lodestar-release-bundle`
+     artifact to download and upload by hand in Play Console.
    - Verify the signature with `jarsigner -verify`.
    - Upload it to the **closed testing (alpha)** track with `tools/play_api.py`, using the release notes from
      `PlayStore/listing/en-US/release_notes.txt`, and commit the new full description through the same edit.

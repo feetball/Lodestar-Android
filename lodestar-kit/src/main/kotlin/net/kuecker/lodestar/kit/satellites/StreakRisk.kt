@@ -332,18 +332,6 @@ internal class StreakEvaluator(
     private val sampleArc = AstroMath.clamp(0.5 * smallestSide, 0.2, 3.0)
     private val threshold = EarthShadow.sunlitThreshold
 
-    companion object {
-        /**
-         * The most the direction to a satellite at [range] kilometres can turn, in radians, while it covers at most
-         * `speed * window` kilometres. That is `asin(v·T/ρ)` only while the satellite cannot reach the observer; one
-         * that can cover its range may fly past and end up on the other side, so then any direction is possible.
-         */
-        fun maximumTurn(speed: Double, window: Double, range: Double): Double {
-            val ratio = speed * window / range
-            return if (ratio < 1.0) asin(ratio) else PI
-        }
-    }
-
     fun evaluate(satellite: Satellite, output: MutableList<RawCrossing>): StreakOutcome {
         val propagator = satellite.propagator
         val minutes = (start - propagator.epochReferenceSeconds) / 60.0
@@ -482,7 +470,7 @@ internal class StreakEvaluator(
         return CrossingPoint(look.date, look.azimuth, look.altitude, frame.position(look.direction))
     }
 
-    private companion object {
+    internal companion object {
         const val minimumStep: Double = 0.05
         const val maximumStep: Double = 5.0
         const val minimumRangeKilometers: Double = 150.0
@@ -490,6 +478,16 @@ internal class StreakEvaluator(
 
         /** Windows up to this many seconds use the shadow shortcut of the prefilter. */
         const val shadowShortcutLimit: Double = 1_200.0
+
+        /**
+         * The most the direction to a satellite at [range] kilometres can turn, in radians, while it covers at most
+         * `speed * window` kilometres. That is `asin(v·T/ρ)` only while the satellite cannot reach the observer; one
+         * that can cover its range may fly past and end up on the other side, so then any direction is possible.
+         */
+        fun maximumTurn(speed: Double, window: Double, range: Double): Double {
+            val ratio = speed * window / range
+            return if (ratio < 1.0) asin(ratio) else PI
+        }
     }
 }
 

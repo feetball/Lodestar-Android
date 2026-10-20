@@ -64,6 +64,8 @@ fun RootScreen(app: AppModel) {
 @Composable
 private fun Tabs(app: AppModel) {
     val palette = app.palette
+    // The night palette's tertiary red is nearly invisible on the bar (about 1.5:1), so the other tabs use the next one up.
+    val unselected = if (palette.isNight) palette.secondaryText else palette.tertiaryText
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = palette.background,
@@ -78,8 +80,8 @@ private fun Tabs(app: AppModel) {
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = palette.accent,
                             selectedTextColor = palette.accent,
-                            unselectedIconColor = palette.tertiaryText,
-                            unselectedTextColor = palette.tertiaryText,
+                            unselectedIconColor = unselected,
+                            unselectedTextColor = unselected,
                             indicatorColor = palette.surfaceRaised,
                         ),
                     )

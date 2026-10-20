@@ -923,6 +923,7 @@ class SkyWatcherMountTests {
         // Scheat is 77° up, south of the zenith: north is straight up, towards the mount's overhead limit of 88°.
         val scheat = EquatorialCoordinate.fromRightAscensionHours(23.0629, 28.0828)
         assertTrue(goto(rig, scheat) < 0.1)
+        rig.driver.diagLog.setLength(0)
         rig.controller.nudge(MountNudgeDirection.NORTH, MountNudgeRate.SLEW, 30.0)
         for (step in 0 until 60) {
             rig.clock.advance(0.5)
@@ -930,13 +931,32 @@ class SkyWatcherMountTests {
         }
         rig.controller.stopNudge()
         val altitude = realAltitude(rig)
-        assertTrue(altitude in 85.0..88.6, "$altitude")
+        assertTrue(altitude in 85.0..88.6, "WITHGUARD $altitude LOG ${rig.driver.diagLog}")
         assertNull(rig.driver.trackingStopReason)
         // The mount tracks at the place where the nudge ended.
         val place = rig.trueJ2000()
         SkyWatcherTestSupport.poll(rig, 60)
         assertTrue(rig.trueJ2000().angularSeparation(place) < 0.05)
         assertEquals(true, rig.controller.poll().isTracking)
+    }
+
+    @Test
+    fun diagOverheadWithoutTheGuard() {
+        val rig = SkyWatcherTestSupport.rig(altAz, SkyWatcherPointingErrors(axis1Index = 1.0), settings = MountSettings(maximumNudgeSeconds = 30.0))
+        rig.driver.jumpGuardForDiagnosis = false
+        rig.controller.connect()
+        aligned(rig, altAzimuthAlignmentStars)
+        val scheat = EquatorialCoordinate.fromRightAscensionHours(23.0629, 28.0828)
+        assertTrue(goto(rig, scheat) < 0.1)
+        rig.driver.diagLog.setLength(0)
+        rig.controller.nudge(MountNudgeDirection.NORTH, MountNudgeRate.SLEW, 30.0)
+        for (step in 0 until 60) {
+            rig.clock.advance(0.5)
+            rig.controller.poll()
+        }
+        rig.controller.stopNudge()
+        val altitude = realAltitude(rig)
+        assertTrue(false, "NOGUARD $altitude stop=${rig.driver.trackingStopReason} LOG ${rig.driver.diagLog}")
     }
 
     @Test

@@ -98,6 +98,10 @@ class SkyWatcherDriver(
 
     private enum class Motion { STOPPED, TRACKING, SLEWING, NUDGING }
 
+    /** TEMPORARY diagnosis aids, not for merging. */
+    internal var jumpGuardForDiagnosis: Boolean = true
+    internal val diagLog = StringBuilder()
+
     private class Leg(val axis1: Double?, val axis2: Double?)
 
     private class Slew(val goal: EquatorialCoordinate, var legs: MutableList<Leg>, var refinements: Int, var lastCommand: Instant)
@@ -766,6 +770,7 @@ class SkyWatcherDriver(
             return null
         } catch (error: MountError) {
             if (error.isCommunicationFailure) throw error
+            diagLog.append("TRACKING-STOPPED-BY $error | ")
             stopTracking(error)
             return error
         }
@@ -794,7 +799,9 @@ class SkyWatcherDriver(
         // nearly a full turn. Tracking would be stopped by the rate check below, but a nudge is only clamped to the rate limit and
         // would unwind the cable at full speed: both end here as at any other limit. The threshold is well above the half turn
         // (about 180 degrees) in which the azimuth swings when the target passes close to the zenith, which is no cable problem.
-        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > otherTurnJumpDegrees) {
+        diagLog.append("${motion.name.take(1)} r1=${"%.1f".format(reading.axis1)} w1=${"%.1f".format(wanted.axis1)} r2=${"%.1f".format(reading.axis2)} w2=${"%.1f".format(wanted.axis2)} | ")
+        if (jumpGuardForDiagnosis && resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > otherTurnJumpDegrees) {
+            diagLog.append("GUARD | ")
             throw MountError.OutsideMountLimits
         }
         val limit = configuration.limits.maximumAxisRateDegreesPerSecond
@@ -944,6 +951,7 @@ class SkyWatcherDriver(
             lastServo = clock.now()
         } catch (limit: MountError) {
             if (limit.isCommunicationFailure) throw limit
+            diagLog.append("NUDGE-ENDS-BY $limit | ")
             // The nudge has reached a limit of the mount: end it here and go on tracking from where the mount is.
             endNudge()
         }

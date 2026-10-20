@@ -54,6 +54,7 @@ internal fun ObjectRow(
     }
     // The width of the row caps the position, so the names keep the rest even beside a long "Clears skyline tomorrow".
     BoxWithConstraints(modifier) {
+        val positionMaxWidth = maxWidth * POSITION_MAXIMUM_SHARE
         Row(
             Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = summary },
             verticalAlignment = Alignment.CenterVertically,
@@ -71,7 +72,7 @@ internal fun ObjectRow(
                     position,
                     zone,
                     isAlignedToEnd = true,
-                    modifier = Modifier.widthIn(max = maxWidth * POSITION_MAXIMUM_SHARE),
+                    modifier = Modifier.widthIn(max = positionMaxWidth),
                 )
             }
         }

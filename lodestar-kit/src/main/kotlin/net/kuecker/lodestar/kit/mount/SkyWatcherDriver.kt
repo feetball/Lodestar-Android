@@ -98,6 +98,9 @@ class SkyWatcherDriver(
 
     private enum class Motion { STOPPED, TRACKING, SLEWING, NUDGING }
 
+    /** TEMPORARY diagnosis switch, not for merging. */
+    internal var jumpGuardForDiagnosis: Boolean = true
+
     private class Leg(val axis1: Double?, val axis2: Double?)
 
     private class Slew(val goal: EquatorialCoordinate, var legs: MutableList<Leg>, var refinements: Int, var lastCommand: Instant)
@@ -793,7 +796,7 @@ class SkyWatcherDriver(
         // Beyond the azimuth limit of an alt-azimuth mount `choose` answers with the same direction from another turn, a jump of
         // nearly a full turn. Tracking would be stopped by the rate check below, but a nudge is only clamped to the rate limit and
         // would unwind the cable at full speed: both end here as at any other limit.
-        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > 180.0) {
+        if (jumpGuardForDiagnosis && resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > 180.0) {
             throw MountError.OutsideMountLimits
         }
         val limit = configuration.limits.maximumAxisRateDegreesPerSecond

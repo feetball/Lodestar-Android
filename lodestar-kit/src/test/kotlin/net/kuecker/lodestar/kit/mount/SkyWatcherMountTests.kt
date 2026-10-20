@@ -924,19 +924,62 @@ class SkyWatcherMountTests {
         val scheat = EquatorialCoordinate.fromRightAscensionHours(23.0629, 28.0828)
         assertTrue(goto(rig, scheat) < 0.1)
         rig.controller.nudge(MountNudgeDirection.NORTH, MountNudgeRate.SLEW, 30.0)
+        val trace = StringBuilder("start=${realAltitude(rig)} ")
         for (step in 0 until 60) {
             rig.clock.advance(0.5)
-            rig.controller.poll()
+            val status = rig.controller.poll()
+            trace.append("$step:${"%.2f".format(realAltitude(rig))}:${status.phase}:${rig.driver.trackingStopReason} ")
         }
         rig.controller.stopNudge()
         val altitude = realAltitude(rig)
-        assertTrue(altitude in 85.0..88.6, "$altitude")
+        assertTrue(altitude in 85.0..88.6, "$altitude TRACE $trace")
         assertNull(rig.driver.trackingStopReason)
         // The mount tracks at the place where the nudge ended.
         val place = rig.trueJ2000()
         SkyWatcherTestSupport.poll(rig, 60)
         assertTrue(rig.trueJ2000().angularSeparation(place) < 0.05)
         assertEquals(true, rig.controller.poll().isTracking)
+    }
+
+    @Test
+    fun diagOverheadWithoutTheGuard() {
+        val rig = SkyWatcherTestSupport.rig(altAz, SkyWatcherPointingErrors(axis1Index = 1.0), settings = MountSettings(maximumNudgeSeconds = 30.0))
+        rig.driver.jumpGuardForDiagnosis = false
+        rig.controller.connect()
+        aligned(rig, altAzimuthAlignmentStars)
+        val scheat = EquatorialCoordinate.fromRightAscensionHours(23.0629, 28.0828)
+        assertTrue(goto(rig, scheat) < 0.1)
+        rig.controller.nudge(MountNudgeDirection.NORTH, MountNudgeRate.SLEW, 30.0)
+        val trace = StringBuilder("start=${realAltitude(rig)} ")
+        for (step in 0 until 60) {
+            rig.clock.advance(0.5)
+            val status = rig.controller.poll()
+            trace.append("$step:${"%.2f".format(realAltitude(rig))}:${status.phase}:${rig.driver.trackingStopReason} ")
+        }
+        rig.controller.stopNudge()
+        val altitude = realAltitude(rig)
+        assertTrue(altitude in 85.0..88.6, "NOGUARD $altitude TRACE $trace")
+        assertNull(rig.driver.trackingStopReason)
+    }
+
+    @Test
+    fun diagAzimuthWithoutTheGuard() {
+        val rig = SkyWatcherTestSupport.rig(altAz, settings = MountSettings(maximumNudgeSeconds = 30.0))
+        rig.driver.jumpGuardForDiagnosis = false
+        rig.controller.connect()
+        rig.simulator.placeAxes(267.0, 40.0)
+        rig.controller.nudge(MountNudgeDirection.WEST, MountNudgeRate.SLEW, 20.0)
+        var highest = rig.simulator.axis1Degrees
+        val trace = StringBuilder()
+        for (step in 0 until 30) {
+            rig.clock.advance(0.5)
+            rig.controller.poll()
+            highest = max(highest, rig.simulator.axis1Degrees)
+            trace.append("$step:${"%.1f".format(rig.simulator.axis1Degrees)} ")
+        }
+        assertTrue(highest > 268.0 && highest < 271.0, "NOGUARD-AZ highest=$highest TRACE $trace")
+        assertTrue(rig.simulator.axis1Degrees > 268.0, "NOGUARD-AZ ${rig.simulator.axis1Degrees} TRACE $trace")
+        assertFalse(rig.simulator.isMoving)
     }
 
     @Test

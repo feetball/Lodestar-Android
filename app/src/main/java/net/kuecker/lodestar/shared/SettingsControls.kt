@@ -321,6 +321,9 @@ fun SettingsOptionalNumberField(
     NumberField(title, value, onValueChange, range, prefix, unit, fractionDigits, placeholder, isRequired = false, caption = caption)
 }
 
+/** The gap between the number of a [NumberField] and a unit word: about one space of the body text. */
+private val UNIT_GAP = 4.dp
+
 @Composable
 private fun NumberField(
     title: String,
@@ -352,10 +355,11 @@ private fun NumberField(
             val fieldWidth = with(LocalDensity.current) {
                 measurer.measure(text.ifEmpty { "0" }, fieldStyle).size.width.toDp() + 4.dp
             }.coerceIn(24.dp, 120.dp)
-            // The unit follows the number; a degree sign hugs it ("20°"), a word such as "mm" or "s" keeps a gap.
+            // The unit follows the number; a degree sign hugs it ("20°"), a word such as "mm" or "s" is a space away,
+            // as in the same unit in a line of text ("5 s").
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(if (unit == "°") 0.dp else 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (unit == "°") 0.dp else UNIT_GAP),
             ) {
                 Box(contentAlignment = Alignment.CenterEnd) {
                     if (text.isEmpty() && placeholder.isNotEmpty()) {

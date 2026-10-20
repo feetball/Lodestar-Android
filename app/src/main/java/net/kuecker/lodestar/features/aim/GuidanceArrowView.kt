@@ -1,9 +1,12 @@
 package net.kuecker.lodestar.features.aim
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -23,6 +26,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -59,6 +64,12 @@ internal fun GuidanceArrowView(model: AimViewModel, isActive: Boolean, modifier:
 /** Distance of the texts from the reticle: inside the ring, below the reticle as the reader sees it. */
 private val LABEL_OFFSET = 50.dp
 
+/** The check mark's badge sits on the ring; this is its radius. */
+private val BADGE_RADIUS = 15.dp
+
+/** The ring grows with the screen but leaves room for the panels on a small one. [heightPx] is the stage's height. */
+private fun Density.ringRadius(heightPx: Float): Float = min(100.dp.toPx(), max(70.dp.toPx(), heightPx * 0.115f))
+
 /**
  * The ring and arrow around the middle of the available space, and the texts. [rotation] turns the texts so they read
  * upright; the arrow lives in the phone's own screen axes ([axes]), so it ignores the HUD rotation: it always points
@@ -67,26 +78,28 @@ private val LABEL_OFFSET = 50.dp
 @Composable
 private fun AimArrowContent(guidance: Guidance?, rotation: AimHUDRotation, axes: ScreenAxes, modifier: Modifier) {
     val palette = LocalPalette.current
+    val density = LocalDensity.current
     val arrow = remember { Path() }
     val checkMark = remember { Path() }
-    Box(modifier, contentAlignment = Alignment.Center) {
-        if (guidance == null) return@Box
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        if (guidance == null) return@BoxWithConstraints
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2, size.height / 2)
-            // The ring grows with the screen but leaves room for the panels on a small one.
-            val radius = min(100.dp.toPx(), max(70.dp.toPx(), size.height * 0.115f))
+            val radius = ringRadius(size.height)
             if (guidance.state == GuidanceState.ON_TARGET) {
                 drawCircle(palette.positive, radius, center, style = Stroke(5.dp.toPx()))
-                // A ring, a check mark and a word: the state does not depend on colour alone. The check mark sits
-                // above the reticle as the reader sees it and turns with the HUD so it stays upright.
-                val checkCenter = center + rotation.rotated(Offset(0f, -LABEL_OFFSET.toPx()))
+                // A ring, a check mark and a word: the state does not depend on colour alone. The check mark is a
+                // badge on the ring at the top as the reader sees it, clear of the target's name inside the ring,
+                // and turns with the HUD so it stays upright.
+                val badgeCenter = center + rotation.rotated(Offset(0f, -radius))
+                drawCircle(palette.positive, BADGE_RADIUS.toPx(), badgeCenter)
                 checkMark.rewind()
-                addCheckMark(checkMark, 1.dp.toPx())
-                rotate(degrees = rotation.degrees.toFloat(), pivot = checkCenter) {
-                    translate(left = checkCenter.x, top = checkCenter.y) {
+                addCheckMark(checkMark, 0.6.dp.toPx())
+                rotate(degrees = rotation.degrees.toFloat(), pivot = badgeCenter) {
+                    translate(left = badgeCenter.x, top = badgeCenter.y) {
                         drawPath(
-                            checkMark, palette.positive,
-                            style = Stroke(5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+                            checkMark, palette.background,
+                            style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
                         )
                     }
                 }
@@ -106,18 +119,31 @@ private fun AimArrowContent(guidance: Guidance?, rotation: AimHUDRotation, axes:
             }
         }
         if (guidance.state == GuidanceState.ON_TARGET) {
-            ArrowLabel("On target", palette.positive, 22.sp, rotation)
+            // Above the ring and its badge, where the panels at the bottom of the screen and the sky labels
+            // inside the ring do not reach it.
+            val ringDp = with(density) { ringRadius(constraints.maxHeight.toFloat()).toDp() }
+            ArrowLabel("On target", palette.positive, 22.sp, rotation, offset = -(ringDp + BADGE_RADIUS + 19.dp))
         } else {
             ArrowLabel(AimFormat.angle(guidance.separation), palette.guidance, 26.sp, rotation)
         }
     }
 }
 
-/** A text that turns with the HUD so it reads upright, below the reticle as the reader sees it. */
+/**
+ * A text on a backing that turns with the HUD so it reads upright, [offset] below the reticle as the reader sees it
+ * (above it when negative). The backing keeps the sky labels under it from running through the digits.
+ */
 @Composable
-private fun ArrowLabel(text: String, color: Color, size: TextUnit, rotation: AimHUDRotation) {
+private fun ArrowLabel(
+    text: String,
+    color: Color,
+    size: TextUnit,
+    rotation: AimHUDRotation,
+    offset: Dp = LABEL_OFFSET,
+) {
+    val palette = LocalPalette.current
     val blur = with(LocalDensity.current) { 3.dp.toPx() }
-    val shift = rotation.rotated(DpOffset(0.dp, LABEL_OFFSET))
+    val shift = rotation.rotated(DpOffset(0.dp, offset))
     AimFixedTextSize {
         Text(
             text,
@@ -129,7 +155,11 @@ private fun ArrowLabel(text: String, color: Color, size: TextUnit, rotation: Aim
             ).monospacedDigits(),
             softWrap = false,
             maxLines = 1,
-            modifier = Modifier.offset(shift.x, shift.y).rotate(rotation.degrees.toFloat()),
+            modifier = Modifier
+                .offset(shift.x, shift.y)
+                .rotate(rotation.degrees.toFloat())
+                .background(palette.surface.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 6.dp, vertical = 1.dp),
         )
     }
 }

@@ -937,7 +937,7 @@ class SkyWatcherMountTests {
         SkyWatcherTestSupport.poll(rig, 60)
         val moved = rig.trueJ2000().angularSeparation(place)
         assertTrue(moved < 0.05, "moved $moved degrees from altitude $altitude")
-        assertEquals(true, rig.controller.poll().isTracking)
+        assertEquals(true, rig.controller.poll().isTracking, "tracking stopped: ${rig.driver.trackingStopReason}")
     }
 
     @Test

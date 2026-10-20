@@ -978,11 +978,11 @@ class SkyWatcherDriver(
 
         /**
          * How far above the overhead limit an alt-azimuth mount may keep tracking. A nudge towards the limit ends where the mount
-         * is when the limit is found, which can be a hair above it (the axes were turning); tracking has to be able to go on from
-         * there, and a target that creeps over the limit by sidereal motion stops it soon enough. A goto or a nudge still stops at
-         * the limit itself.
+         * is when the limit is found, which can be above it (the axes were turning, and the pointing model adds a few tenths of a
+         * degree to the altitude the driver sees); tracking has to be able to go on from there for a while, and a target that
+         * creeps over the limit by sidereal motion stops it soon enough. A goto or a nudge still stops at the limit itself.
          */
-        private const val trackingOverheadSlackDegrees: Double = 0.5
+        private const val trackingOverheadSlackDegrees: Double = 1.0
         private const val nudgeLeadSeconds: Double = 0.5
         private const val nudgeUpdateSeconds: Double = 0.5
         private const val trackingLeadExtraSeconds: Double = 0.5

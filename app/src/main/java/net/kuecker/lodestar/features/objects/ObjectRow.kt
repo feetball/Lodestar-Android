@@ -1,14 +1,14 @@
 package net.kuecker.lodestar.features.objects
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -22,10 +22,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.ObjectIcon
 import net.kuecker.lodestar.shared.monospacedDigits
 import net.kuecker.lodestar.theme.LocalPalette
@@ -50,21 +52,28 @@ internal fun ObjectRow(
         val spoken = ObjectsFormat.spokenSummary(obj, position, isFavorite, zone)
         if (showsProminence) "$spoken, ${obj.prominence.displayName}" else spoken
     }
-    Row(
-        modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = summary },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        ObjectIcon(obj.category)
-        if (isLargeText) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Names(obj, position, isFavorite, showsProminence, subtitleLines = 2)
-                SkyPosition(position, zone, isAlignedToEnd = false)
+    // The width of the row caps the position, so the names keep the rest even beside a long "Clears skyline tomorrow".
+    BoxWithConstraints(modifier) {
+        Row(
+            Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = summary },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ObjectIcon(obj.category)
+            if (isLargeText) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Names(obj, position, isFavorite, showsProminence, subtitleLines = 2)
+                    SkyPosition(position, zone, isAlignedToEnd = false)
+                }
+            } else {
+                Names(obj, position, isFavorite, showsProminence, subtitleLines = 2, modifier = Modifier.weight(1f))
+                SkyPosition(
+                    position,
+                    zone,
+                    isAlignedToEnd = true,
+                    modifier = Modifier.widthIn(max = maxWidth * POSITION_MAXIMUM_SHARE),
+                )
             }
-        } else {
-            Names(obj, position, isFavorite, showsProminence, subtitleLines = 1, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(8.dp))
-            SkyPosition(position, zone, isAlignedToEnd = true)
         }
     }
 }
@@ -113,22 +122,29 @@ private fun Names(
             }
         }
         Text(
-            ObjectsFormat.subtitle(obj, position?.magnitude, position = position) +
-                if (showsProminence) " · ${obj.prominence.displayName}" else "",
+            ObjectsFormat.rowSubtitle(obj, position?.magnitude, position) +
+                if (showsProminence) "${AppFormat.NO_BREAK_SPACE}· ${AppFormat.unbreakable(obj.prominence.displayName)}" else "",
             color = palette.secondaryText,
             style = MaterialTheme.typography.bodySmall,
-            // The kind, magnitude, elongation and warnings of a comet or an asteroid take two lines.
-            maxLines = if (obj.smallBody != null) maxOf(subtitleLines, 2) else subtitleLines,
+            // The kind and magnitude of a comet or an asteroid take one line, the elongation and warnings the next.
+            maxLines = if (obj.smallBody != null) maxOf(subtitleLines, 3) else subtitleLines,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
 @Composable
-private fun SkyPosition(position: ObjectSkyPosition?, zone: ZoneId, isAlignedToEnd: Boolean) {
+private fun SkyPosition(
+    position: ObjectSkyPosition?,
+    zone: ZoneId,
+    isAlignedToEnd: Boolean,
+    modifier: Modifier = Modifier,
+) {
     if (position == null) return
     val palette = LocalPalette.current
+    val textAlign = if (isAlignedToEnd) TextAlign.End else TextAlign.Start
     Column(
+        modifier,
         horizontalAlignment = if (isAlignedToEnd) Alignment.End else Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -138,13 +154,15 @@ private fun SkyPosition(position: ObjectSkyPosition?, zone: ZoneId, isAlignedToE
                 color = palette.accent,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold).monospacedDigits(),
                 maxLines = 1,
+                textAlign = textAlign,
             )
         } else {
             Text(
                 if (position.isBehindSkyline) "Behind skyline" else "Below horizon",
                 color = palette.tertiaryText,
                 style = MaterialTheme.typography.bodyMedium.monospacedDigits(),
-                maxLines = 1,
+                maxLines = 2,
+                textAlign = textAlign,
             )
             val rising = remember(position, zone) { ObjectsFormat.risingText(position, zone) }
             if (rising != null) {
@@ -152,7 +170,9 @@ private fun SkyPosition(position: ObjectSkyPosition?, zone: ZoneId, isAlignedToE
                     rising,
                     color = palette.secondaryText,
                     style = MaterialTheme.typography.bodySmall.monospacedDigits(),
-                    maxLines = 1,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = textAlign,
                 )
             }
         }
@@ -164,3 +184,6 @@ private const val LARGE_TEXT_SCALE = 1.5f
 
 /** Long names wrap onto this many lines (two on iOS; narrow phones leave less room beside the position). */
 private const val MAXIMUM_NAME_LINES = 3
+
+/** The share of the row's width the rise or altitude column may take; the names keep the rest. */
+private const val POSITION_MAXIMUM_SHARE = 0.4f

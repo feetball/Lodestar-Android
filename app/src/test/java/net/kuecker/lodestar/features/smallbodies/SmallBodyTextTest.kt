@@ -60,6 +60,17 @@ class SmallBodyTextTest {
     }
 
     @Test
+    fun aListRowPutsTheElongationOnItsOwnLineAndKeepsEachValueWhole() {
+        val obj = Fixtures.obj(Fixtures.vesta)
+        val info = assertNotNull(SmallBodyInfo.compute(Fixtures.vesta, frame)).copy(magnitude = 7.4, elongation = 62.0)
+        assertEquals(
+            "Asteroid · mag ≈ 7.4\n62° from the Sun",
+            SmallBodyText.rowSubtitle(obj, info, isComputed = true),
+        )
+        assertEquals("Asteroid", SmallBodyText.rowSubtitle(obj, null, isComputed = false))
+    }
+
+    @Test
     fun aRowAppendsTheWarnings() {
         val obj = Fixtures.obj(Fixtures.withoutMagnitude)
         val info = assertNotNull(SmallBodyInfo.compute(Fixtures.withoutMagnitude, frame))

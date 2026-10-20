@@ -54,9 +54,13 @@ import net.kuecker.lodestar.theme.LocalPalette
 private const val SUGGESTION_REFRESH_MS = 30_000L
 
 /** The name of an arrangement in the texts and the pickers. */
-internal fun mountArrangementTitle(mode: SkyWatcherMountMode): String = when (mode) {
-    SkyWatcherMountMode.ALT_AZIMUTH -> "Alt-azimuth (AZ-GTi on its tripod)"
-    SkyWatcherMountMode.EQUATORIAL -> "Equatorial (Star Adventurer GTi, EQ mounts, AZ-GTi on a wedge)"
+internal fun mountArrangementTitle(mode: SkyWatcherMountMode): String {
+    val title = when (mode) {
+        SkyWatcherMountMode.ALT_AZIMUTH -> "Alt-azimuth (AZ-GTi on its tripod)"
+        SkyWatcherMountMode.EQUATORIAL -> "Equatorial (Star Adventurer GTi, EQ mounts, AZ-GTi on a wedge)"
+    }
+    // Each name in the parentheses stays whole, so a narrow row wraps between them and not inside one.
+    return AppFormat.unbreakableNames(title)
 }
 
 /** What to do with the mount before it is switched on, for each arrangement. */

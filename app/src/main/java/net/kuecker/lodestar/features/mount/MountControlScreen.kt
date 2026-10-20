@@ -39,6 +39,7 @@ import net.kuecker.lodestar.services.MountProtocols
 import net.kuecker.lodestar.services.MountService
 import net.kuecker.lodestar.services.MountSettingsValues
 import net.kuecker.lodestar.services.MountSnapshot
+import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.ChipTone
 import net.kuecker.lodestar.shared.InfoRow
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -130,7 +131,7 @@ private fun MountStatusSection(service: MountService, snapshot: MountSnapshot) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoRow("Mount", capabilities.name + if (snapshot.isDemo) " (simulated)" else "")
                     capabilities.firmware?.let { InfoRow("Firmware", it) }
-                    InfoRow("Protocol", MountProtocols.option(capabilities.kind).title)
+                    InfoRow("Protocol", AppFormat.unbreakableNames(MountProtocols.option(capabilities.kind).title))
                     snapshot.connection?.takeUnless { snapshot.isDemo }?.let { InfoRow("Address", "${it.host}:${it.port} (${it.link.title})") }
                     snapshot.status.position?.let { InfoRow("Points at", MountText.position(it, app.settings.coordinateStyle)) }
                     InfoRow("State", MountText.phaseLine(snapshot))
@@ -202,7 +203,7 @@ internal fun MountMessage(text: String, isError: Boolean) {
 private fun MountConnectionSection(service: MountService, draft: MountDraft, snapshot: MountSnapshot) {
     val palette = LocalPalette.current
     val option = draft.option
-    val protocols = MountProtocols.all.map { SettingsMenuOption(it.title, it.protocol) }
+    val protocols = MountProtocols.all.map { SettingsMenuOption(AppFormat.unbreakableNames(it.title), it.protocol) }
     SettingsSection(title = "Connect") {
         SettingsMenuPicker(
             title = "Mount type",

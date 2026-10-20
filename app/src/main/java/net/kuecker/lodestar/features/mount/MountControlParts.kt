@@ -34,6 +34,7 @@ import net.kuecker.lodestar.services.MountAdvanced
 import net.kuecker.lodestar.services.MountAdvancedField
 import net.kuecker.lodestar.services.MountProtocols
 import net.kuecker.lodestar.services.MountService
+import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.SettingsCaption
 import net.kuecker.lodestar.shared.SettingsDivider
 import net.kuecker.lodestar.shared.SettingsMenuOption
@@ -208,7 +209,7 @@ internal fun MountProtocolsSection() {
             if (index > 0) SettingsDivider()
             SettingsRow {
                 Text(
-                    option.title,
+                    AppFormat.unbreakableNames(option.title),
                     color = palette.primaryText,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.semantics { heading() },

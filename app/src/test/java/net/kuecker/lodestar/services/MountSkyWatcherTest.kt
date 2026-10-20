@@ -154,7 +154,7 @@ class MountSkyWatcherTest {
         assertEquals(listOf("Vega"), info.stars.map { it.name })
         assertEquals(assertNotNull(result.offsetDegrees), assertNotNull(info.homeErrorDegrees), 1e-9)
         assertTrue(info.homeErrorDegrees > 1.0, "the simulated mount starts a few degrees off")
-        assertEquals("Aligned on 1 star, ≈ ${MountText.accuracyText(info.predictedErrorDegrees!!)} accuracy", MountText.alignmentLine(info))
+        assertEquals("Aligned on 1 star, ≈\u00A0${MountText.accuracyText(info.predictedErrorDegrees!!)}\u00A0accuracy", MountText.alignmentLine(info))
         // Go to works now.
         assertIs<MountResult.Success>(session.goto(MountTestSky.target("Andromeda", andromeda)))
     }

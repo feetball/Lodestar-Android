@@ -69,7 +69,7 @@ internal object MountText {
         if (capabilities.canSync) add("Sync")
         if (capabilities.canAbort) add("Stop")
         if (capabilities.canNudge) add("Nudges")
-        if (capabilities.canSetTracking) add("Tracking on/off")
+        if (capabilities.canSetTracking) add(AppFormat.unbreakable("Tracking on/off"))
         if (capabilities.canSetSiteAndTime) add("Location and time")
     }
 
@@ -114,7 +114,8 @@ internal object MountText {
     fun alignmentLine(info: MountSkyWatcherInfo): String {
         val count = info.stars.size
         if (count == 0) return "Not aligned: centre a star and tap Sync"
-        val accuracy = info.predictedErrorDegrees?.let { ", ≈ ${accuracyText(it)} accuracy" }.orEmpty()
+        // "≈ 0.4° accuracy" wraps as a whole, so "accuracy" is never left alone on a line.
+        val accuracy = info.predictedErrorDegrees?.let { ", ${AppFormat.unbreakable("≈ ${accuracyText(it)} accuracy")}" }.orEmpty()
         val residual = if (count > 1) info.maximumResidualDegrees?.let { ", ${AngleFormatter.formatDegrees(it, 2)} residual" }.orEmpty() else ""
         return "Aligned on $count star${if (count == 1) "" else "s"}$residual$accuracy"
     }

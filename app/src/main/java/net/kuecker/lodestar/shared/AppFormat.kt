@@ -106,6 +106,17 @@ object AppFormat {
         return if (lastSpace <= 0) text else text.substring(0, lastSpace) + NO_BREAK_SPACE + text.substring(lastSpace + 1)
     }
 
+    private val parenthetical = Regex("\\(([^)]*)\\)")
+
+    /**
+     * [text] in which each comma-separated name inside parentheses stays whole: "Sky-Watcher Wi-Fi (AZ-GTi, Star
+     * Adventurer GTi)" wraps only after the comma, never to a line of "GTi)" alone.
+     */
+    fun unbreakableNames(text: String): String = parenthetical.replace(text) { match ->
+        val names = match.groupValues[1].split(", ").joinToString(", ") { unbreakable(it) }
+        "($names)"
+    }
+
     /**
      * A " · "-separated [line] in which each part stays whole and the dot stays with the part before it: a narrow line
      * breaks only after a dot, so no value is split from its unit and no line starts with a dot.

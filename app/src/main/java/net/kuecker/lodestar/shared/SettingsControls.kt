@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -189,7 +191,12 @@ fun SettingsSliderRow(
 /** One choice of a [SettingsMenuPicker]. */
 data class SettingsMenuOption<T>(val title: String, val value: T)
 
-/** A row that opens a menu to pick one value; the chosen value is drawn in the accent colour. */
+/**
+ * A row that opens a menu to pick one value; the chosen value is drawn in the accent colour. The title keeps its
+ * width: a value that does not fit beside it drops to a line of its own under the title and wraps there, and the
+ * chevron stays at the end of the value.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> SettingsMenuPicker(
     title: String,
@@ -207,11 +214,21 @@ fun <T> SettingsMenuPicker(
             stateDescription = selectedTitle
         },
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 8.dp))
             Box {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(selectedTitle, color = palette.accent, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        selectedTitle,
+                        color = palette.accent,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     Icon(Icons.Outlined.UnfoldMore, contentDescription = null, tint = palette.accent, modifier = Modifier.size(18.dp))
                 }
                 DropdownMenu(

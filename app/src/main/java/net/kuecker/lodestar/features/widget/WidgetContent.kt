@@ -52,6 +52,9 @@ internal enum class WidgetLayoutKind {
     /** The Moon, with its phase, and the darkness window. */
     SMALL_ROOMY,
 
+    /** Two cells high and three or more wide, too narrow for two tiles: the Moon with its phase beside it, and the darkness window. */
+    SMALL_WIDE,
+
     /** All four items in a grid of two by two: a label and one line each. */
     GRID,
 
@@ -61,6 +64,9 @@ internal enum class WidgetLayoutKind {
     /** All four items one under the other, narrow: a label and one line each. */
     LIST_NARROW,
 
+    /** The narrow list, tall enough for four items of a label and two lines each. */
+    LIST_NARROW_TALL,
+
     /** All four items one under the other with a title: a label and two lines each. */
     LIST,
 
@@ -68,20 +74,24 @@ internal enum class WidgetLayoutKind {
     LIST_TALL,
 }
 
-/** From this height the narrow list gives a time window two lines. */
-private val NARROW_TWO_LINES_FROM = 200.dp
-
 /** The sizes the widgets are laid out for (Glance picks the largest that fits) and what shows at each. */
 internal object WidgetSizes {
     val small = DpSize(100.dp, 90.dp)
     val smallRoomy = DpSize(120.dp, 120.dp)
+
+    /** Less in area than [smallRoomy], so that a square 2 × 2 keeps the roomy layout. */
+    val smallWide = DpSize(150.dp, 90.dp)
     val grid = DpSize(220.dp, 100.dp)
     val gridDetail = DpSize(220.dp, 150.dp)
     val listNarrow = DpSize(100.dp, 160.dp)
+
+    /** Four items of a label (about 14 dp) and two lines (about 17 dp each), with the padding, need about 210 dp. */
+    val listNarrowTall = DpSize(100.dp, 220.dp)
     val list = DpSize(220.dp, 230.dp)
     val listTall = DpSize(220.dp, 300.dp)
 
-    val all: Set<DpSize> = setOf(small, smallRoomy, grid, gridDetail, listNarrow, list, listTall)
+    val all: Set<DpSize> =
+        setOf(small, smallRoomy, smallWide, grid, gridDetail, listNarrow, listNarrowTall, list, listTall)
 
     /** The sizes of the two widgets of the picker, for their previews: 2 × 2 and 4 × 2 cells. */
     val previewSmall = DpSize(110.dp, 110.dp)
@@ -95,8 +105,10 @@ internal object WidgetSizes {
             wide && size.height >= list.height -> WidgetLayoutKind.LIST
             wide && size.height >= gridDetail.height -> WidgetLayoutKind.GRID_DETAIL
             wide -> WidgetLayoutKind.GRID
+            size.height >= listNarrowTall.height -> WidgetLayoutKind.LIST_NARROW_TALL
             size.height >= listNarrow.height -> WidgetLayoutKind.LIST_NARROW
             size.width >= smallRoomy.width && size.height >= smallRoomy.height -> WidgetLayoutKind.SMALL_ROOMY
+            size.width >= smallWide.width && size.height >= smallWide.height -> WidgetLayoutKind.SMALL_WIDE
             else -> WidgetLayoutKind.SMALL
         }
     }
@@ -135,9 +147,11 @@ internal fun TonightWidgetContent(model: WidgetModel) {
                 when (WidgetSizes.kind(size)) {
                     WidgetLayoutKind.SMALL -> SmallLayout(copy, model.moonImage)
                     WidgetLayoutKind.SMALL_ROOMY -> SmallRoomyLayout(copy, model.moonImage)
+                    WidgetLayoutKind.SMALL_WIDE -> SmallWideLayout(copy, model.moonImage)
                     WidgetLayoutKind.GRID -> GridLayout(copy, model.moonImage, showDetail = false)
                     WidgetLayoutKind.GRID_DETAIL -> GridLayout(copy, model.moonImage, showDetail = true)
-                    WidgetLayoutKind.LIST_NARROW -> NarrowListLayout(copy, model.moonImage)
+                    WidgetLayoutKind.LIST_NARROW -> NarrowListLayout(copy, model.moonImage, valueLines = 1)
+                    WidgetLayoutKind.LIST_NARROW_TALL -> NarrowListLayout(copy, model.moonImage, valueLines = 2)
                     WidgetLayoutKind.LIST -> ListLayout(copy, model.moonImage, showExtra = false)
                     WidgetLayoutKind.LIST_TALL -> ListLayout(copy, model.moonImage, showExtra = true)
                 }
@@ -221,17 +235,21 @@ private fun MoonPicture(bitmap: Bitmap?, size: Dp) {
     }
 }
 
-/** An item's label line: its picture (the Moon's phase, for the Moon), the label, a mark for what is happening now, and its figure at the end. */
+/**
+ * An item's label line: its picture (the Moon's phase, for the Moon), the label, a mark for what is happening now, and its
+ * figure at the end. [compact] is a little smaller, for the narrow list ("Next · in 2 weeks" needs about 97 dp at 11 sp).
+ */
 @Composable
-private fun LabelLine(slot: Slot, item: WidgetItem, moonImage: Bitmap?, short: Boolean) {
+private fun LabelLine(slot: Slot, item: WidgetItem, moonImage: Bitmap?, short: Boolean, compact: Boolean = false) {
+    val textSize = if (compact) 10.sp else 11.sp
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (slot == Slot.MOON) MoonPicture(moonImage, 12.dp) else Glyph(slot.glyph, 12.dp)
-        Spacer(GlanceModifier.width(4.dp))
-        Text(if (short) item.shortLabel else item.label, style = secondaryStyle(11.sp), maxLines = 1)
-        item.badge?.let { Text(" · $it", style = accentStyle(11.sp), maxLines = 1) }
+        Spacer(GlanceModifier.width(if (compact) 3.dp else 4.dp))
+        Text(if (short) item.shortLabel else item.label, style = secondaryStyle(textSize), maxLines = 1)
+        item.badge?.let { Text(" · $it", style = accentStyle(textSize), maxLines = 1) }
         item.trailing?.let {
             Spacer(GlanceModifier.defaultWeight())
-            Text(it, style = primaryStyle(11.sp, bold = true), maxLines = 1)
+            Text(it, style = primaryStyle(textSize, bold = true), maxLines = 1)
         }
     }
 }
@@ -246,7 +264,7 @@ private fun valueStyle(slot: Slot, size: TextUnit): TextStyle =
 @Composable
 private fun NeedsLocation(kind: WidgetLayoutKind) {
     val isTiny = kind == WidgetLayoutKind.SMALL
-    val isSmall = isTiny || kind == WidgetLayoutKind.SMALL_ROOMY
+    val isSmall = isTiny || kind == WidgetLayoutKind.SMALL_ROOMY || kind == WidgetLayoutKind.SMALL_WIDE
     Column(
         GlanceModifier.fillMaxSize().padding(if (isTiny) 8.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -294,6 +312,24 @@ private fun SmallRoomyLayout(copy: WidgetCopy, moonImage: Bitmap?) {
     }
 }
 
+/** 3×2 (from 150 × 90): the Moon with its phase and lit part beside it, and the darkness window under it. */
+@Composable
+private fun SmallWideLayout(copy: WidgetCopy, moonImage: Bitmap?) {
+    Column(GlanceModifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MoonPicture(moonImage, 28.dp)
+            Spacer(GlanceModifier.width(8.dp))
+            Column {
+                Text(copy.moon.value, style = primaryStyle(12.sp, bold = true), maxLines = 2)
+                Text("${copy.moon.trailing.orEmpty()} lit", style = secondaryStyle(11.sp), maxLines = 1)
+            }
+        }
+        Spacer(GlanceModifier.defaultWeight())
+        LabelLine(Slot.DARK, copy.dark, null, short = true)
+        Text(copy.dark.value, style = accentStyle(13.sp), maxLines = 2)
+    }
+}
+
 /** 4×2 and larger: the four items as tiles, two by two. */
 @Composable
 private fun GridLayout(copy: WidgetCopy, moonImage: Bitmap?, showDetail: Boolean) {
@@ -321,20 +357,25 @@ private fun RowScope.Tile(slot: Slot, copy: WidgetCopy, moonImage: Bitmap?, show
     ) {
         LabelLine(slot, item, moonImage, short = true)
         // 11 sp: "9:29 PM – 3:39 AM" then fits the tile of the smallest 4 × 2 widget (107 dp of text).
-        Text(item.value, style = valueStyle(slot, 11.sp), maxLines = 1)
-        if (showDetail) item.detail?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }
+        // With the detail line the tiles are taller (74 dp), and a long title or "Sets 9:36 PM · rises 8:12 AM" wraps.
+        Text(item.value, style = valueStyle(slot, 11.sp), maxLines = if (showDetail) 2 else 1)
+        if (showDetail) item.detail?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 2) }
     }
 }
 
-/** 2×3 and taller but narrow: the four items one under the other, a label and one line each. */
+/**
+ * 2×3 and taller but narrow: the four items one under the other, a label and [valueLines] lines each. (A time window
+ * wraps to a second line where the widget is tall enough for four items with two lines each: [WidgetSizes.listNarrowTall].)
+ */
 @Composable
-private fun NarrowListLayout(copy: WidgetCopy, moonImage: Bitmap?) {
-    // A time window wraps to a second line when the widget is tall enough for four items with two lines each.
-    val valueLines = if (LocalSize.current.height >= NARROW_TWO_LINES_FROM) 2 else 1
-    Column(GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)) {
+private fun NarrowListLayout(copy: WidgetCopy, moonImage: Bitmap?, valueLines: Int) {
+    Column(GlanceModifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp)) {
         for ((index, slot) in Slot.entries.withIndex()) {
             if (index > 0) Spacer(GlanceModifier.defaultWeight())
-            Entry(slot, copy, moonImage, short = true, detail = false, extra = false, valueSize = 13.sp, valueLines = valueLines)
+            Entry(
+                slot, copy, moonImage, short = true, detail = false, extra = false, valueSize = 13.sp,
+                valueLines = valueLines, compact = true,
+            )
         }
     }
 }
@@ -366,10 +407,11 @@ private fun Entry(
     extra: Boolean,
     valueSize: TextUnit = 14.sp,
     valueLines: Int = 1,
+    compact: Boolean = false,
 ) {
     val item = copy.item(slot)
     Column(GlanceModifier.fillMaxWidth()) {
-        LabelLine(slot, item, moonImage, short)
+        LabelLine(slot, item, moonImage, short, compact)
         Text(item.value, style = valueStyle(slot, valueSize), maxLines = valueLines)
         if (detail) item.detail?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }
         if (extra) item.extra?.let { Text(it, style = secondaryStyle(11.sp), maxLines = 1) }

@@ -7,6 +7,7 @@ import net.kuecker.lodestar.kit.foundation.DateInterval
 import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.planning.MilkyWayCoreVisibility
+import net.kuecker.lodestar.shared.AppFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -90,7 +91,11 @@ internal data class WidgetCopy(
 
         private fun time(instant: Instant) = format.time(instant, zone)
 
-        private fun window(interval: DateInterval) = "${time(interval.start)} – ${time(interval.end)}"
+        /** A time as written in the widget: a line never breaks between "9:34" and "PM". */
+        private fun shownTime(instant: Instant) = AppFormat.unbreakable(time(instant))
+
+        /** "9:29 PM – 3:39 AM", which can break only at the spaces around the dash. */
+        private fun window(interval: DateInterval) = "${shownTime(interval.start)} – ${shownTime(interval.end)}"
 
         private fun spokenWindows(intervals: List<DateInterval>) =
             intervals.joinToString(" and ") { "${time(it.start)} to ${time(it.end)}" }
@@ -147,10 +152,10 @@ internal data class WidgetCopy(
                 RiseTransitSet.Circumstance.ALWAYS_UP -> "Up all night"
                 RiseTransitSet.Circumstance.ALWAYS_DOWN -> "Down all night"
                 RiseTransitSet.Circumstance.NORMAL -> when {
-                    rise != null && set != null && set < rise -> "Sets ${time(set)} · rises ${time(rise)}"
-                    rise != null && set != null -> "Rises ${time(rise)} · sets ${time(set)}"
-                    rise != null -> "Rises ${time(rise)}"
-                    set != null -> "Sets ${time(set)}"
+                    rise != null && set != null && set < rise -> "Sets ${shownTime(set)} · rises ${shownTime(rise)}"
+                    rise != null && set != null -> "Rises ${shownTime(rise)} · sets ${shownTime(set)}"
+                    rise != null -> "Rises ${shownTime(rise)}"
+                    set != null -> "Sets ${shownTime(set)}"
                     else -> "Up all night"
                 }
             }
@@ -204,10 +209,10 @@ internal data class WidgetCopy(
         /** "Best 02:40 · 28° SE". */
         private fun best(core: WidgetCore): String? {
             val time = core.bestTime ?: return null
-            val altitude = core.maxAltitude ?: return "Best ${time(time)}"
+            val altitude = core.maxAltitude ?: return "Best ${shownTime(time)}"
             val height = AngleFormatter.formatDegrees(altitude, 0)
-            val azimuth = core.bestAzimuth ?: return "Best ${time(time)} · $height"
-            return "Best ${time(time)} · $height ${AngleFormatter.compassPoint(azimuth).abbreviation}"
+            val azimuth = core.bestAzimuth ?: return "Best ${shownTime(time)} · $height"
+            return "Best ${shownTime(time)} · $height ${AngleFormatter.compassPoint(azimuth).abbreviation}"
         }
 
         private fun spokenBest(core: WidgetCore): String? {
@@ -238,7 +243,7 @@ internal data class WidgetCopy(
             ).joinToString(" · ").ifEmpty { null }
             return WidgetItem(
                 label, "Next", relative?.replaceFirstChar { it.lowercase(Locale.ROOT) }, null, event.title,
-                "${format.day(event.date, zone)} · ${time(event.date)}", extra,
+                "${format.day(event.date, zone)} · ${shownTime(event.date)}", extra,
                 "Next event: ${event.title}, ${format.day(event.date, zone)} at ${time(event.date)}." +
                     (extra?.let { " $it." } ?: ""),
             )

@@ -6,6 +6,8 @@ import net.kuecker.lodestar.kit.events.EventKind
 import net.kuecker.lodestar.kit.foundation.DateInterval
 import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -48,6 +50,20 @@ class WidgetCopyTest {
         assertEquals("4h 24m without the Moon", dark.extra)
         assertNull(dark.badge)
         assertEquals("Dark", dark.label)
+    }
+
+    @Test
+    fun aTwelveHourTimeNeverBreaksBetweenTheTimeAndItsAmOrPm() {
+        val twelveHour = object : WidgetTimeFormat {
+            override fun time(instant: Instant, zone: ZoneId): String =
+                DateTimeFormatter.ofPattern("h:mm a", Locale.US).withZone(zone).format(instant)
+
+            override fun day(instant: Instant, zone: ZoneId): String = WidgetTestFormat.day(instant, zone)
+        }
+        val dark = WidgetCopy.of(night, at(8), twelveHour).dark
+        assertEquals("9:00 PM – 4:00 AM", dark.value)
+        // Said out loud, the times keep their ordinary spaces.
+        assertTrue(dark.spoken.contains("from 9:00 PM to 4:00 AM"))
     }
 
     @Test

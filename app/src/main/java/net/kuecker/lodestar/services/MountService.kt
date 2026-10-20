@@ -364,7 +364,7 @@ class MountService(
     private fun noticeFor(task: Task, result: MountResult): MountNotice? = when {
         task.key == KEY_NUDGE || task.key == KEY_SETTINGS -> (result as? MountResult.Failure)?.let { notice(it.message, true) }
         result is MountResult.Failure -> notice(result.message, isError = true)
-        result is MountResult.Success && result.message != null -> notice(result.message, isError = false)
+        result is MountResult.Success && result.message != null -> notice(result.message, isError = result.isWarning)
         else -> null
     }
 

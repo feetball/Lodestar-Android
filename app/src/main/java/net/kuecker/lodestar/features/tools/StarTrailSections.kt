@@ -69,7 +69,7 @@ private fun CameraSection(inputs: TrailsInputs, myCamera: LensSetup, setup: Lens
     FormSection(
         title = "Camera & Lens",
         footer = "Starts from the camera in Settings; changes here stay in this planner. Without a pixel pitch " +
-            "Lodestar assumes ${defaultPitchText()} µm, typical of a high-resolution camera.",
+            "Lodestar assumes ${defaultPitchText()}\u00A0µm, typical of a high-resolution camera.",
     ) {
         control {
             SettingsMenuPicker(
@@ -192,7 +192,7 @@ private fun TrailSection(inputs: TrailsInputs, setup: LensSetup) {
                 info("Distance from the pole", AngleFormatter.formatDegrees(trail.radiusFromPoleDegrees, 1))
                 if (trail.usedDefaultPixelPitch) {
                     caption(
-                        "The length in pixels assumes a pixel pitch of ${defaultPitchText()} µm because yours is " +
+                        "The length in pixels assumes a pixel pitch of ${defaultPitchText()}\u00A0µm because yours is " +
                             "not set.",
                     )
                 }

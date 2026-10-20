@@ -341,7 +341,7 @@ private fun OrientationPicker(
         SettingsMenuOption(orientationName(MosaicOrientation.PORTRAIT), MosaicOrientation.PORTRAIT),
     )
     Column {
-        SettingsMenuPicker("Camera orientation", chosen, options, onSelect)
+        SettingsMenuPicker("Camera orientation", chosen, options, onSelect = onSelect)
         SettingsCaption(
             if (chosen == null) {
                 "Chosen for the fewest panels. Turn the camera a quarter turn for portrait."

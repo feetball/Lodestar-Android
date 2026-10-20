@@ -48,6 +48,7 @@ import net.kuecker.lodestar.features.tools.SensorDiagnosticsScreen
 import net.kuecker.lodestar.features.tools.TrailsTimeLapseScreen
 import net.kuecker.lodestar.shared.NavStack
 import net.kuecker.lodestar.shared.NavStackHost
+import net.kuecker.lodestar.shared.SettingsCaption
 import net.kuecker.lodestar.shared.SettingsMenuOption
 import net.kuecker.lodestar.shared.SettingsRow
 import net.kuecker.lodestar.shared.rememberRetained
@@ -190,7 +191,10 @@ internal fun <T> SettingsSegmentedPicker(
     }
 }
 
-/** A tappable row with an accent-coloured label and optional [icon], the equivalent of a button in a form. */
+/**
+ * A tappable row with an accent-coloured label and optional [icon], the equivalent of a button in a form. [caption], if
+ * any, sits right under the label.
+ */
 @Composable
 internal fun SettingsActionRow(
     title: String,
@@ -199,6 +203,7 @@ internal fun SettingsActionRow(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     isDestructive: Boolean = false,
+    caption: String? = null,
 ) {
     val palette = LocalPalette.current
     val tint = if (isDestructive) palette.critical else palette.accent
@@ -213,6 +218,7 @@ internal fun SettingsActionRow(
             if (icon != null) Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
             Text(title, color = tint, style = MaterialTheme.typography.bodyLarge)
         }
+        if (caption != null) SettingsCaption(caption)
     }
 }
 

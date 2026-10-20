@@ -356,8 +356,11 @@ private fun MountOperateSection(service: MountService, snapshot: MountSnapshot, 
             SettingsDivider()
         }
         if (capabilities.canSetSiteAndTime && snapshot.skyWatcher == null) {
-            SettingsActionRow("Send location and time now", onClick = { scope.launch { service.sendSiteAndTime() } })
-            SettingsRow { SettingsCaption("Sends your observing location and the phone's time (UTC) to the mount.") }
+            SettingsActionRow(
+                "Send location and time now",
+                onClick = { scope.launch { service.sendSiteAndTime() } },
+                caption = "Sends your observing location and the phone's time (UTC) to the mount.",
+            )
             SettingsDivider()
         }
         if (capabilities.canNudge) {
@@ -402,13 +405,9 @@ private fun MountLimitsSection(service: MountService, draft: MountDraft) {
             range = -10.0..60.0,
             unit = "°",
             fractionDigits = 0,
+            caption = "Lodestar will not slew to anything lower than this, nor to a target that sinks below it within a " +
+                "minute. Set it above trees, roofs and anything the mount could hit.",
         )
-        SettingsRow {
-            SettingsCaption(
-                "Lodestar will not slew to anything lower than this, nor to a target that sinks below it within a " +
-                    "minute. Set it above trees, roofs and anything the mount could hit.",
-            )
-        }
         SettingsDivider()
         if (option.protocol == MountProtocol.SKYWATCHER) {
             SettingsRow {
@@ -440,13 +439,9 @@ private fun MountLimitsSection(service: MountService, draft: MountDraft) {
                 preferences.update { it.copy(maximumSyncOffset = value) }
                 service.settingsChanged()
             },
+            caption = "A sync that would move the mount's idea of its position by more than this is refused, which catches a wrong " +
+                "star. Sky-Watcher Wi-Fi mounts ignore this: they judge a star by how well it fits the others.",
         )
-        SettingsRow {
-            SettingsCaption(
-                "A sync that would move the mount's idea of its position by more than this is refused, which catches a wrong " +
-                    "star. Sky-Watcher Wi-Fi mounts ignore this: they judge a star by how well it fits the others.",
-            )
-        }
         if (option.advancedFields.isNotEmpty()) {
             SettingsDivider()
             SettingsActionRow(

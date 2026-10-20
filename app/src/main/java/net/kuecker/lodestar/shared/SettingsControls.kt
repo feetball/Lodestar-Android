@@ -194,7 +194,7 @@ data class SettingsMenuOption<T>(val title: String, val value: T)
 /**
  * A row that opens a menu to pick one value; the chosen value is drawn in the accent colour. The title keeps its
  * width: a value that does not fit beside it drops to a line of its own under the title and wraps there, and the
- * chevron stays at the end of the value.
+ * chevron stays at the end of the value. [caption], if any, sits right under the title line.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -202,6 +202,7 @@ fun <T> SettingsMenuPicker(
     title: String,
     selection: T,
     options: List<SettingsMenuOption<T>>,
+    caption: String? = null,
     onSelect: (T) -> Unit,
 ) {
     val palette = LocalPalette.current
@@ -253,6 +254,7 @@ fun <T> SettingsMenuPicker(
                 }
             }
         }
+        if (caption != null) SettingsCaption(caption)
     }
 }
 
@@ -287,7 +289,7 @@ object SettingsNumberText {
 /**
  * A labelled numeric text field for a value that always exists; clearing the field does not change it. Valid input
  * is applied while typing; invalid input is flagged and reverted when editing ends. [prefix] is shown before the
- * number (e.g. "f/"), [unit] after it.
+ * number (e.g. "f/"), [unit] after it. [caption], if any, sits right under the title line.
  */
 @Composable
 fun SettingsNumberField(
@@ -298,8 +300,9 @@ fun SettingsNumberField(
     prefix: String = "",
     unit: String = "",
     fractionDigits: Int = 1,
+    caption: String? = null,
 ) {
-    NumberField(title, value, { it?.let(onValueChange) }, range, prefix, unit, fractionDigits, "", isRequired = true)
+    NumberField(title, value, { it?.let(onValueChange) }, range, prefix, unit, fractionDigits, "", isRequired = true, caption = caption)
 }
 
 /** A labelled numeric text field for a value that may be unknown; clearing the field sets it to `null`. */
@@ -313,8 +316,9 @@ fun SettingsOptionalNumberField(
     unit: String = "",
     fractionDigits: Int = 1,
     placeholder: String = "Unknown",
+    caption: String? = null,
 ) {
-    NumberField(title, value, onValueChange, range, prefix, unit, fractionDigits, placeholder, isRequired = false)
+    NumberField(title, value, onValueChange, range, prefix, unit, fractionDigits, placeholder, isRequired = false, caption = caption)
 }
 
 @Composable
@@ -328,6 +332,7 @@ private fun NumberField(
     fractionDigits: Int,
     placeholder: String,
     isRequired: Boolean,
+    caption: String? = null,
 ) {
     val palette = LocalPalette.current
     val focus = LocalFocusManager.current
@@ -394,6 +399,7 @@ private fun NumberField(
             val upper = SettingsNumberText.text(range.endInclusive, fractionDigits)
             Text("Enter a value from $lower to $upper.", color = palette.critical, style = MaterialTheme.typography.bodySmall)
         }
+        if (caption != null) SettingsCaption(caption)
     }
 }
 

@@ -569,14 +569,19 @@ class SkyWatcherDriver(
 
     // MARK: Choosing axis angles
 
-    /** The axis angles for [place] at [at], within the limits; throws the mount's limit errors. */
+    /**
+     * The axis angles for [place] at [at], within the limits; throws the mount's limit errors. [overheadSlack] degrees are allowed
+     * above the overhead limit (tracking uses it, see [trackingOverheadSlackDegrees]).
+     */
     @Throws(MountError::class)
-    private fun choose(place: EquatorialCoordinate, at: Instant, near: Reading, keepSide: Boolean): Choice {
+    private fun choose(place: EquatorialCoordinate, at: Instant, near: Reading, keepSide: Boolean, overheadSlack: Double = 0.0): Choice {
         val limits = configuration.limits
         val sidereal = lst(at)
         val altitude = SkyWatcherSky.altitude(place, sidereal, location.latitude)
         if (altitude < limits.minimumAltitudeDegrees) throw MountError.MountHorizonLimit
-        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && altitude > limits.maximumAltitudeDegrees) throw MountError.MountOverheadLimit
+        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && altitude > limits.maximumAltitudeDegrees + overheadSlack) {
+            throw MountError.MountOverheadLimit
+        }
         val direction = SkyWatcherSky.localDirection(place, sidereal, location.latitude, resolvedMode)
         val solutions = model.solutions(direction, near.axis1)
         if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH) {
@@ -789,7 +794,13 @@ class SkyWatcherDriver(
     @Throws(MountError::class)
     private fun servoStep(reading: Reading, lead: Double, anchorAt: (Instant) -> EquatorialCoordinate) {
         val at = reading.time.addingTimeInterval(lead)
-        val wanted = choose(anchorAt(at), at, reading, true)
+        val wanted = choose(anchorAt(at), at, reading, true, if (motion == Motion.TRACKING) trackingOverheadSlackDegrees else 0.0)
+        // Beyond the azimuth limit of an alt-azimuth mount `choose` answers with the same direction from another turn, a jump of
+        // nearly a full turn. Tracking would be stopped by the rate check below, but a nudge is only clamped to the rate limit and
+        // would unwind the cable at full speed: both end here as at any other limit.
+        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > 180.0) {
+            throw MountError.OutsideMountLimits
+        }
         val limit = configuration.limits.maximumAxisRateDegreesPerSecond
         var rate1 = (wanted.axis1 - reading.axis1) / lead
         var rate2 = (wanted.axis2 - reading.axis2) / lead
@@ -811,7 +822,12 @@ class SkyWatcherDriver(
         if (trackingEnabled) {
             motion = Motion.TRACKING
             lastServo = null
-            applyTracking(reading)
+            if (applyTracking(reading) != null) {
+                // Tracking cannot go on from here (the nudge ended at a limit): the axes still turn at the nudge rate, so stop
+                // them now instead of at the next poll, when they would have travelled on.
+                stopAxes()
+                pendingStop = false
+            }
         } else {
             motion = Motion.STOPPED
             stopAxes()
@@ -951,6 +967,14 @@ class SkyWatcherDriver(
         private const val minimumCosine: Double = 0.05
         private const val maximumDeclination: Double = 89.5
         private const val nudgeGraceSeconds: Double = 2.0
+
+        /**
+         * How far above the overhead limit an alt-azimuth mount may keep tracking. A nudge towards the limit ends where the mount
+         * is, and the mount still coasts on while it brakes (a few tenths of a degree from the fastest nudge); tracking has to be
+         * able to go on from there, and a target that creeps over the limit by sidereal motion stops it soon enough. A goto or a
+         * nudge still stops at the limit itself.
+         */
+        private const val trackingOverheadSlackDegrees: Double = 0.6
         private const val nudgeLeadSeconds: Double = 0.5
         private const val nudgeUpdateSeconds: Double = 0.5
         private const val trackingLeadExtraSeconds: Double = 0.5

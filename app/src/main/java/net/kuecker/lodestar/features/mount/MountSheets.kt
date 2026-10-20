@@ -199,7 +199,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
     var failure by remember { mutableStateOf<String?>(null) }
     var alignsPhone by remember { mutableStateOf(true) }
 
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -213,8 +213,9 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
             )
             LodestarButton("Cancel", onClick = onDone, kind = LodestarButtonKind.SECONDARY)
         }
-        // What does not fit scrolls: the confirmation has more than a small phone can show.
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+        // What does not fit scrolls: the confirmation has more than a small phone can show. The bottom margin is part
+        // of what scrolls: outside it, the scroll area would end right at the button and cut its rounded corners.
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
             if (resolved == null || target == null || snapshot.state != MountConnectionState.CONNECTED) {
                 Text(
                     if (snapshot.state != MountConnectionState.CONNECTED) "The mount is not connected." else "There is no target or observing location.",

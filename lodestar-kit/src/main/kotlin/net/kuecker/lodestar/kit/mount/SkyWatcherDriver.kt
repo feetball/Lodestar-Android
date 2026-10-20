@@ -792,8 +792,9 @@ class SkyWatcherDriver(
         val wanted = choose(anchorAt(at), at, reading, true)
         // Beyond the azimuth limit of an alt-azimuth mount `choose` answers with the same direction from another turn, a jump of
         // nearly a full turn. Tracking would be stopped by the rate check below, but a nudge is only clamped to the rate limit and
-        // would unwind the cable at full speed: both end here as at any other limit.
-        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > 180.0) {
+        // would unwind the cable at full speed: both end here as at any other limit. The threshold is well above the half turn
+        // (about 180 degrees) in which the azimuth swings when the target passes close to the zenith, which is no cable problem.
+        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > otherTurnJumpDegrees) {
             throw MountError.OutsideMountLimits
         }
         val limit = configuration.limits.maximumAxisRateDegreesPerSecond
@@ -957,6 +958,9 @@ class SkyWatcherDriver(
         private const val minimumCosine: Double = 0.05
         private const val maximumDeclination: Double = 89.5
         private const val nudgeGraceSeconds: Double = 2.0
+
+        /** A change of the azimuth axis larger than this is the same direction from another turn of the cable, not a real move. */
+        private const val otherTurnJumpDegrees: Double = 270.0
         private const val nudgeLeadSeconds: Double = 0.5
         private const val nudgeUpdateSeconds: Double = 0.5
         private const val trackingLeadExtraSeconds: Double = 0.5

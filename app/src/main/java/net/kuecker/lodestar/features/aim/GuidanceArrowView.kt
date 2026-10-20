@@ -82,6 +82,13 @@ private val READOUT_HALF_HEIGHT = 24.dp
 private val READOUT_GAP = 6.dp
 
 /**
+ * How far above the reticle the readout goes when it cannot go below: clear of the name that the sky chart draws
+ * above the target (its ring is 21 dp, the name sits 15 dp above the ring and is about 18 dp tall), so the readout
+ * does not cover "Panel 1 of 3" or the name of the target when that is at the reticle.
+ */
+private val ABOVE_OFFSET = 21.dp + 15.dp + 9.dp + READOUT_GAP + READOUT_HALF_HEIGHT
+
+/**
  * Where the distance readout goes, in dp below the reticle as the reader sees it: in its place below the reticle when
  * there are at least [room] dp before the panels begin, above the reticle when the panels leave less (the cards at
  * the bottom of the HUD cover the middle of a small screen), and then no lower than the panels' top edge.
@@ -89,7 +96,7 @@ private val READOUT_GAP = 6.dp
 private fun readoutOffset(room: Dp): Dp {
     if (room >= LABEL_OFFSET + READOUT_HALF_HEIGHT + READOUT_GAP) return LABEL_OFFSET
     val clearOfPanels = room - READOUT_GAP - READOUT_HALF_HEIGHT
-    return if (clearOfPanels < -LABEL_OFFSET) clearOfPanels else -LABEL_OFFSET
+    return if (clearOfPanels < -ABOVE_OFFSET) clearOfPanels else -ABOVE_OFFSET
 }
 
 /** Distance from the ring to the middle of the "On target" label above it. */

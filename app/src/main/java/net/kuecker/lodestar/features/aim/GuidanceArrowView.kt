@@ -2,12 +2,18 @@ package net.kuecker.lodestar.features.aim
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,11 +28,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -87,8 +92,8 @@ private fun readoutOffset(room: Dp): Dp {
     return if (clearOfPanels < -LABEL_OFFSET) clearOfPanels else -LABEL_OFFSET
 }
 
-/** The check mark's badge sits on the ring; this is its radius. */
-private val BADGE_RADIUS = 15.dp
+/** Distance from the ring to the middle of the "On target" label above it. */
+private val ON_TARGET_LABEL_GAP = 30.dp
 
 /** The ring grows with the screen but leaves room for the panels on a small one. [heightPx] is the stage's height. */
 private fun Density.ringRadius(heightPx: Float): Float = min(100.dp.toPx(), max(70.dp.toPx(), heightPx * 0.115f))
@@ -110,7 +115,6 @@ private fun AimArrowContent(
     val palette = LocalPalette.current
     val density = LocalDensity.current
     val arrow = remember { Path() }
-    val checkMark = remember { Path() }
     // Where the middle of this stage, and so the reticle, lies in the window.
     var centerY by remember { mutableFloatStateOf(Float.NaN) }
     BoxWithConstraints(
@@ -122,22 +126,10 @@ private fun AimArrowContent(
             val center = Offset(size.width / 2, size.height / 2)
             val radius = ringRadius(size.height)
             if (guidance.state == GuidanceState.ON_TARGET) {
+                // A ring, a check mark and a word: the state does not depend on colour alone. The check mark goes
+                // with the word, on its backing above the ring, so it never lands on the target's name, which the
+                // sky chart draws anywhere inside the ring.
                 drawCircle(palette.positive, radius, center, style = Stroke(5.dp.toPx()))
-                // A ring, a check mark and a word: the state does not depend on colour alone. The check mark is a
-                // badge on the ring at the top as the reader sees it, clear of the target's name inside the ring,
-                // and turns with the HUD so it stays upright.
-                val badgeCenter = center + rotation.rotated(Offset(0f, -radius))
-                drawCircle(palette.positive, BADGE_RADIUS.toPx(), badgeCenter)
-                checkMark.rewind()
-                addCheckMark(checkMark, 0.6.dp.toPx())
-                rotate(degrees = rotation.degrees.toFloat(), pivot = badgeCenter) {
-                    translate(left = badgeCenter.x, top = badgeCenter.y) {
-                        drawPath(
-                            checkMark, palette.background,
-                            style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-                        )
-                    }
-                }
             } else {
                 drawCircle(palette.guidance.copy(alpha = 0.25f), radius, center, style = Stroke(1.dp.toPx()))
                 val scale = 0.65f + 0.35f * min(1.0, guidance.separation / 20).toFloat()
@@ -154,10 +146,13 @@ private fun AimArrowContent(
             }
         }
         if (guidance.state == GuidanceState.ON_TARGET) {
-            // Above the ring and its badge, where the panels at the bottom of the screen and the sky labels
-            // inside the ring do not reach it.
+            // Above the ring, where the panels at the bottom of the screen and the sky labels inside the ring do
+            // not reach it.
             val ringDp = with(density) { ringRadius(constraints.maxHeight.toFloat()).toDp() }
-            ArrowLabel("On target", palette.positive, 22.sp, rotation, offset = -(ringDp + BADGE_RADIUS + 19.dp))
+            ArrowLabel(
+                "On target", palette.positive, 22.sp, rotation, offset = -(ringDp + ON_TARGET_LABEL_GAP),
+                icon = Icons.Filled.CheckCircle,
+            )
         } else {
             // The room between the reticle and the panels, as the reader sees it: the panels lie at the bottom of an
             // upright HUD and at the top of the screen when it is upside down. A sideways HUD has them at the side.
@@ -174,8 +169,8 @@ private fun AimArrowContent(
 
 /**
  * A text on a backing that turns with the HUD so it reads upright, [offset] below the reticle as the reader sees it
- * (above it when negative), with a small [caption] under it that says what the figure is. The backing keeps the sky
- * labels under it from running through the digits.
+ * (above it when negative), with a small [caption] under it that says what the figure is and an [icon] before the
+ * text. The backing keeps the sky labels under it from running through the digits.
  */
 @Composable
 private fun ArrowLabel(
@@ -185,6 +180,7 @@ private fun ArrowLabel(
     rotation: AimHUDRotation,
     offset: Dp = LABEL_OFFSET,
     caption: String? = null,
+    icon: ImageVector? = null,
 ) {
     val palette = LocalPalette.current
     val shadow = Shadow(Color.Black.copy(alpha = 0.7f), blurRadius = with(LocalDensity.current) { 3.dp.toPx() })
@@ -198,13 +194,16 @@ private fun ArrowLabel(
                 .padding(horizontal = 6.dp, vertical = 1.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text,
-                color = color,
-                style = TextStyle(fontSize = size, fontWeight = FontWeight.SemiBold, shadow = shadow).monospacedDigits(),
-                softWrap = false,
-                maxLines = 1,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                if (icon != null) Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+                Text(
+                    text,
+                    color = color,
+                    style = TextStyle(fontSize = size, fontWeight = FontWeight.SemiBold, shadow = shadow).monospacedDigits(),
+                    softWrap = false,
+                    maxLines = 1,
+                )
+            }
             if (caption != null) {
                 Text(
                     caption,
@@ -216,13 +215,6 @@ private fun ArrowLabel(
             }
         }
     }
-}
-
-/** A bold check mark centred on the origin, as a polyline of about 34 × 26 units ([unit] pixels each). */
-private fun addCheckMark(path: Path, unit: Float) {
-    path.moveTo(-14 * unit, 0f)
-    path.lineTo(-5 * unit, 10 * unit)
-    path.lineTo(15 * unit, -11 * unit)
 }
 
 /**

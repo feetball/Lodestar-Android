@@ -155,7 +155,7 @@ private fun SkyOverlayRenderer.drawAimMarker(direction: Vector3, name: String) {
     addLabel(name, center.x, center.y, AimLabelStyle(14f, FontWeight.Bold, color), 0, offsetY = -(radius + 15))
 }
 
-/** An arrow at the screen edge in the direction of a target that is not in view, with its distance. */
+/** An arrow at the screen edge in the direction of a target that is not in view. */
 private fun SkyOverlayRenderer.drawEdgeIndicator(direction: Vector3, color: Color) {
     val screen = worldToScreen * direction
     var headingX = screen.x
@@ -207,12 +207,7 @@ private fun SkyOverlayRenderer.drawEdgeIndicator(direction: Vector3, color: Colo
         drawPath(arrow, color)
         drawPath(arrow, Color.Black.faded(0.5f), style = Stroke(density))
     }
-
-    val separation = AimFormat.angle(boresight.angle(direction))
-    scratch.labels.add(
-        separation, (tipX - headingX * 38 * density).toFloat(), (tipY - headingY * 38 * density).toFloat(),
-        AimLabelStyle(14f, FontWeight.Bold, color), 3,
-    )
+    // The distance is not repeated here: the arrow around the reticle carries it, labelled.
 }
 
 // Reticle

@@ -3,6 +3,7 @@ package net.kuecker.lodestar.features.aim
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -69,10 +70,10 @@ internal fun GuidanceArrowView(model: AimViewModel, isActive: Boolean, modifier:
 }
 
 /** Distance of the texts from the reticle: inside the ring, below the reticle as the reader sees it. */
-private val LABEL_OFFSET = 50.dp
+private val LABEL_OFFSET = 54.dp
 
-/** Half the height of the distance readout with its backing, and the space kept between it and the panels. */
-private val READOUT_HALF_HEIGHT = 17.dp
+/** Half the height of the distance readout (figure and caption) with its backing, and the space kept to the panels. */
+private val READOUT_HALF_HEIGHT = 24.dp
 private val READOUT_GAP = 6.dp
 
 /**
@@ -166,14 +167,15 @@ private fun AimArrowContent(
                 AimHUDRotation.CLOCKWISE, AimHUDRotation.COUNTERCLOCKWISE -> Float.POSITIVE_INFINITY
             }
             val offset = readoutOffset(with(density) { roomPx.toDp() })
-            ArrowLabel(AimFormat.angle(guidance.separation), palette.guidance, 26.sp, rotation, offset)
+            ArrowLabel(AimFormat.angle(guidance.separation), palette.guidance, 26.sp, rotation, offset, caption = "away")
         }
     }
 }
 
 /**
  * A text on a backing that turns with the HUD so it reads upright, [offset] below the reticle as the reader sees it
- * (above it when negative). The backing keeps the sky labels under it from running through the digits.
+ * (above it when negative), with a small [caption] under it that says what the figure is. The backing keeps the sky
+ * labels under it from running through the digits.
  */
 @Composable
 private fun ArrowLabel(
@@ -182,27 +184,37 @@ private fun ArrowLabel(
     size: TextUnit,
     rotation: AimHUDRotation,
     offset: Dp = LABEL_OFFSET,
+    caption: String? = null,
 ) {
     val palette = LocalPalette.current
-    val blur = with(LocalDensity.current) { 3.dp.toPx() }
+    val shadow = Shadow(Color.Black.copy(alpha = 0.7f), blurRadius = with(LocalDensity.current) { 3.dp.toPx() })
     val shift = rotation.rotated(DpOffset(0.dp, offset))
     AimFixedTextSize {
-        Text(
-            text,
-            color = color,
-            style = TextStyle(
-                fontSize = size,
-                fontWeight = FontWeight.SemiBold,
-                shadow = Shadow(Color.Black.copy(alpha = 0.7f), blurRadius = blur),
-            ).monospacedDigits(),
-            softWrap = false,
-            maxLines = 1,
-            modifier = Modifier
+        Column(
+            Modifier
                 .offset(shift.x, shift.y)
                 .rotate(rotation.degrees.toFloat())
-                .background(palette.surface.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                .background(palette.surface.copy(alpha = AIM_PANEL_ALPHA), RoundedCornerShape(8.dp))
                 .padding(horizontal = 6.dp, vertical = 1.dp),
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text,
+                color = color,
+                style = TextStyle(fontSize = size, fontWeight = FontWeight.SemiBold, shadow = shadow).monospacedDigits(),
+                softWrap = false,
+                maxLines = 1,
+            )
+            if (caption != null) {
+                Text(
+                    caption,
+                    color = color,
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, shadow = shadow),
+                    softWrap = false,
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }
 

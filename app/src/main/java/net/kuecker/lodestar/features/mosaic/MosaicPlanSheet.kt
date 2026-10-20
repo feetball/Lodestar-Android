@@ -234,7 +234,7 @@ private fun MosaicPlanContent(
                     "While a mosaic runs, the Aim screen guides to one panel after the other.",
                     color = palette.secondaryText,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
         }

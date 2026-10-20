@@ -330,38 +330,47 @@ private fun NumberField(
             val fieldWidth = with(LocalDensity.current) {
                 measurer.measure(text.ifEmpty { "0" }, fieldStyle).size.width.toDp() + 4.dp
             }.coerceIn(24.dp, 120.dp)
-            Box(contentAlignment = Alignment.CenterEnd) {
-                if (text.isEmpty() && placeholder.isNotEmpty()) {
-                    Text(placeholder, color = palette.tertiaryText, style = MaterialTheme.typography.bodyLarge)
+            // The unit follows the number; a degree sign hugs it ("20°"), a word such as "mm" or "s" keeps a gap.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(if (unit == "°") 0.dp else 8.dp),
+            ) {
+                Box(contentAlignment = Alignment.CenterEnd) {
+                    if (text.isEmpty() && placeholder.isNotEmpty()) {
+                        Text(placeholder, color = palette.tertiaryText, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    BasicTextField(
+                        value = text,
+                        onValueChange = { newText ->
+                            text = newText
+                            if (newText.isBlank()) {
+                                if (!isRequired) onValueChange(null)
+                            } else {
+                                SettingsNumberText.parse(newText, range)?.let { parsed -> if (parsed != value) onValueChange(parsed) }
+                            }
+                        },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = if (invalid) palette.critical else palette.primaryText,
+                            textAlign = TextAlign.End,
+                        ).monospacedDigits(),
+                        cursorBrush = SolidColor(palette.accent),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = if (range.start < 0) KeyboardType.Text else KeyboardType.Decimal,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+                        modifier = Modifier
+                            .width(fieldWidth)
+                            .onFocusChanged { focused = it.isFocused }
+                            .semantics { contentDescription = title },
+                    )
                 }
-                BasicTextField(
-                    value = text,
-                    onValueChange = { newText ->
-                        text = newText
-                        if (newText.isBlank()) {
-                            if (!isRequired) onValueChange(null)
-                        } else {
-                            SettingsNumberText.parse(newText, range)?.let { parsed -> if (parsed != value) onValueChange(parsed) }
-                        }
-                    },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = if (invalid) palette.critical else palette.primaryText,
-                        textAlign = TextAlign.End,
-                    ).monospacedDigits(),
-                    cursorBrush = SolidColor(palette.accent),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = if (range.start < 0) KeyboardType.Text else KeyboardType.Decimal,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
-                    modifier = Modifier
-                        .width(fieldWidth)
-                        .onFocusChanged { focused = it.isFocused }
-                        .semantics { contentDescription = title },
-                )
+                if (unit.isNotEmpty()) {
+                    val unitColor = if (unit == "°") palette.primaryText else palette.secondaryText
+                    Text(unit, color = unitColor, style = MaterialTheme.typography.bodyLarge)
+                }
             }
-            if (unit.isNotEmpty()) Text(unit, color = palette.secondaryText, style = MaterialTheme.typography.bodyLarge)
         }
         if (invalid) {
             val lower = SettingsNumberText.text(range.start, fractionDigits)

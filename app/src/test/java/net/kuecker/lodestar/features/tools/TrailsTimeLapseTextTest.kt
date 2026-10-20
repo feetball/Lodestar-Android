@@ -85,6 +85,14 @@ class TrailsTimeLapseTextTest {
     }
 
     @Test
+    fun secondsAreWrittenWithTheSpaceOfTheOtherSecondsInTheResults() {
+        assertEquals("10 s", TrailsText.duration(10.0))
+        assertEquals("4m 30s", TrailsText.duration(270.0))
+        assertEquals("1h 05m", TrailsText.duration(3_900.0))
+        assertEquals("10 s", TrailsText.seconds(10.0))
+    }
+
+    @Test
     fun otherRefusalsHaveWordsButNoSuggestedInterval() {
         val result = TrailsText.timeLapse {
             TimeLapsePlanner.plan(15.0, 10.0, 24.0, TimeLapseTarget.ClipLength(10_000.0))

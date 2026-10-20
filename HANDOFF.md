@@ -14,7 +14,7 @@ How to continue Lodestar 1.1 on another computer. This file is for Claude Code a
 |---|---|---|
 | Repo | `feetball/Lodestar` | `feetball/Lodestar-Android` (public) |
 | 1.1 code | **`main`** (features-1.1 and the review branch were merged on 2026-10-19) | **`main`** |
-| Version | 1.1 on all four targets (app, iOS widgets, watch app, watch widgets) | 1.1, versionCode 3 |
+| Version | 1.1 on all four targets (app, iOS widgets, watch app, watch widgets) | 1.1, versionCode 4 |
 | CI | `.github/workflows/ci.yml` on macOS runners. `main` is red since `5b1dc75` (see "What is left") | `ci.yml`, green |
 | Visual review | `review.yml` (`gh workflow run review.yml --ref <branch>`), shot lists in `Tools/review/` | `emulator.yml` with `-f set=review`, `tools/capture_review.sh` |
 | Store text | `AppStore/metadata-en-US.json` (1.1 description, What's New, promotional text) | `PlayStore/listing/en-US/` (`full_description.txt`, `release_notes.txt`) |
@@ -81,7 +81,7 @@ A pixel scan checks that night mode is pure red (no green or blue).
 2. **iOS PRs #13–#16**: review and merge. Check #16 on a device (frame rate on the Aim tab with the camera, VoiceOver,
    touches through the overlay). The Sky tab has the same problem #14 fixed for Aim: its time-travel bar is partly under
    the app's own tab bar; the general fix belongs in `RootView` / `AppTabBar`.
-3. **Android release 1.1 (3)**
+3. **Android release 1.1 (4)**
    - Build a signed bundle:
      `./gradlew :app:bundleRelease -Plodestar.signing.storeFile=<keystore> -Plodestar.signing.storePassword=<pw> -Plodestar.signing.keyAlias=upload -Plodestar.signing.keyPassword=<pw> --no-configuration-cache`
      Without a JDK or the keystore on the machine: Actions > **Release bundle** > Run workflow builds, signs and verifies the same

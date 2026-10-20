@@ -1,6 +1,7 @@
 package net.kuecker.lodestar.kit.mount
 
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
+import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.mount.MountTestSupport.andromeda
 import net.kuecker.lodestar.kit.mount.MountTestSupport.deneb
 import net.kuecker.lodestar.kit.mount.MountTestSupport.rigNames
@@ -300,6 +301,21 @@ class MountControllerCommandTests {
             listOf("SiteLatitude=40.015", "SiteLongitude=-105.27", "SiteElevation=1650.0", "UTCDate=2026-10-18T04:00:00.000Z"),
             alpaca.alpacaSimulator?.siteValues,
         )
+    }
+
+    @Test
+    fun testAlpacaSiteElevationStaysWithinWhatAscomAccepts() {
+        val rig = MountTestSupport.rig("alpaca-topocentric")
+        rig.controller.connect()
+        // The Dead Sea shore is inside the engine's range for elevations but below ASCOM's lower limit of -300 m.
+        rig.controller.setSiteAndTime(GeographicLocation(31.5, 35.5, -430.0), MountTestSupport.start)
+        val low = assertNotNull(rig.alpacaSimulator?.siteValues)
+        assertTrue(low.contains("SiteElevation=-300.0"), "$low")
+        assertTrue(low.contains("UTCDate=2026-10-18T04:00:00.000Z"), "$low")
+        val high = MountTestSupport.rig("alpaca-topocentric")
+        high.controller.connect()
+        high.controller.setSiteAndTime(GeographicLocation(28.0, 86.9, 11_000.0), MountTestSupport.start)
+        assertTrue(assertNotNull(high.alpacaSimulator?.siteValues).contains("SiteElevation=10000.0"))
     }
 
     @Test

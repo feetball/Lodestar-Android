@@ -1,5 +1,10 @@
 package net.kuecker.lodestar.kit.mount
 
+import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
+import net.kuecker.lodestar.kit.ephemeris.horizontal
+import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
+import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
+import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.mount.MountTestSupport.altair
 import net.kuecker.lodestar.kit.mount.MountTestSupport.andromeda
 import net.kuecker.lodestar.kit.mount.MountTestSupport.deneb
@@ -232,6 +237,81 @@ class MountControllerTests {
         noLookahead.controller.connect()
         noLookahead.controller.goto(altair)
         assertEquals(MountPhase.SLEWING, noLookahead.controller.status.phase)
+    }
+
+    /**
+     * The J2000 place [degreesAbove] degrees straight above the Sun, as seen by the rig's observer at the clock's time (so
+     * exactly [degreesAbove] degrees from the Sun).
+     */
+    private fun targetNearTheSunOf(rig: MountRig, degreesAbove: Double): EquatorialCoordinate {
+        val frame = rig.frame()
+        val sun = frame.horizontal(SolarSystemBody.SUN, refraction = false)
+        return frame.j2000(HorizontalCoordinate(sun.azimuth, sun.altitude + degreesAbove), refracted = false)
+    }
+
+    @Test
+    fun testGotoNearTheDaytimeSunIsRefusedWithoutTouchingTheMount() {
+        for (name in rigNames) {
+            val rig = MountTestSupport.rig(name, begin = MountTestSupport.midday)
+            rig.controller.connect()
+            val sun = rig.frame().horizontal(SolarSystemBody.SUN, refraction = false)
+            assertTrue(sun.altitude in 30.0..50.0, "$name: the Sun should be high: ${sun.altitude}")
+            // Eight degrees above the Sun: well above the horizon, so only the Sun guard can refuse it.
+            val nearby = targetNearTheSunOf(rig, 8.0)
+            val refusal = assertFailsWith<MountError.NearSun>(name) { rig.controller.goto(nearby) }
+            assertEquals(8.0, refusal.separationDegrees, 0.1, name)
+            assertEquals(15.0, refusal.limitDegrees, 0.0, name)
+            assertEquals(0, rig.mount.slewsStarted, name)
+            assertEquals(MountPhase.IDLE, rig.controller.status.phase, name)
+            assertNull(rig.controller.status.target, name)
+        }
+    }
+
+    @Test
+    fun testGotoAwayFromTheDaytimeSunIsAllowedAndTheExclusionIsConfigurable() {
+        for (name in rigNames) {
+            val rig = MountTestSupport.rig(name, begin = MountTestSupport.midday)
+            rig.controller.connect()
+            // The opposite side of the sky, 45 degrees up.
+            val frame = rig.frame()
+            val sun = frame.horizontal(SolarSystemBody.SUN, refraction = false)
+            val faraway = frame.j2000(HorizontalCoordinate(sun.azimuth + 180.0, 45.0), refracted = false)
+            rig.controller.goto(faraway)
+            assertEquals(MountPhase.SLEWING, rig.controller.status.phase, name)
+            assertEquals(1, rig.mount.slewsStarted, name)
+        }
+        // 20 degrees from the Sun is outside the standard 15 degrees, but inside a 25 degree exclusion.
+        val wide = MountTestSupport.rig("lx200-onstep", begin = MountTestSupport.midday)
+        wide.controller.connect()
+        val twenty = targetNearTheSunOf(wide, 20.0)
+        wide.controller.goto(twenty)
+        assertEquals(MountPhase.SLEWING, wide.controller.status.phase)
+        val strict = MountTestSupport.rig("lx200-onstep", MountSettings(sunExclusionDegrees = 25.0), begin = MountTestSupport.midday)
+        strict.controller.connect()
+        val refusal = assertFailsWith<MountError.NearSun> { strict.controller.goto(twenty) }
+        assertEquals(25.0, refusal.limitDegrees, 0.0)
+        assertEquals(0, strict.mount.slewsStarted)
+    }
+
+    @Test
+    fun testGotoNearTheSunIsAllowedOnceItHasSet() {
+        // A few minutes after sunset at Boulder, the Sun is about four degrees below the horizon.
+        var evening = MountTestSupport.midday
+        for (step in 0 until 1_000) {
+            val altitude = SkyFrame(evening, MountTestSupport.boulder).horizontal(SolarSystemBody.SUN, refraction = false).altitude
+            if (altitude < -4.0) break
+            evening = evening.plusSeconds(60)
+        }
+        for (name in rigNames) {
+            val rig = MountTestSupport.rig(name, begin = evening)
+            rig.controller.connect()
+            val sun = rig.frame().horizontal(SolarSystemBody.SUN, refraction = false)
+            assertTrue(sun.altitude in -8.0..-3.0, "$name: the Sun should have just set: ${sun.altitude}")
+            // Nine degrees from the Sun and about five degrees above the horizon.
+            val nearby = targetNearTheSunOf(rig, 9.0)
+            rig.controller.goto(nearby)
+            assertEquals(MountPhase.SLEWING, rig.controller.status.phase, name)
+        }
     }
 
     @Test

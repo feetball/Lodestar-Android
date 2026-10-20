@@ -309,6 +309,37 @@ class EventsCalculatorTests {
     }
 
     @Test
+    fun testNightOfAnEventAroundNoonOnDaylightSavingChangeDays() {
+        // A night runs from local noon to local noon, so on a 23- or 25-hour day the event just after noon (spring) or just
+        // before noon (autumn) belongs to the night of its own side of noon, not to the one an hour away that shifting by
+        // 12 absolute hours lands in. A radiant that stays high all night makes the window the whole astronomical night.
+        val zone = ZoneId.of("America/New_York")
+        val observer = EventsTestSupport.newYork.observer
+        val options = EventOptions(timeZone = zone)
+        val radiant = EquatorialCoordinate(0.0, 85.0)
+        // The event, and an instant on the local day on which its night starts.
+        val cases = listOf(
+            Pair("2026-03-08T16:30:00Z", "2026-03-08T16:30:00Z"), // 12:30 EDT: the night of 8 March, 30 minutes after noon
+            Pair("2026-03-08T15:30:00Z", "2026-03-07T20:00:00Z"), // 11:30 EDT: the night of 7 March
+            Pair("2026-11-01T16:30:00Z", "2026-10-31T20:00:00Z"), // 11:30 EST: the night of 31 October, 30 minutes before its end
+            Pair("2026-11-01T17:30:00Z", "2026-11-01T17:30:00Z"), // 12:30 EST: the night of 1 November
+        )
+        for ((eventText, dayText) in cases) {
+            val date = utc(eventText)
+            val peak = MeteorShowerPeak(MeteorShower.all[0], date, date, 0.0, radiant)
+            val event = AstronomicalEvent(date, EventDetails.MeteorShower(peak), null)
+            val night = TwilightCalculator.night(utc(dayText), observer, zone)
+            val dark = assertNotNull(night.astronomicalNight, eventText)
+            val visibility = assertNotNull(EventCalculator.visibility(event, observer, options), eventText)
+            val window = assertNotNull(visibility.bestWindow, eventText)
+            assertTrue(
+                abs(EventsTestSupport.seconds(window.start, dark.start)) < 1 && abs(EventsTestSupport.seconds(window.end, dark.end)) < 1,
+                "$eventText: window $window is not the night of $dayText, $dark",
+            )
+        }
+    }
+
+    @Test
     fun testPolarObserversAndTheSouthernHemisphere() {
         val options = EventOptions(kinds = setOf(EventKind.METEOR_SHOWER, EventKind.OPPOSITION, EventKind.FULL_MOON_SPECIAL))
         // Tromsø (69.65N) in June has no astronomical night: the Daytime Arietids (7 June) have no window and nothing breaks.

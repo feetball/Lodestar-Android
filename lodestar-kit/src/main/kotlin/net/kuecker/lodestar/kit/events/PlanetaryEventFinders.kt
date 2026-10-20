@@ -212,11 +212,22 @@ data class EarthApsis(
 /**
  * Finds the Earth's perihelion and aphelion as the extremes of the Earth–Sun distance (the Earth–Moon barycentre of the
  * VSOP87 series, as in the published tables; it differs from the Earth's centre by at most 0.00003 AU).
+ *
+ * Each apsis is searched within a week of the mean instant of Meeus, *Astronomical Algorithms*, ch. 38 (a whole `k` is a
+ * perihelion, `k + 0.5` an aphelion). The anomalistic year is longer than the calendar year, so the apsides drift through
+ * the calendar by about 1.75 days a century; counting `k` instead of calendar days keeps them inside the window from the
+ * year 1 to the year 4001. The planets and the Moon move the true apsis by at most about two days from the mean one.
  */
 object EarthApsisFinder {
     private const val halfWindow: Double = 7.0
     private const val halfDifference: Double = 0.5
     private const val tolerance: Double = 1e-6
+
+    /** The mean perihelion at `k = 0` (JDE, 2000 January 3). */
+    private const val meanPerihelionEpoch: Double = 2_451_547.507
+
+    /** Days from one mean perihelion to the next. */
+    private const val anomalisticYearDays: Double = 365.259_635_8
 
     /** The apsides from [from] to [to] (both inclusive), as events without visibility, in time order. */
     fun events(from: Instant, to: Instant): List<AstronomicalEvent> {
@@ -224,16 +235,14 @@ object EarthApsisFinder {
         val fromUT = EventSearch.ut(from)
         val toUT = EventSearch.ut(EventSearch.limitedEnd(from, to))
         fun distance(ut: Double): Double = Ephemeris.geocentricJ2000(SolarSystemBody.SUN, JulianDate(ut)).length
-        val firstYear = floor(JulianDate.decimalYear(fromUT)).toInt() - 1
-        val lastYear = floor(JulianDate.decimalYear(toUT)).toInt() + 1
+        val firstK = floor((fromUT - meanPerihelionEpoch) / anomalisticYearDays).toInt() - 1
+        val lastK = ceil((toUT - meanPerihelionEpoch) / anomalisticYearDays).toInt() + 1
         val found = ArrayList<AstronomicalEvent>()
-        for (year in firstYear..lastYear) {
+        for (k in firstK..lastK) {
             for (kind in EarthApsisKind.entries) {
-                val centre = if (kind == EarthApsisKind.PERIHELION) {
-                    JulianDate.julianDay(year, 1, 3)
-                } else {
-                    JulianDate.julianDay(year, 7, 4)
-                }
+                val phase = if (kind == EarthApsisKind.PERIHELION) 0.0 else 0.5
+                // The mean instant is in dynamical time (TT); the search runs in UT.
+                val centre = JulianDate.fromTt(meanPerihelionEpoch + anomalisticYearDays * (k.toDouble() + phase)).ut
                 val root = EventSearch.root(
                     { distance(it + halfDifference) - distance(it - halfDifference) },
                     centre - halfWindow, centre + halfWindow, tolerance,

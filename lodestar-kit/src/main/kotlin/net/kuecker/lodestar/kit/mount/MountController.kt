@@ -1,5 +1,7 @@
 package net.kuecker.lodestar.kit.mount
 
+import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
+import net.kuecker.lodestar.kit.ephemeris.horizontal
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.foundation.Observer
@@ -22,7 +24,8 @@ import kotlin.math.ceil
  * ```
  *
  * Safety rules enforced here: a target below [MountSettings.altitudeLimit] (now, and
- * [MountSettings.horizonLookaheadSeconds] from now) is never sent; a goto while a slew or nudge runs is refused
+ * [MountSettings.horizonLookaheadSeconds] from now) is never sent, and neither is a target within
+ * [MountSettings.sunExclusionDegrees] of the Sun while the Sun is up; a goto while a slew or nudge runs is refused
  * ([MountError.SlewInProgress], [MountError.Busy]) until [abort] has been called, and so is a goto or sync while
  * the mount's own "slewing" flag is set (a move started on the hand controller); a slew that exceeds
  * [MountSettings.maximumSlewSeconds] is aborted; a nudge ends by itself after its duration (the next [poll] sends the
@@ -176,8 +179,9 @@ class MountController(
      *
      * @throws MountError.NotConnected, [MountError.SlewInProgress] (call [abort] first), [MountError.Busy] (nudging),
      * [MountError.InvalidInput], [MountError.NotSupported], [MountError.BelowHorizonLimit] (checked with the observer's
-     * sky now and [MountSettings.horizonLookaheadSeconds] from now), and whatever the mount answers
-     * ([MountError.NotAligned], [MountError.MountHorizonLimit], [MountError.Parked], …).
+     * sky now and [MountSettings.horizonLookaheadSeconds] from now), [MountError.NearSun] (the Sun is up and the target is
+     * within [MountSettings.sunExclusionDegrees] of it, now or [MountSettings.horizonLookaheadSeconds] from now), and
+     * whatever the mount answers ([MountError.NotAligned], [MountError.MountHorizonLimit], [MountError.Parked], …).
      */
     @Throws(MountError::class)
     fun goto(target: EquatorialCoordinate, properMotion: ProperMotion? = null) {
@@ -192,6 +196,7 @@ class MountController(
         if (!found.canSlew) throw MountError.NotSupported(MountFeature.SLEW)
         val now = clock.now()
         checkAltitude(target, properMotion, now)
+        checkSun(target, properMotion, now)
         val sent = driver.epoch.fromJ2000(target, SkyFrame(now, observer), properMotion)
         try {
             driver.slew(sent)
@@ -421,7 +426,14 @@ class MountController(
         failures += 1
         lastError = error
         if (failures < settings.maximumConsecutiveFailures) return
-        if (phase == MountPhase.SLEWING) outcome = MountSlewOutcome.Failed(MountError.ConnectionLost)
+        // A nudge keeps an axis turning until the mount is told to stop, and the poll that would have ended it will not
+        // come again. The link may be gone, so this is one best-effort attempt that never throws.
+        val nudging = nudgeDirection
+        if (phase == MountPhase.NUDGING && nudging != null) stopNudgeQuietly(nudging)
+        if (phase == MountPhase.SLEWING) {
+            stopQuietly()
+            outcome = MountSlewOutcome.Failed(MountError.ConnectionLost)
+        }
         phase = MountPhase.DISCONNECTED
         lastError = MountError.ConnectionLost
         nudgeDirection = null
@@ -459,6 +471,31 @@ class MountController(
         }
     }
 
+    /**
+     * Refuses a target that is closer to the Sun than [MountSettings.sunExclusionDegrees] while the Sun is up. The check
+     * looks at the sky now and [MountSettings.horizonLookaheadSeconds] from now (the Sun may rise during the slew), and
+     * compares positions, not identities: Venus near inferior conjunction, the Moon at new moon or a comet in the glare
+     * are as dangerous as the Sun itself. Both places are geometric, topocentric and in the horizontal frame, so no
+     * frame conversion can put them out of step. The Sun counts as up from -1 degrees, which covers its disc and the
+     * refraction at the horizon.
+     */
+    private fun checkSun(target: EquatorialCoordinate, properMotion: ProperMotion?, now: Instant) {
+        val limit = settings.sunExclusionDegrees
+        val offsets = if (settings.horizonLookaheadSeconds > 0) {
+            doubleArrayOf(0.0, settings.horizonLookaheadSeconds)
+        } else {
+            doubleArrayOf(0.0)
+        }
+        for (offset in offsets) {
+            val frame = SkyFrame(now.addingTimeInterval(offset), observer)
+            val sun = frame.horizontal(SolarSystemBody.SUN, refraction = false)
+            if (sun.altitude <= sunUpAltitude) continue
+            val place = frame.horizontal(target, properMotion, false)
+            val distance = place.angularSeparation(sun)
+            if (distance < limit) throw MountError.NearSun(distance, limit)
+        }
+    }
+
     private fun storePosition(reading: EquatorialCoordinate, now: Instant) {
         mountPosition = reading
         position = driver.epoch.toJ2000(reading, SkyFrame(now, observer))
@@ -482,6 +519,15 @@ class MountController(
         }
     }
 
+    /** Tells the mount to end the nudge in [direction] when the session is being given up; a failure changes nothing. */
+    private fun stopNudgeQuietly(direction: MountNudgeDirection) {
+        try {
+            driver.stopNudge(direction)
+        } catch (_: MountError) {
+            // The link is probably gone; the session ends with `ConnectionLost` either way.
+        }
+    }
+
     /** Runs [action] up to three times while it fails with communication errors; returns the last error, or null on success. */
     private fun repeatUntilDone(action: () -> Unit): MountError? {
         var last: MountError? = null
@@ -499,5 +545,8 @@ class MountController(
 
     private companion object {
         const val stopAttempts: Int = 3
+
+        /** The Sun's geometric altitude (degrees) above which it counts as up for the exclusion zone. */
+        const val sunUpAltitude: Double = -1.0
     }
 }

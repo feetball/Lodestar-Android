@@ -210,17 +210,20 @@ class SkyWatcherDriver(
     }
 
     /**
-     * Ends the session. Servo tracking (alt-azimuth mounts) is stopped, because the mount would otherwise keep turning at the last
-     * rate; a sidereal tracking equatorial mount keeps tracking, and a running slew is left to finish.
+     * Ends the session. Servo tracking (alt-azimuth mounts) and a nudge are stopped, because the mount would otherwise keep turning
+     * at the last rate; a sidereal tracking equatorial mount keeps tracking, and a running slew is left to finish.
      */
     override fun disconnect() {
         if (!connected) return
         connected = false
-        if (motion == Motion.TRACKING && resolvedStrategy == SkyWatcherTrackingStrategy.SERVO) {
-            try {
-                stopAxes()
-            } catch (error: MountError) {
-                // Best effort: the link is probably gone.
+        if (motion == Motion.NUDGING || (motion == Motion.TRACKING && resolvedStrategy == SkyWatcherTrackingStrategy.SERVO)) {
+            // Best effort: the link is probably gone. Each axis gets its own try, so that a failure on one does not leave the other running.
+            for (axis in SkyWatcherAxis.entries) {
+                try {
+                    link.command(SkyWatcherCommand.STOP_MOTION, axis, "", "stop")
+                } catch (error: MountError) {
+                    // Nothing more can be done about this axis.
+                }
             }
         }
         motion = Motion.STOPPED
@@ -787,6 +790,12 @@ class SkyWatcherDriver(
     private fun servoStep(reading: Reading, lead: Double, anchorAt: (Instant) -> EquatorialCoordinate) {
         val at = reading.time.addingTimeInterval(lead)
         val wanted = choose(anchorAt(at), at, reading, true)
+        // Beyond the azimuth limit of an alt-azimuth mount `choose` answers with the same direction from another turn, a jump of
+        // nearly a full turn. Tracking would be stopped by the rate check below, but a nudge is only clamped to the rate limit and
+        // would unwind the cable at full speed: both end here as at any other limit.
+        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > 180.0) {
+            throw MountError.OutsideMountLimits
+        }
         val limit = configuration.limits.maximumAxisRateDegreesPerSecond
         var rate1 = (wanted.axis1 - reading.axis1) / lead
         var rate2 = (wanted.axis2 - reading.axis2) / lead

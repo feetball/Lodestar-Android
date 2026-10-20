@@ -5,6 +5,7 @@ import net.kuecker.lodestar.kit.events.EventsTestSupport.assertInstant
 import net.kuecker.lodestar.kit.events.EventsTestSupport.assertNear
 import net.kuecker.lodestar.kit.events.EventsTestSupport.utc
 import net.kuecker.lodestar.kit.foundation.*
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -159,6 +160,48 @@ class EventsPlanetaryTests {
         assertInstant("2026-07-06T17:30:00Z", found[1].first.date, 1_500.0, "aphelion")
         assertNear(0.98330, found[0].second.distanceAU, 1e-4, "perihelion distance")
         assertNear(1.01664, found[1].second.distanceAU, 1e-4, "aphelion distance")
+    }
+
+    @Test
+    fun testApsidesAreFoundFarFromThePresent() {
+        // The apsides drift through the calendar by about 1.75 days a century: around 1500 the perihelion is in late
+        // December, around 2500 it is on 11 January, outside a fixed window around 3 January. Meeus (ch. 38) gives the
+        // mean instants (JDE = 2451547.507 + 365.2596358 k, whole k perihelion, k + 0.5 aphelion); the planets and the
+        // Moon move the true ones by up to about two days, so allow three.
+        val cases = listOf(Pair(0.0, EarthApsisKind.PERIHELION), Pair(0.5, EarthApsisKind.APHELION))
+        for (k in listOf(-500.0, 500.0)) {
+            for ((offset, kind) in cases) {
+                val estimate = JulianDate.fromTt(2_451_547.507 + 365.259_635_8 * (k + offset)).date
+                val label = "${kind.rawValue} k ${k + offset}"
+                val found = EventsTestSupport.apsides(
+                    EarthApsisFinder.events(estimate.addingTimeInterval(-20 * 86_400.0), estimate.addingTimeInterval(20 * 86_400.0)),
+                )
+                assertEquals(listOf(kind), found.map { it.second.kind }, label)
+                val apsis = found.firstOrNull() ?: continue
+                assertTrue(abs(EventsTestSupport.seconds(apsis.first.date, estimate)) < 3 * 86_400, "$label: ${apsis.first.date}")
+                // The distance is the extreme of its kind around the event.
+                val jd = JulianDate(apsis.first.date)
+                fun distance(days: Double): Double = Ephemeris.geocentricJ2000(SolarSystemBody.SUN, jd.addingDays(days)).length
+                val sign = if (kind == EarthApsisKind.PERIHELION) 1.0 else -1.0
+                assertTrue(sign * (distance(-5.0) - distance(0.0)) > 0 && sign * (distance(5.0) - distance(0.0)) > 0, label)
+                assertNear(if (kind == EarthApsisKind.PERIHELION) 0.9833 else 1.0167, apsis.second.distanceAU, 1e-3, "$label distance")
+            }
+        }
+    }
+
+    @Test
+    fun testApsidesOfWholeYearsFarFromThePresent() {
+        // 2500: perihelion about 11 January, aphelion about 13 July. 1500: aphelion about 26 June, perihelion about
+        // 26 December (the one before it, in 1499, is also in late December and outside the year).
+        val year2500 = EventsTestSupport.apsides(events(EarthApsisFinder::events, "2500-01-01T00:00:00Z", "2500-12-31T23:59:59Z"))
+        assertEquals(listOf(EarthApsisKind.PERIHELION, EarthApsisKind.APHELION), year2500.map { it.second.kind })
+        val year1500 = EventsTestSupport.apsides(events(EarthApsisFinder::events, "1500-01-01T00:00:00Z", "1500-12-31T23:59:59Z"))
+        assertEquals(listOf(EarthApsisKind.APHELION, EarthApsisKind.PERIHELION), year1500.map { it.second.kind })
+        // The calculator reaches them too.
+        val calculated = EventCalculator.events(
+            utc("2500-01-01T00:00:00Z"), utc("2501-01-01T00:00:00Z"), null, EventOptions(kinds = setOf(EventKind.EARTH_APSIS)),
+        )
+        assertEquals(2, calculated.size)
     }
 
     @Test

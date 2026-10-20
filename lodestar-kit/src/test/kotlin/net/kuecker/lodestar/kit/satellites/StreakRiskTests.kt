@@ -8,7 +8,9 @@ import net.kuecker.lodestar.kit.satellites.SatelliteTestSupport.geostationary
 import net.kuecker.lodestar.kit.satellites.SatelliteTestSupport.observer
 import net.kuecker.lodestar.kit.satellites.SatelliteTestSupport.referenceSatellites
 import java.time.Instant
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.asin
 import kotlin.math.exp
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -162,6 +164,19 @@ class StreakRiskTests {
         assertTrue(restriction.restrict(5.0, 1.0, 4.0)) // falls through it a quarter of the way
         assertEquals(0.0, restriction.low, 0.0)
         assertEquals(0.25, restriction.high, 1e-12)
+    }
+
+    @Test
+    fun testTheDirectionBoundOfThePrefilterAllowsAPassOverTheObserver() {
+        // Out of reach: the direction turns by at most the angle the distance covered subtends.
+        assertEquals(asin(0.5), StreakEvaluator.maximumTurn(8.0, 60.0, 960.0), 1e-12)
+        assertEquals(asin(0.5), StreakEvaluator.maximumTurn(8.0, 120.0, 1920.0), 1e-12)
+        assertEquals(asin(960.0 / 961.0), StreakEvaluator.maximumTurn(8.0, 120.0, 961.0), 1e-12)
+        // A satellite that can cover its range (960 km in 120 s at 8 km/s) may fly past the observer and end up on the
+        // other side: it was capped at 90 degrees, which rejected frames it reaches after passing overhead.
+        assertEquals(PI, StreakEvaluator.maximumTurn(8.0, 120.0, 960.0), 0.0)
+        assertEquals(PI, StreakEvaluator.maximumTurn(8.0, 120.0, 700.0), 0.0)
+        assertEquals(PI, StreakEvaluator.maximumTurn(8.0, 120.0, 150.0), 0.0)
     }
 
     // MARK: Assessments

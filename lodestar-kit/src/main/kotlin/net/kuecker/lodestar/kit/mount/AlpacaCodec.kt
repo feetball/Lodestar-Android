@@ -93,9 +93,9 @@ enum class AlpacaAxis(
 /** The `Value` of a successful reply and the transaction numbers it carried. */
 data class AlpacaReply(
     /** The `ClientTransactionID` the device echoed, if it did. */
-    val clientTransactionID: Int?,
+    val clientTransactionID: Long?,
     /** The `ServerTransactionID` of the device, if it sent one. */
-    val serverTransactionID: Int?,
+    val serverTransactionID: Long?,
     /** The `Value` member, absent for methods that return nothing. */
     val value: MountJSON?,
 ) {
@@ -463,11 +463,11 @@ object AlpacaResponseParser {
                 throw AlpacaCodec.error(number, message)
             }
         }
-        val echoed = optionalInteger(root, "ClientTransactionID")
-        if (echoed != null && echoed != 0 && echoed != request.clientTransactionID) {
+        val echoed = optionalTransactionID(root, "ClientTransactionID")
+        if (echoed != null && echoed != 0L && echoed != request.clientTransactionID.toLong()) {
             throw MountError.MalformedReply("the reply belongs to another request")
         }
-        return AlpacaReply(echoed, optionalInteger(root, "ServerTransactionID"), root.field("Value"))
+        return AlpacaReply(echoed, optionalTransactionID(root, "ServerTransactionID"), root.field("Value"))
     }
 
     /** The versions of the Alpaca API the server supports (`/management/apiversions`). */
@@ -507,9 +507,17 @@ object AlpacaResponseParser {
         }
     }
 
-    private fun optionalInteger(root: MountJSON, name: String): Int? {
+    /**
+     * A transaction id member: absent, or a whole number up to the 4 294 967 295 of the uint32 the Alpaca API defines (a
+     * server may well count milliseconds or hash into it).
+     */
+    private fun optionalTransactionID(root: MountJSON, name: String): Long? {
         val field = root.field(name) ?: return null
-        return AlpacaCodec.integer(field) ?: throw MountError.MalformedReply("$name is not an integer")
+        val number = (field as? MountJSON.Number)?.value
+        if (number == null || number != floor(number) || number < -2_147_483_647.0 || number > 4_294_967_295.0) {
+            throw MountError.MalformedReply("$name is not an integer")
+        }
+        return number.toLong()
     }
 
     private fun text(root: MountJSON, name: String): String =

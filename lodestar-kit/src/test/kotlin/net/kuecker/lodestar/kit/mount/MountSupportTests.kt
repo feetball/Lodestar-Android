@@ -46,6 +46,7 @@ class MountSupportTests {
         assertEquals(60.0, standard.horizonLookaheadSeconds, 0.0)
         assertEquals(300.0, standard.maximumSlewSeconds, 0.0)
         assertEquals(3, standard.maximumConsecutiveFailures)
+        assertEquals(15.0, standard.sunExclusionDegrees, 0.0)
         val wild = MountSettings(
             altitudeLimit = 500.0, horizonLookaheadSeconds = -5.0, maximumSlewSeconds = 1.0e9, slewStartGraceSeconds = Double.NaN,
             arrivalToleranceDegrees = 0.0, pollIntervalSeconds = 0.0, maximumConsecutiveFailures = 0, maximumNudgeSeconds = 1.0e9,
@@ -62,6 +63,12 @@ class MountSupportTests {
         assertEquals(180.0, wild.maximumSyncOffsetDegrees, 0.0)
         assertEquals(-10.0, MountSettings(altitudeLimit = -50.0).altitudeLimit, 0.0)
         assertEquals(10, MountSettings(maximumConsecutiveFailures = 99).maximumConsecutiveFailures)
+        // The exclusion around the Sun can be changed but not switched off.
+        assertEquals(5.0, MountSettings(sunExclusionDegrees = 0.0).sunExclusionDegrees, 0.0)
+        assertEquals(5.0, MountSettings(sunExclusionDegrees = -10.0).sunExclusionDegrees, 0.0)
+        assertEquals(45.0, MountSettings(sunExclusionDegrees = 500.0).sunExclusionDegrees, 0.0)
+        assertEquals(15.0, MountSettings(sunExclusionDegrees = Double.NaN).sunExclusionDegrees, 0.0)
+        assertEquals(20.0, MountSettings(sunExclusionDegrees = 20.0).sunExclusionDegrees, 0.0)
     }
 
     @Test
@@ -85,8 +92,8 @@ class MountSupportTests {
     fun testErrorsExplainThemselves() {
         val errors: List<MountError> = listOf(
             MountError.NotConnected, MountError.Busy, MountError.SlewInProgress, MountError.BelowHorizonLimit(-3.26, 0.0),
-            MountError.MountHorizonLimit, MountError.MountOverheadLimit, MountError.OutsideMountLimits, MountError.NotAligned,
-            MountError.Parked, MountError.Standby, MountError.NotTracking, MountError.NotSupported(MountFeature.SYNC),
+            MountError.NearSun(8.24, 15.0), MountError.MountHorizonLimit, MountError.MountOverheadLimit, MountError.OutsideMountLimits,
+            MountError.NotAligned, MountError.Parked, MountError.Standby, MountError.NotTracking, MountError.NotSupported(MountFeature.SYNC),
             MountError.HardwareFault(""), MountError.HardwareFault("motor 2"), MountError.Rejected(""), MountError.Rejected("tracking"),
             MountError.Timeout("read position"), MountError.SlewTimeout(300.0), MountError.SlewStopped(12.34),
             MountError.SyncOffsetTooLarge(45.0, 30.0), MountError.ConnectionLost, MountError.Transport("reset"),
@@ -105,6 +112,11 @@ class MountSupportTests {
             "The target is at -3.3°, below your altitude limit of 0.0°. Lodestar won't slew there.",
             MountError.BelowHorizonLimit(-3.26, 0.0).userMessage,
         )
+        assertEquals(
+            "The target is 8.2° from the Sun, closer than the 15° safety limit. Lodestar won't slew there.",
+            MountError.NearSun(8.24, 15.0).userMessage,
+        )
+        assertTrue(!MountError.NearSun(8.24, 15.0).isCommunicationFailure)
         assertEquals("This mount doesn't support syncing to a position.", MountError.NotSupported(MountFeature.SYNC).userMessage)
         assertEquals("The mount stopped 12.3° short of the target.", MountError.SlewStopped(12.34).userMessage)
         assertEquals("The slew did not finish within 300 s, so it was stopped.", MountError.SlewTimeout(300.0).userMessage)

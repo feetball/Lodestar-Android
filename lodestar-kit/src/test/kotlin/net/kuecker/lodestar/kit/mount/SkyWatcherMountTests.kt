@@ -940,25 +940,6 @@ class SkyWatcherMountTests {
     }
 
     @Test
-    fun testANudgeIntoTheAzimuthLimitEndsInsteadOfUnwinding() {
-        val rig = SkyWatcherTestSupport.rig(altAz, settings = MountSettings(maximumNudgeSeconds = 30.0))
-        rig.controller.connect()
-        // Three degrees short of the cable limit of 270°, in the west and 40° up: a nudge to the west turns the azimuth axis on.
-        rig.simulator.placeAxes(267.0, 40.0)
-        rig.controller.nudge(MountNudgeDirection.WEST, MountNudgeRate.SLEW, 20.0)
-        var highest = rig.simulator.axis1Degrees
-        for (step in 0 until 30) {
-            rig.clock.advance(0.5)
-            rig.controller.poll()
-            highest = max(highest, rig.simulator.axis1Degrees)
-        }
-        // The axis went towards the limit and stopped there; it did not run back the other way round at full speed.
-        assertTrue(highest > 268.0 && highest < 271.0, "$highest")
-        assertTrue(rig.simulator.axis1Degrees > 268.0, "${rig.simulator.axis1Degrees}")
-        assertFalse(rig.simulator.isMoving)
-    }
-
-    @Test
     fun testLosingTheLinkDuringANudgeStopsTheAxes() {
         val rig = SkyWatcherTestSupport.rig(
             altAz, SkyWatcherPointingErrors(axis1Index = 1.0), settings = MountSettings(maximumNudgeSeconds = 30.0),

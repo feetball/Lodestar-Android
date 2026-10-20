@@ -21,7 +21,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import net.kuecker.lodestar.features.aim.AimScreen
+import net.kuecker.lodestar.features.mosaic.MosaicScreenshotEffect
 import net.kuecker.lodestar.features.objects.ObjectsScreen
+import net.kuecker.lodestar.features.online.OnlineScreenshotEffect
 import net.kuecker.lodestar.features.onboarding.OnboardingScreen
 import net.kuecker.lodestar.features.settings.SettingsScreen
 import net.kuecker.lodestar.features.skychart.SkyChartScreen
@@ -40,6 +42,8 @@ import net.kuecker.lodestar.theme.screenBackground
 fun RootScreen(app: AppModel) {
     val palette = app.palette
     CompositionLocalProvider(LocalAppModel provides app) {
+        MosaicScreenshotEffect()
+        OnlineScreenshotEffect()
         // Aim is full screen; at night every screen is (the bars are white). Onboarding keeps the bars, as on iOS.
         val hideBars = palette.isNight || (app.settings.hasCompletedOnboarding && app.selectedTab == AppTab.AIM)
         LodestarTheme(palette, redFilter = app.settings.redFilterOverlay) {
@@ -60,6 +64,8 @@ fun RootScreen(app: AppModel) {
 @Composable
 private fun Tabs(app: AppModel) {
     val palette = app.palette
+    // The night palette's tertiary red is nearly invisible on the bar (about 1.5:1), so the other tabs use the next one up.
+    val unselected = if (palette.isNight) palette.secondaryText else palette.tertiaryText
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = palette.background,
@@ -74,8 +80,8 @@ private fun Tabs(app: AppModel) {
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = palette.accent,
                             selectedTextColor = palette.accent,
-                            unselectedIconColor = palette.tertiaryText,
-                            unselectedTextColor = palette.tertiaryText,
+                            unselectedIconColor = unselected,
+                            unselectedTextColor = unselected,
                             indicatorColor = palette.surfaceRaised,
                         ),
                     )

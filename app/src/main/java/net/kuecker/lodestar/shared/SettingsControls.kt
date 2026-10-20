@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -189,12 +191,18 @@ fun SettingsSliderRow(
 /** One choice of a [SettingsMenuPicker]. */
 data class SettingsMenuOption<T>(val title: String, val value: T)
 
-/** A row that opens a menu to pick one value; the chosen value is drawn in the accent colour. */
+/**
+ * A row that opens a menu to pick one value; the chosen value is drawn in the accent colour. The title keeps its
+ * width: a value that does not fit beside it drops to a line of its own under the title and wraps there, and the
+ * chevron stays at the end of the value. [caption], if any, sits right under the title line.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> SettingsMenuPicker(
     title: String,
     selection: T,
     options: List<SettingsMenuOption<T>>,
+    caption: String? = null,
     onSelect: (T) -> Unit,
 ) {
     val palette = LocalPalette.current
@@ -207,11 +215,21 @@ fun <T> SettingsMenuPicker(
             stateDescription = selectedTitle
         },
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 8.dp))
             Box {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(selectedTitle, color = palette.accent, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        selectedTitle,
+                        color = palette.accent,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     Icon(Icons.Outlined.UnfoldMore, contentDescription = null, tint = palette.accent, modifier = Modifier.size(18.dp))
                 }
                 DropdownMenu(
@@ -236,6 +254,7 @@ fun <T> SettingsMenuPicker(
                 }
             }
         }
+        if (caption != null) SettingsCaption(caption)
     }
 }
 
@@ -270,7 +289,7 @@ object SettingsNumberText {
 /**
  * A labelled numeric text field for a value that always exists; clearing the field does not change it. Valid input
  * is applied while typing; invalid input is flagged and reverted when editing ends. [prefix] is shown before the
- * number (e.g. "f/"), [unit] after it.
+ * number (e.g. "f/"), [unit] after it. [caption], if any, sits right under the title line.
  */
 @Composable
 fun SettingsNumberField(
@@ -281,8 +300,9 @@ fun SettingsNumberField(
     prefix: String = "",
     unit: String = "",
     fractionDigits: Int = 1,
+    caption: String? = null,
 ) {
-    NumberField(title, value, { it?.let(onValueChange) }, range, prefix, unit, fractionDigits, "", isRequired = true)
+    NumberField(title, value, { it?.let(onValueChange) }, range, prefix, unit, fractionDigits, "", isRequired = true, caption = caption)
 }
 
 /** A labelled numeric text field for a value that may be unknown; clearing the field sets it to `null`. */
@@ -296,9 +316,13 @@ fun SettingsOptionalNumberField(
     unit: String = "",
     fractionDigits: Int = 1,
     placeholder: String = "Unknown",
+    caption: String? = null,
 ) {
-    NumberField(title, value, onValueChange, range, prefix, unit, fractionDigits, placeholder, isRequired = false)
+    NumberField(title, value, onValueChange, range, prefix, unit, fractionDigits, placeholder, isRequired = false, caption = caption)
 }
+
+/** The gap between the number of a [NumberField] and a unit word: about one space of the body text. */
+private val UNIT_GAP = 4.dp
 
 @Composable
 private fun NumberField(
@@ -311,6 +335,7 @@ private fun NumberField(
     fractionDigits: Int,
     placeholder: String,
     isRequired: Boolean,
+    caption: String? = null,
 ) {
     val palette = LocalPalette.current
     val focus = LocalFocusManager.current
@@ -330,44 +355,55 @@ private fun NumberField(
             val fieldWidth = with(LocalDensity.current) {
                 measurer.measure(text.ifEmpty { "0" }, fieldStyle).size.width.toDp() + 4.dp
             }.coerceIn(24.dp, 120.dp)
-            Box(contentAlignment = Alignment.CenterEnd) {
-                if (text.isEmpty() && placeholder.isNotEmpty()) {
-                    Text(placeholder, color = palette.tertiaryText, style = MaterialTheme.typography.bodyLarge)
+            // The unit follows the number; a degree sign hugs it ("20°"), a word such as "mm" or "s" is a space away,
+            // as in the same unit in a line of text ("5 s").
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(if (unit == "°") 0.dp else UNIT_GAP),
+            ) {
+                Box(contentAlignment = Alignment.CenterEnd) {
+                    if (text.isEmpty() && placeholder.isNotEmpty()) {
+                        Text(placeholder, color = palette.tertiaryText, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    BasicTextField(
+                        value = text,
+                        onValueChange = { newText ->
+                            text = newText
+                            if (newText.isBlank()) {
+                                if (!isRequired) onValueChange(null)
+                            } else {
+                                SettingsNumberText.parse(newText, range)?.let { parsed -> if (parsed != value) onValueChange(parsed) }
+                            }
+                        },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = if (invalid) palette.critical else palette.primaryText,
+                            textAlign = TextAlign.End,
+                        ).monospacedDigits(),
+                        cursorBrush = SolidColor(palette.accent),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = if (range.start < 0) KeyboardType.Text else KeyboardType.Decimal,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+                        modifier = Modifier
+                            .width(fieldWidth)
+                            .onFocusChanged { focused = it.isFocused }
+                            .semantics { contentDescription = title },
+                    )
                 }
-                BasicTextField(
-                    value = text,
-                    onValueChange = { newText ->
-                        text = newText
-                        if (newText.isBlank()) {
-                            if (!isRequired) onValueChange(null)
-                        } else {
-                            SettingsNumberText.parse(newText, range)?.let { parsed -> if (parsed != value) onValueChange(parsed) }
-                        }
-                    },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = if (invalid) palette.critical else palette.primaryText,
-                        textAlign = TextAlign.End,
-                    ).monospacedDigits(),
-                    cursorBrush = SolidColor(palette.accent),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = if (range.start < 0) KeyboardType.Text else KeyboardType.Decimal,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
-                    modifier = Modifier
-                        .width(fieldWidth)
-                        .onFocusChanged { focused = it.isFocused }
-                        .semantics { contentDescription = title },
-                )
+                if (unit.isNotEmpty()) {
+                    val unitColor = if (unit == "°") palette.primaryText else palette.secondaryText
+                    Text(unit, color = unitColor, style = MaterialTheme.typography.bodyLarge)
+                }
             }
-            if (unit.isNotEmpty()) Text(unit, color = palette.secondaryText, style = MaterialTheme.typography.bodyLarge)
         }
         if (invalid) {
             val lower = SettingsNumberText.text(range.start, fractionDigits)
             val upper = SettingsNumberText.text(range.endInclusive, fractionDigits)
             Text("Enter a value from $lower to $upper.", color = palette.critical, style = MaterialTheme.typography.bodySmall)
         }
+        if (caption != null) SettingsCaption(caption)
     }
 }
 

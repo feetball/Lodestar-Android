@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LocationOff
 import androidx.compose.material.icons.outlined.LocationOn
@@ -71,10 +72,20 @@ fun ObjectIcon(category: ObjectCategory, modifier: Modifier = Modifier, size: Dp
 /** Visual tone of a status chip. */
 enum class ChipTone { NEUTRAL, POSITIVE, WARNING, CRITICAL }
 
-/** A compact capsule with an icon and a short label, used for sensor/alignment status. */
+/**
+ * A compact capsule with an icon and a short label, used for sensor/alignment status. A label that does not fit
+ * [maxLines] lines is cut with an ellipsis; with more than one line the capsule has rounded corners instead.
+ */
 @Composable
-fun StatusChip(icon: ImageVector, text: String, modifier: Modifier = Modifier, tone: ChipTone = ChipTone.NEUTRAL) {
+fun StatusChip(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+    tone: ChipTone = ChipTone.NEUTRAL,
+    maxLines: Int = 1,
+) {
     val palette = LocalPalette.current
+    val shape = if (maxLines > 1) RoundedCornerShape(16.dp) else CircleShape
     val foreground = when (tone) {
         ChipTone.NEUTRAL -> palette.secondaryText
         ChipTone.POSITIVE -> palette.positive
@@ -83,8 +94,8 @@ fun StatusChip(icon: ImageVector, text: String, modifier: Modifier = Modifier, t
     }
     Row(
         modifier
-            .background(palette.surface.copy(alpha = 0.85f), CircleShape)
-            .border(0.75.dp, foreground.copy(alpha = 0.45f), CircleShape)
+            .background(palette.surface.copy(alpha = 0.85f), shape)
+            .border(0.75.dp, foreground.copy(alpha = 0.45f), shape)
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -94,7 +105,7 @@ fun StatusChip(icon: ImageVector, text: String, modifier: Modifier = Modifier, t
             text,
             color = foreground,
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-            maxLines = 1,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
         )
     }
@@ -187,7 +198,8 @@ fun LodestarButton(
 ) {
     LodestarButton(onClick, modifier, kind, enabled) {
         if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-        Text(text)
+        // A label that wraps is centred and keeps its last two words together, so no word is left alone on a line.
+        Text(AppFormat.withoutWidow(text), textAlign = TextAlign.Center)
     }
 }
 

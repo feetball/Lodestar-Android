@@ -98,6 +98,8 @@ class MountService(
     private val pollMillis: Long = POLL_MILLIS,
     private val nudgePollMillis: Long = NUDGE_POLL_MILLIS,
     private val worker: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1),
+    /** The time the mount's place is worked out at: the app's clock (so a screenshot's frozen time holds). */
+    private val now: () -> Instant = Instant::now,
 ) {
     /** What the screens show; observable. */
     var snapshot: MountSnapshot by mutableStateOf(MountSnapshot())
@@ -347,22 +349,22 @@ class MountService(
                 endSession(lost = true, problem = null)
                 return
             }
-            val now = System.nanoTime()
-            if (now >= nextPoll) {
+            val nowNanos = System.nanoTime()
+            if (nowNanos >= nextPoll) {
                 guarded { session.poll(); MountResult.Success() }
                 publish(notice = session.takeNotice()?.let { notice(it, isError = true) })
                 val interval = if (session.status.phase == MountPhase.NUDGING) nudgePollMillis else pollMillis
                 nextPoll = System.nanoTime() + interval * NANOS_PER_MILLI
                 continue
             }
-            withTimeoutOrNull((nextPoll - now) / NANOS_PER_MILLI + 1) { wake.receive() }
+            withTimeoutOrNull((nextPoll - nowNanos) / NANOS_PER_MILLI + 1) { wake.receive() }
         }
     }
 
     private fun noticeFor(task: Task, result: MountResult): MountNotice? = when {
         task.key == KEY_NUDGE || task.key == KEY_SETTINGS -> (result as? MountResult.Failure)?.let { notice(it.message, true) }
         result is MountResult.Failure -> notice(result.message, isError = true)
-        result is MountResult.Success && result.message != null -> notice(result.message, isError = false)
+        result is MountResult.Success && result.message != null -> notice(result.message, isError = result.isWarning)
         else -> null
     }
 
@@ -399,7 +401,7 @@ class MountService(
         )
         val position = status.position
         val observer = observerProvider()
-        marker = if (position != null && observer != null) MountMarker.make(position, observer, Instant.now()) else null
+        marker = if (position != null && observer != null) MountMarker.make(position, observer, now()) else null
     }
 
     private fun endSession(lost: Boolean, problem: String?) {
@@ -441,7 +443,7 @@ class MountService(
          * The service for the running app: remembered settings in the device-local `lodestar.mount` preferences, sockets
          * over the phone's Wi-Fi, and the app's lifecycle (call from the main thread).
          */
-        fun create(context: Context, observerProvider: () -> Observer?): MountService {
+        fun create(context: Context, observerProvider: () -> Observer?, now: () -> Instant = Instant::now): MountService {
             val appContext = context.applicationContext
             val network = MountWifiNetwork(appContext).also { it.start() }
             val store = SharedPreferencesMountStore(appContext.getSharedPreferences("lodestar.mount", Context.MODE_PRIVATE))
@@ -451,8 +453,9 @@ class MountService(
                 session = session,
                 preferences = MountPreferences(store),
                 observerProvider = observerProvider,
-                demoFactory = { kind -> MountDemoLinkFactory(kind, observerProvider) },
+                demoFactory = { kind -> MountDemoLinkFactory(kind, observerProvider, now) },
                 sockets = network,
+                now = now,
             )
             ProcessLifecycleOwner.get().lifecycle.addObserver(
                 object : DefaultLifecycleObserver {

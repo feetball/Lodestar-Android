@@ -36,9 +36,12 @@ internal object SatelliteText {
     const val STOP = "Stop"
     const val RIDE_ALONG_BELOW = "Below the horizon"
 
-    /** "21:34 – 21:39". */
-    fun span(item: SatellitePassItem, zone: ZoneId): String =
-        "${AppFormat.time(item.start, zone)} – ${AppFormat.time(item.end, zone)}"
+    /** "21:34 – 21:39", or just "21:34" when both ends are written the same (a pass visible for less than a minute). */
+    fun span(item: SatellitePassItem, zone: ZoneId): String {
+        val start = AppFormat.time(item.start, zone)
+        val end = AppFormat.time(item.end, zone)
+        return if (start == end) start else "$start – $end"
+    }
 
     /** "peak 67° NE": the culmination's altitude and compass point. */
     fun peak(point: SatellitePassPoint): String =

@@ -180,7 +180,7 @@ private fun CameraSection(inputs: ExposureInputs, myCamera: LensSetup, setup: Le
         SensorFormat.presets + myCamera.sensor
     }
     val footer = if (inputs.rule == ExposureRule.NPF) {
-        "NPF needs the pixel pitch. Without it Lodestar assumes ${defaultPitchText()} µm, typical of a " +
+        "NPF needs the pixel pitch. Without it Lodestar assumes ${defaultPitchText()}\u00A0µm, typical of a " +
             "high-resolution camera."
     } else {
         "The 500, 400 and 300 rules use the focal length multiplied by the sensor's crop factor."
@@ -283,7 +283,7 @@ private fun ResultSection(inputs: ExposureInputs, setup: LensSetup) {
         for (note in estimate.notes) caption(note)
         if (setup.pixelPitchMicrometers == null && rule != ExposureRule.NPF) {
             caption(
-                "Trail lengths in pixels assume a pixel pitch of ${defaultPitchText()} µm because yours is " +
+                "Trail lengths in pixels assume a pixel pitch of ${defaultPitchText()}\u00A0µm because yours is " +
                     "not set.",
             )
         }

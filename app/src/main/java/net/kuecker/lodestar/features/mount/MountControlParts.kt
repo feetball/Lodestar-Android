@@ -34,6 +34,7 @@ import net.kuecker.lodestar.services.MountAdvanced
 import net.kuecker.lodestar.services.MountAdvancedField
 import net.kuecker.lodestar.services.MountProtocols
 import net.kuecker.lodestar.services.MountService
+import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.SettingsCaption
 import net.kuecker.lodestar.shared.SettingsDivider
 import net.kuecker.lodestar.shared.SettingsMenuOption
@@ -87,13 +88,13 @@ internal fun MountAdvancedRows(service: MountService, draft: MountDraft) {
     fun change(transform: (MountAdvanced) -> MountAdvanced) = preferences.update { it.copy(advanced = transform(it.advanced)) }
     if (MountAdvancedField.EPOCH in fields) {
         SettingsDivider()
-        SettingsMenuPicker("Coordinate frame", advanced.epoch, epochOptions) { value -> change { it.copy(epoch = value) } }
-        SettingsRow {
-            SettingsCaption(
-                "Which sky coordinates the mount expects. Automatic is right for nearly every mount: JNow for LX200 " +
-                    "and Celestron, J2000 for current SynScan firmware. Applies the next time you connect.",
-            )
-        }
+        SettingsMenuPicker(
+            "Coordinate frame",
+            advanced.epoch,
+            epochOptions,
+            caption = "Which sky coordinates the mount expects. Automatic is right for nearly every mount: JNow for LX200 " +
+                "and Celestron, J2000 for current SynScan firmware. Applies the next time you connect.",
+        ) { value -> change { it.copy(epoch = value) } }
     }
     if (MountAdvancedField.SWAP_EAST_WEST in fields) {
         SettingsDivider()
@@ -110,14 +111,14 @@ internal fun MountAdvancedRows(service: MountService, draft: MountDraft) {
             for (mode in SkyWatcherMountMode.entries) add(SettingsMenuOption(mountArrangementTitle(mode), mode))
         }
         SettingsDivider()
-        SettingsMenuPicker("Mount arrangement", advanced.skyWatcherMode, modes) { value -> change { it.copy(skyWatcherMode = value) } }
-        SettingsRow {
-            SettingsCaption(
-                "Automatic takes it from the mount model when it connects: the AZ-GTi and AZ-GTe are alt-azimuth, the Star " +
-                    "Adventurer GTi and EQ mounts equatorial. Choose Equatorial for an AZ-GTi on a wedge. Applies the next " +
-                    "time you connect.",
-            )
-        }
+        SettingsMenuPicker(
+            "Mount arrangement",
+            advanced.skyWatcherMode,
+            modes,
+            caption = "Automatic takes it from the mount model when it connects: the AZ-GTi and AZ-GTe are alt-azimuth, the Star " +
+                "Adventurer GTi and EQ mounts equatorial. Choose Equatorial for an AZ-GTi on a wedge. Applies the next " +
+                "time you connect.",
+        ) { value -> change { it.copy(skyWatcherMode = value) } }
     }
     if (MountAdvancedField.REVERSE_AXIS_1 in fields || MountAdvancedField.REVERSE_AXIS_2 in fields) {
         SettingsDivider()
@@ -208,7 +209,7 @@ internal fun MountProtocolsSection() {
             if (index > 0) SettingsDivider()
             SettingsRow {
                 Text(
-                    option.title,
+                    AppFormat.unbreakableNames(option.title),
                     color = palette.primaryText,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.semantics { heading() },

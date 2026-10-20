@@ -31,7 +31,7 @@ fun rememberMountService(): MountService {
     val context = LocalContext.current
     return remember(app) {
         app.retained.getOrPut(MountService.KEY) {
-            MountService.create(context) { app.observerContext?.observer }
+            MountService.create(context, observerProvider = { app.observerContext?.observer }, now = { app.clock.now })
         }
     }
 }

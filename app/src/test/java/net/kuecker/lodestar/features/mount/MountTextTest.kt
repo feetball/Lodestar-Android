@@ -115,11 +115,11 @@ class MountSkyWatcherTextTest {
     fun theAlignmentLineSaysHowManyStarsAndHowWell() {
         assertEquals("Not aligned: centre a star and tap Sync", MountText.alignmentLine(info()))
         assertEquals(
-            "Aligned on 3 stars, 0.02° residual, ≈ 0.2° accuracy",
+            "Aligned on 3 stars, 0.02° residual, ≈\u00A00.2°\u00A0accuracy",
             MountText.alignmentLine(info(listOf(star("A", 0.0), star("B", 0.01), star("C", 0.02)), predicted = 0.2, maximum = 0.02)),
         )
         // One star cannot have a residual worth showing.
-        assertEquals("Aligned on 1 star, ≈ 1.0° accuracy", MountText.alignmentLine(info(listOf(star("A", 0.0)), predicted = 1.0, maximum = 0.0)))
+        assertEquals("Aligned on 1 star, ≈\u00A01.0°\u00A0accuracy", MountText.alignmentLine(info(listOf(star("A", 0.0)), predicted = 1.0, maximum = 0.0)))
         assertEquals("0.05°", MountText.accuracyText(0.05))
         assertEquals("0.3°", MountText.accuracyText(0.3))
         assertEquals("12°", MountText.accuracyText(12.0))

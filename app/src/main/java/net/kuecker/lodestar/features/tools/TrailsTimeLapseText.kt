@@ -26,8 +26,12 @@ internal object TrailsText {
     /** [count] with the user's digit grouping: "100,000". */
     fun count(count: Int): String = NumberFormat.getIntegerInstance().format(count)
 
-    /** A duration in at most two units: "1h 05m", "4m 30s". */
-    fun duration(seconds: Double): String = AngleFormatter.formatDuration(seconds)
+    /** A duration in at most two units: "10 s" below a minute (as [seconds] writes it), "4m 30s", "1h 05m". */
+    fun duration(seconds: Double): String {
+        val text = AngleFormatter.formatDuration(seconds)
+        // The kit writes a bare seconds value as "10s"; here it has the space of the other seconds in the results.
+        return if (text.endsWith("s") && !text.contains(' ')) text.dropLast(1) + " s" else text
+    }
 
     /** Pixels: whole numbers, one decimal below ten ("0.8 px", "1,240 px"). */
     fun pixels(pixels: Double): String =

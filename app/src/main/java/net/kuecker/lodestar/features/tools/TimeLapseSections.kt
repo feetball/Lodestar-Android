@@ -102,8 +102,8 @@ private fun PlaybackSection(inputs: TrailsInputs) {
 private fun StorageSection(inputs: TrailsInputs) {
     FormSection(
         title = "Camera & Storage",
-        footer = "A raw picture from a 24 MP camera is about 25 MB, from a 45 MP camera about 50 MB. Leave the size " +
-            "empty if you do not need the storage.",
+        footer = "A raw picture from a 24\u00A0MP camera is about 25\u00A0MB, from a 45\u00A0MP camera about 50\u00A0MB. " +
+            "Leave the size empty if you do not need the storage.",
     ) {
         control {
             SettingsOptionalNumberField(

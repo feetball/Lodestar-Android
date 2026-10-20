@@ -83,7 +83,7 @@ internal object WidgetRefresher {
             WidgetScheduler.stopIfUnused(app)
             return
         }
-        val now = Instant.now()
+        val now = WidgetModels.clock()
         val snapshot = withContext(Dispatchers.Default) { WidgetSnapshotCache.recompute(WidgetModels.inputs(app), now) }
         // Every widget, small or medium, is a TonightWidget as far as the system's bookkeeping goes.
         TonightWidget().updateAll(app)

@@ -5,6 +5,7 @@ import net.kuecker.lodestar.kit.comets.SmallBody
 import net.kuecker.lodestar.kit.comets.SmallBodyKind
 import net.kuecker.lodestar.kit.foundation.JulianDate
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
+import net.kuecker.lodestar.shared.AppFormat
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneOffset
@@ -124,6 +125,16 @@ internal object SmallBodyText {
             }
         }
         return parts.joinToString(" · ")
+    }
+
+    /**
+     * [subtitle] for a list row, on two lines so that the wrap does not fall inside a value: "Comet · mag ≈ 7.4", then
+     * "62° from the Sun" (and the warnings after a dot). Each part stays whole and the dot stays with the part before it.
+     */
+    fun rowSubtitle(obj: CelestialObject, info: SmallBodyInfo?, isComputed: Boolean): String {
+        val parts = subtitle(obj, info, isComputed).split(" · ")
+        return listOf(parts.take(2), parts.drop(2)).filter { it.isNotEmpty() }
+            .joinToString("\n") { AppFormat.unbreakableParts(it.joinToString(" · ")) }
     }
 
     /** The one line under a name in the picker, Tonight and the lists: kind, estimate and elongation. */

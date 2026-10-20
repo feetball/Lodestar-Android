@@ -69,7 +69,9 @@ class MountServiceTest {
         val (service, _) = service()
         assertEquals(MountConnectionState.DISCONNECTED, service.snapshot.state)
         service.connect(MountTestSky.connection)
-        assertEquals(MountConnectionState.CONNECTING, service.snapshot.state)
+        // The simulated mount can answer before this line runs (the service works on Dispatchers.Default), so the state
+        // is CONNECTING or already CONNECTED, but never still DISCONNECTED.
+        assertTrue(service.snapshot.state in setOf(MountConnectionState.CONNECTING, MountConnectionState.CONNECTED))
         val snapshot = awaitState(service, MountConnectionState.CONNECTED)
         assertNotNull(snapshot.capabilities)
         assertEquals(MountTestSky.connection, snapshot.connection)

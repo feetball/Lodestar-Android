@@ -59,6 +59,8 @@ import androidx.compose.ui.window.DialogWindowProvider
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import net.kuecker.lodestar.app.AppModel
+import net.kuecker.lodestar.app.ScreenshotScreen
+import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.horizon.AzimuthRange
 import net.kuecker.lodestar.kit.horizon.HorizonRecorder
@@ -110,6 +112,7 @@ internal fun HorizonRecordingScreen(site: SavedSite, onClose: () -> Unit) {
     val palette = LocalPalette.current
     val sweep = remember(site.id) { HorizonSweep(site.horizon) }
     var step by remember { mutableStateOf<HorizonStep>(HorizonStep.Sweeping) }
+    ScreenshotScreenEffect(ScreenshotScreen.SKYLINE) { playScreenshotSweep(app) }
 
     DisposableEffect(app) {
         app.keepsMotionRunning = true

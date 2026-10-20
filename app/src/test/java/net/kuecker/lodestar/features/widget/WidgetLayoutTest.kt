@@ -14,8 +14,24 @@ class WidgetLayoutTest {
     fun aSquareTwoByTwoShowsTheMoonAndTheDarkness() {
         assertEquals(WidgetLayoutKind.SMALL, kind(110, 110))
         assertEquals(WidgetLayoutKind.SMALL, kind(100, 90))
-        // Three cells wide is still too narrow for two tiles side by side.
-        assertEquals(WidgetLayoutKind.SMALL, kind(180, 110))
+        assertEquals(WidgetLayoutKind.SMALL, kind(146, 110))
+    }
+
+    @Test
+    fun threeCellsWideAndTwoHighAddsThePhaseBesideTheMoon() {
+        // Too narrow for two tiles side by side, but wide enough to say more than the smallest layout.
+        assertEquals(WidgetLayoutKind.SMALL_WIDE, kind(160, 110))
+        assertEquals(WidgetLayoutKind.SMALL_WIDE, kind(180, 110))
+        assertEquals(WidgetLayoutKind.SMALL_WIDE, kind(200, 110))
+        // A square keeps the roomy layout.
+        assertEquals(WidgetLayoutKind.SMALL_ROOMY, kind(150, 150))
+    }
+
+    @Test
+    fun aRoomierTwoByTwoAddsThePhaseOfTheMoon() {
+        assertEquals(WidgetLayoutKind.SMALL_ROOMY, kind(120, 120))
+        assertEquals(WidgetLayoutKind.SMALL_ROOMY, kind(146, 146))
+        assertEquals(WidgetLayoutKind.SMALL, kind(119, 130))
     }
 
     @Test
@@ -33,8 +49,16 @@ class WidgetLayoutTest {
 
     @Test
     fun aNarrowTallWidgetShowsAllFourOneUnderTheOther() {
-        assertEquals(WidgetLayoutKind.LIST_NARROW, kind(110, 250))
+        assertEquals(WidgetLayoutKind.LIST_NARROW, kind(110, 180))
         assertEquals(WidgetLayoutKind.LIST_NARROW, kind(180, 180))
+    }
+
+    @Test
+    fun aNarrowWidgetTallEnoughForTwoLinesEachGivesEveryValueTwo() {
+        assertEquals(WidgetLayoutKind.LIST_NARROW_TALL, kind(110, 230))
+        assertEquals(WidgetLayoutKind.LIST_NARROW_TALL, kind(146, 230))
+        assertEquals(WidgetLayoutKind.LIST_NARROW_TALL, kind(110, 250))
+        assertEquals(WidgetLayoutKind.LIST_NARROW, kind(110, 219))
     }
 
     @Test

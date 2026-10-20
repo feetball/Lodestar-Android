@@ -130,7 +130,7 @@ private fun CloudForecastContent(forecast: CloudForecast, night: DateInterval, z
 private const val RECHECK_MILLIS = 15 * 60_000L
 
 private val TOTAL_HEIGHT = 40.dp
-private val LAYER_HEIGHT = 9.dp
+private val LAYER_HEIGHT = 12.dp
 private val GAP = 3.dp
 private val AXIS_HEIGHT = 16.dp
 private val LABEL_WIDTH = 38.dp
@@ -147,9 +147,9 @@ private fun CloudStrip(slots: List<CloudSlot>, zone: ZoneId, description: String
     Row(Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = description }) {
         Column(Modifier.width(LABEL_WIDTH), verticalArrangement = Arrangement.spacedBy(GAP)) {
             LayerLabel("Total", TOTAL_HEIGHT)
-            LayerLabel("High", LAYER_HEIGHT)
-            LayerLabel("Mid", LAYER_HEIGHT)
-            LayerLabel("Low", LAYER_HEIGHT)
+            LayerLabel("High", LAYER_HEIGHT, isLayer = true)
+            LayerLabel("Mid", LAYER_HEIGHT, isLayer = true)
+            LayerLabel("Low", LAYER_HEIGHT, isLayer = true)
         }
         val totalHeight = TOTAL_HEIGHT + (LAYER_HEIGHT + GAP) * 3 + AXIS_HEIGHT
         Canvas(Modifier.weight(1f).height(totalHeight)) {
@@ -159,10 +159,12 @@ private fun CloudStrip(slots: List<CloudSlot>, zone: ZoneId, description: String
 }
 
 @Composable
-private fun LayerLabel(text: String, height: Dp) {
+private fun LayerLabel(text: String, height: Dp, isLayer: Boolean = false) {
     val palette = LocalPalette.current
+    // The layers are thin rows: their labels are smaller than the line of the standard small label, which would be cut.
+    val style = MaterialTheme.typography.labelSmall.let { if (isLayer) it.copy(fontSize = 9.sp, lineHeight = 11.sp) else it }
     Box(Modifier.height(height), contentAlignment = Alignment.CenterStart) {
-        Text(text, color = palette.secondaryText, style = MaterialTheme.typography.labelSmall)
+        Text(text, color = palette.secondaryText, style = style, maxLines = 1)
     }
 }
 

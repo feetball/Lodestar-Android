@@ -132,12 +132,17 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
                 color = palette.primaryText,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             )
+            // Each value ("mag 3.4", "6h 10m above 20°") stays whole when the line wraps, and no line starts with a dot.
             Text(
-                target.note ?: TonightFormat.description(obj),
+                AppFormat.unbreakableParts(target.note ?: TonightFormat.description(obj)),
                 color = palette.secondaryText,
                 style = MaterialTheme.typography.bodySmall,
             )
-            Text(timing(target, zone), color = palette.tertiaryText, style = MaterialTheme.typography.bodySmall)
+            Text(
+                AppFormat.unbreakableParts(timing(target, zone)),
+                color = palette.tertiaryText,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
@@ -156,10 +161,13 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
     }
 }
 
-/** The name, with the first catalog designation when it differs: "Andromeda Galaxy · M 31". */
+/**
+ * The name, with the first catalog designation when it differs: "Andromeda Galaxy · M 31". The designation is never
+ * split between its catalogue and number, and the dot stays with the name, so no line starts with it.
+ */
 private fun title(obj: CelestialObject): String {
     val name = SmallBodyText.displayName(obj)
-    return TonightFormat.designation(obj)?.let { "$name · $it" } ?: name
+    return TonightFormat.designation(obj)?.let { "$name${AppFormat.NO_BREAK_SPACE}· ${AppFormat.unbreakable(it)}" } ?: name
 }
 
 /** "Best 23:40 facing SE · 7h 12m above 20°". */

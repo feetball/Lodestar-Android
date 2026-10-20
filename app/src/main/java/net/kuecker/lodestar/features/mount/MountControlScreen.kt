@@ -10,9 +10,9 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ControlCamera
 import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Sensors
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +39,7 @@ import net.kuecker.lodestar.services.MountProtocols
 import net.kuecker.lodestar.services.MountService
 import net.kuecker.lodestar.services.MountSettingsValues
 import net.kuecker.lodestar.services.MountSnapshot
+import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.ChipTone
 import net.kuecker.lodestar.shared.InfoRow
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -57,6 +58,7 @@ import net.kuecker.lodestar.theme.LocalPalette
 /** Settings ▸ Mount Control: connect to a GoTo mount, see what it can do, nudge it, and set the safety limits. */
 @Composable
 fun MountControlScreen(onBack: () -> Unit) {
+    MountControlScreenshotEffect()
     SettingsSubScreen("Mount Control", onBack) { MountControlContent() }
 }
 
@@ -129,7 +131,7 @@ private fun MountStatusSection(service: MountService, snapshot: MountSnapshot) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoRow("Mount", capabilities.name + if (snapshot.isDemo) " (simulated)" else "")
                     capabilities.firmware?.let { InfoRow("Firmware", it) }
-                    InfoRow("Protocol", MountProtocols.option(capabilities.kind).title)
+                    InfoRow("Protocol", AppFormat.unbreakableNames(MountProtocols.option(capabilities.kind).title))
                     snapshot.connection?.takeUnless { snapshot.isDemo }?.let { InfoRow("Address", "${it.host}:${it.port} (${it.link.title})") }
                     snapshot.status.position?.let { InfoRow("Points at", MountText.position(it, app.settings.coordinateStyle)) }
                     InfoRow("State", MountText.phaseLine(snapshot))
@@ -201,7 +203,7 @@ internal fun MountMessage(text: String, isError: Boolean) {
 private fun MountConnectionSection(service: MountService, draft: MountDraft, snapshot: MountSnapshot) {
     val palette = LocalPalette.current
     val option = draft.option
-    val protocols = MountProtocols.all.map { SettingsMenuOption(it.title, it.protocol) }
+    val protocols = MountProtocols.all.map { SettingsMenuOption(AppFormat.unbreakableNames(it.title), it.protocol) }
     SettingsSection(title = "Connect") {
         SettingsMenuPicker(
             title = "Mount type",
@@ -259,7 +261,7 @@ private fun MountConnectionSection(service: MountService, draft: MountDraft, sna
         }
         for (kind in MountDemoKind.entries) {
             SettingsDivider()
-            SettingsActionRow(kind.title, onClick = { service.connect(demoConnection(kind), demo = kind) }, icon = Icons.Outlined.Share)
+            SettingsActionRow(kind.title, onClick = { service.connect(demoConnection(kind), demo = kind) }, icon = Icons.Outlined.PlayCircle)
         }
         SettingsRow {
             SettingsCaption(
@@ -354,8 +356,11 @@ private fun MountOperateSection(service: MountService, snapshot: MountSnapshot, 
             SettingsDivider()
         }
         if (capabilities.canSetSiteAndTime && snapshot.skyWatcher == null) {
-            SettingsActionRow("Send location and time now", onClick = { scope.launch { service.sendSiteAndTime() } })
-            SettingsRow { SettingsCaption("Sends your observing location and the phone's time (UTC) to the mount.") }
+            SettingsActionRow(
+                "Send location and time now",
+                onClick = { scope.launch { service.sendSiteAndTime() } },
+                caption = "Sends your observing location and the phone's time (UTC) to the mount.",
+            )
             SettingsDivider()
         }
         if (capabilities.canNudge) {
@@ -400,13 +405,9 @@ private fun MountLimitsSection(service: MountService, draft: MountDraft) {
             range = -10.0..60.0,
             unit = "°",
             fractionDigits = 0,
+            caption = "Lodestar will not slew to anything lower than this, nor to a target that sinks below it within a " +
+                "minute. Set it above trees, roofs and anything the mount could hit.",
         )
-        SettingsRow {
-            SettingsCaption(
-                "Lodestar will not slew to anything lower than this, nor to a target that sinks below it within a " +
-                    "minute. Set it above trees, roofs and anything the mount could hit.",
-            )
-        }
         SettingsDivider()
         if (option.protocol == MountProtocol.SKYWATCHER) {
             SettingsRow {
@@ -438,13 +439,9 @@ private fun MountLimitsSection(service: MountService, draft: MountDraft) {
                 preferences.update { it.copy(maximumSyncOffset = value) }
                 service.settingsChanged()
             },
+            caption = "A sync that would move the mount's idea of its position by more than this is refused, which catches a wrong " +
+                "star. Sky-Watcher Wi-Fi mounts ignore this: they judge a star by how well it fits the others.",
         )
-        SettingsRow {
-            SettingsCaption(
-                "A sync that would move the mount's idea of its position by more than this is refused, which catches a wrong " +
-                    "star. Sky-Watcher Wi-Fi mounts ignore this: they judge a star by how well it fits the others.",
-            )
-        }
         if (option.advancedFields.isNotEmpty()) {
             SettingsDivider()
             SettingsActionRow(

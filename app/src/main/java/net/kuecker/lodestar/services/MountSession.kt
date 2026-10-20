@@ -30,7 +30,12 @@ import kotlin.math.abs
 
 /** The outcome of something the user asked the mount to do, in words ready to show. */
 sealed interface MountResult {
-    data class Success(val message: String? = null, val offsetDegrees: Double? = null) : MountResult
+    /** [isWarning]: the step worked, but the message asks the user to check something, so it is styled as a warning. */
+    data class Success(
+        val message: String? = null,
+        val offsetDegrees: Double? = null,
+        val isWarning: Boolean = false,
+    ) : MountResult
 
     data class Failure(val message: String, val error: MountError? = null) : MountResult
 }
@@ -166,11 +171,14 @@ object MountHints {
         val off = AppFormat.separation(offsetDegrees)
         return when {
             stars == 1 -> "Synced to $name. The mount's home position was $off off."
-            offsetDegrees > SUSPICIOUS_OFFSET ->
+            isLargeSyncCorrection(offsetDegrees, stars) ->
                 "Synced to $name. The mount was $off off, which is a lot: check that you centred the right star and that the mount has not been bumped."
             else -> "Synced to $name. The mount was $off off."
         }
     }
+
+    /** True when [skyWatcherSynced] says the correction is a lot, so the text is a warning: the first star only sets the home position. */
+    fun isLargeSyncCorrection(offsetDegrees: Double, stars: Int): Boolean = stars != 1 && offsetDegrees > SUSPICIOUS_OFFSET
 
     private const val SUSPICIOUS_OFFSET = 0.5
 
@@ -313,7 +321,11 @@ class MountSession(
         points.lastOrNull()?.let { syncedStars[it] = SyncedStar(target.name, target.j2000) }
         syncedStars.keys.removeAll { key -> points.none { it === key } }
         if (points.size == 1) homeError = result.offsetDegrees
-        MountResult.Success(MountHints.skyWatcherSynced(target.name, result.offsetDegrees, points.size), result.offsetDegrees)
+        MountResult.Success(
+            MountHints.skyWatcherSynced(target.name, result.offsetDegrees, points.size),
+            result.offsetDegrees,
+            isWarning = MountHints.isLargeSyncCorrection(result.offsetDegrees, points.size),
+        )
     }
 
     /** Where the star alignment of a Sky-Watcher mount stands; null for the other mounts. */

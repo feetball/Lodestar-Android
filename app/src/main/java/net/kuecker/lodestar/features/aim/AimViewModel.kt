@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.geometry.Rect
 import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -105,6 +106,13 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
      * that expresses a direction on the screen from device or mount axes (the guidance arrow) can use it too.
      */
     var screenAxes: ScreenAxes = ScreenAxes.natural
+
+    /**
+     * The readout at the top of the stack of panels at the bottom of the HUD, in window pixels, or `null` while the
+     * HUD has no such stack (its wide layout). [GuidanceHUD] publishes it; the arrow around the reticle keeps its
+     * distance readout clear of the stack with it.
+     */
+    var hudPanels: Rect? by mutableStateOf(null)
 
     private val fieldOfViewState: MutableDoubleState = app.retained.getOrPut(FIELD_OF_VIEW_KEY) {
         mutableDoubleStateOf(storedFieldOfView())

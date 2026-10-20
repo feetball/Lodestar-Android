@@ -44,10 +44,16 @@ import kotlinx.coroutines.delay
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.Palette
 
-/** A translucent card for the panels over the sky, so the picture stays visible behind it. */
+/**
+ * How opaque the cards and buttons over the sky are: nearly, so the sky stays a hint behind them but its labels and
+ * numbers do not run through their text.
+ */
+internal const val AIM_PANEL_ALPHA = 0.96f
+
+/** A nearly opaque card for the panels over the sky ([AIM_PANEL_ALPHA]). */
 internal fun Modifier.aimPanel(palette: Palette, padding: Dp = 10.dp): Modifier {
     val shape = RoundedCornerShape(14.dp)
-    return background(palette.surface.copy(alpha = 0.88f), shape)
+    return background(palette.surface.copy(alpha = AIM_PANEL_ALPHA), shape)
         .border(0.5.dp, palette.stroke, shape)
         .padding(padding)
 }
@@ -74,9 +80,11 @@ internal fun AimControlButton(
     val foreground = if (isOn) palette.onAccent else palette.accent
     Column(
         modifier
-            .alpha(if (!enabled) 0.4f else if (pressed) 0.7f else 1f)
             .heightIn(min = minHeight)
-            .background(if (isOn) palette.accent else palette.surface.copy(alpha = 0.88f), shape)
+            // The opaque base lies outside the dimming, so a dimmed button does not let the sky through.
+            .background(palette.surface.copy(alpha = AIM_PANEL_ALPHA), shape)
+            .alpha(if (!enabled) 0.4f else if (pressed) 0.7f else 1f)
+            .background(if (isOn) palette.accent else palette.surface.copy(alpha = AIM_PANEL_ALPHA), shape)
             .then(if (isOn) Modifier else Modifier.border(0.75.dp, palette.stroke, shape))
             .clickable(
                 interactionSource = interaction,

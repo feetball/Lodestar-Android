@@ -92,6 +92,38 @@ object AppFormat {
         return "${(fraction * 100).roundedHalfAwayFromZero().toInt()}%"
     }
 
+    // Line breaks
+
+    /** The no-break space: a value stays with its unit, and a catalogue prefix with its number, across a line wrap. */
+    const val NO_BREAK_SPACE = ' '
+
+    /** [text] with every space a no-break space, so it moves to the next line whole ("mag 3.4", "NGC 7000", "6h 10m"). */
+    fun unbreakable(text: String): String = text.replace(' ', NO_BREAK_SPACE)
+
+    /** [text] with a no-break space before its last word, so a wrapped line is never left with that word alone. */
+    fun withoutWidow(text: String): String {
+        val lastSpace = text.lastIndexOf(' ')
+        return if (lastSpace <= 0) text else text.substring(0, lastSpace) + NO_BREAK_SPACE + text.substring(lastSpace + 1)
+    }
+
+    private val parenthetical = Regex("\\(([^)]*)\\)")
+
+    /**
+     * [text] in which each comma-separated name inside parentheses stays whole: "Sky-Watcher Wi-Fi (AZ-GTi, Star
+     * Adventurer GTi)" wraps only after the comma, never to a line of "GTi)" alone.
+     */
+    fun unbreakableNames(text: String): String = parenthetical.replace(text) { match ->
+        val names = match.groupValues[1].split(", ").joinToString(", ") { unbreakable(it) }
+        "($names)"
+    }
+
+    /**
+     * A " · "-separated [line] in which each part stays whole and the dot stays with the part before it: a narrow line
+     * breaks only after a dot, so no value is split from its unit and no line starts with a dot.
+     */
+    fun unbreakableParts(line: String): String =
+        line.split(" · ").joinToString("${NO_BREAK_SPACE}· ") { unbreakable(it) }
+
     private val formatters = HashMap<String, DateTimeFormatter>()
 
     private fun formatter(skeleton: String): DateTimeFormatter = synchronized(formatters) {

@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,7 +64,6 @@ import net.kuecker.lodestar.shared.SettingsRow
 import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.shared.SettingsSliderRow
 import net.kuecker.lodestar.theme.LocalPalette
-import java.time.Instant
 import kotlin.math.roundToInt
 
 /**
@@ -97,7 +97,7 @@ private fun MosaicPlanContent(
     val observer = app.observerContext?.observer
     val lens = app.lensSetup
     val camera = remember { cameraDirection() }
-    val opened = remember { Instant.now() }
+    val opened = remember { Snapshot.withoutReadObservation { app.clock.now } }
 
     val targetProblem = remember(target) { MosaicPlanning.targetProblem(target) }
     var archProblem by remember { mutableStateOf<String?>(null) }
@@ -117,7 +117,7 @@ private fun MosaicPlanContent(
         outcome = if (observer == null) {
             MosaicPlanOutcome.Problem("Choose a location first.")
         } else {
-            val inputs = MosaicPlanningInputs(setup, target, lens, observer, camera, Instant.now())
+            val inputs = MosaicPlanningInputs(setup, target, lens, observer, camera, app.clock.now)
             withContext(Dispatchers.Default) { MosaicPlanning.plan(inputs) }
         }
     }
@@ -234,7 +234,7 @@ private fun MosaicPlanContent(
                     "While a mosaic runs, the Aim screen guides to one panel after the other.",
                     color = palette.secondaryText,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
         }
@@ -341,7 +341,7 @@ private fun OrientationPicker(
         SettingsMenuOption(orientationName(MosaicOrientation.PORTRAIT), MosaicOrientation.PORTRAIT),
     )
     Column {
-        SettingsMenuPicker("Camera orientation", chosen, options, onSelect)
+        SettingsMenuPicker("Camera orientation", chosen, options, onSelect = onSelect)
         SettingsCaption(
             if (chosen == null) {
                 "Chosen for the fewest panels. Turn the camera a quarter turn for portrait."

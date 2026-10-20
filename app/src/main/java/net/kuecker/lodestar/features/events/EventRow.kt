@@ -122,6 +122,8 @@ internal fun EventBadges(event: AstronomicalEvent, modifier: Modifier = Modifier
                     MoonInterference.MODERATE -> ChipTone.NEUTRAL
                     MoonInterference.STRONG -> ChipTone.WARNING
                 },
+                // "Moon 96% lit · strong interference" wraps on a narrow phone rather than lose its last word.
+                maxLines = 2,
             )
         }
     }

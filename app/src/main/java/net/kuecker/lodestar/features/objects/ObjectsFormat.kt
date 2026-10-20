@@ -61,6 +61,15 @@ internal object ObjectsFormat {
         return parts.joinToString(if (spoken) ", " else " · ")
     }
 
+    /**
+     * [subtitle] for a list row: each part ("mag 3.4", "62° from the Sun") stays whole and the dot stays with the part
+     * before it, so a narrow row wraps between the parts; a comet or an asteroid takes two lines.
+     */
+    fun rowSubtitle(obj: CelestialObject, magnitude: Double?, position: ObjectSkyPosition? = null): String {
+        if (obj.smallBody != null) return SmallBodyText.rowSubtitle(obj, position?.smallBody, position != null)
+        return AppFormat.unbreakableParts(subtitle(obj, magnitude, position = position))
+    }
+
     /** Altitude and compass direction of an object above the horizon, such as "↑34° SE". */
     fun altitudeAndDirection(position: ObjectSkyPosition): String {
         val altitude = AngleFormatter.formatDegrees(position.altitude, 0)
@@ -81,9 +90,11 @@ internal object ObjectsFormat {
             position.computedAt.atZone(zone).toLocalDate(),
             rise.atZone(zone).toLocalDate(),
         )
+        // A narrow row wraps the text, but never between a time and its AM or PM.
+        val time = AppFormat.unbreakable(AppFormat.time(rise, zone))
         return when {
-            days < 1 -> "$verb ${AppFormat.time(rise, zone)}"
-            days == 1L -> "$verb tomorrow ${AppFormat.time(rise, zone)}"
+            days < 1 -> "$verb $time"
+            days == 1L -> "$verb tomorrow $time"
             else -> "$verb ${AppFormat.dateTime(rise, zone)}"
         }
     }

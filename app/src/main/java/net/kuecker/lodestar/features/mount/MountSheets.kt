@@ -1,10 +1,12 @@
 package net.kuecker.lodestar.features.mount
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,9 +23,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -59,10 +63,12 @@ import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.shared.SettingsToggleRow
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
-import java.time.Instant
 
-/** Share of the screen the nudge sheet fills: little, so the sky and the target stay in view while centring. */
-private const val NUDGE_SHEET_HEIGHT = 0.5f
+/**
+ * Most of the screen the nudge sheet takes. It is only as tall as its pad needs, so that the sky and the target stay in
+ * view while centring; on a small screen it grows to this much before it scrolls.
+ */
+private const val NUDGE_SHEET_MAX_HEIGHT = 0.75f
 
 /** Share of the screen the connection sheet fills. */
 private const val CONTROL_SHEET_HEIGHT = 0.9f
@@ -77,6 +83,7 @@ private const val REFRESH_MS = 2_000L
 @Composable
 fun MountAimSheets(target: CelestialObject?) {
     val sheets = rememberMountAimState()
+    MountScreenshotEffect(sheets, target)
     // A sheet does not wait for the Aim screen to come back: leaving the screen closes it.
     DisposableEffect(sheets) { onDispose { sheets.close() } }
     when (sheets.sheet) {
@@ -92,17 +99,31 @@ fun MountAimSheets(target: CelestialObject?) {
             MountActionContent(MountAction.SYNC, target, LocalSheetDismiss.current)
         }
         MountSheetKind.NUDGE -> LodestarSheet(onDismiss = sheets::close, scrimColor = Color.Black.copy(alpha = 0.15f)) {
-            MountSheetFrame("Nudge mount", NUDGE_SHEET_HEIGHT, LocalSheetDismiss.current) { MountNudgeContent() }
+            MountSheetFrame("Nudge mount", NUDGE_SHEET_MAX_HEIGHT, LocalSheetDismiss.current, fitsContent = true) { MountNudgeContent() }
         }
         null -> Unit
     }
 }
 
-/** A sheet body: a title row with Done, and a scrolling [content] below it. */
+/**
+ * A sheet body: a title row with Done, and a scrolling [content] below it. The sheet fills [heightShare] of the screen,
+ * or, with [fitsContent], is as tall as its content up to that share.
+ */
 @Composable
-private fun MountSheetFrame(title: String, heightShare: Float, onDone: () -> Unit, content: @Composable () -> Unit) {
+private fun MountSheetFrame(
+    title: String,
+    heightShare: Float,
+    onDone: () -> Unit,
+    fitsContent: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     val palette = LocalPalette.current
-    Column(Modifier.fillMaxWidth().fillMaxHeight(heightShare)) {
+    val height = if (fitsContent) {
+        Modifier.heightIn(max = LocalConfiguration.current.screenHeightDp.dp * heightShare)
+    } else {
+        Modifier.fillMaxHeight(heightShare)
+    }
+    Column(Modifier.fillMaxWidth().then(height)) {
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -116,7 +137,7 @@ private fun MountSheetFrame(title: String, heightShare: Float, onDone: () -> Uni
             )
             LodestarButton("Done", onClick = onDone, kind = LodestarButtonKind.SECONDARY)
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        Column(Modifier.weight(1f, fill = !fitsContent).verticalScroll(rememberScrollState())) {
             content()
         }
     }
@@ -163,11 +184,11 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
     val scope = rememberCoroutineScope()
     val snapshot = service.snapshot
     val observer = app.observerContext?.observer
-    var now by remember { mutableStateOf(Instant.now()) }
+    var now by remember { mutableStateOf(Snapshot.withoutReadObservation { app.clock.now }) }
     LaunchedEffect(Unit) {
         while (true) {
             delay(REFRESH_MS)
-            now = Instant.now()
+            now = app.clock.now
         }
     }
     val resolved = remember(target?.id, observer, now) {
@@ -178,7 +199,7 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
     var failure by remember { mutableStateOf<String?>(null) }
     var alignsPhone by remember { mutableStateOf(true) }
 
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -192,100 +213,107 @@ private fun MountActionContent(action: MountAction, target: CelestialObject?, on
             )
             LodestarButton("Cancel", onClick = onDone, kind = LodestarButtonKind.SECONDARY)
         }
-        if (resolved == null || target == null || snapshot.state != MountConnectionState.CONNECTED) {
-            Text(
-                if (snapshot.state != MountConnectionState.CONNECTED) "The mount is not connected." else "There is no target or observing location.",
-                color = palette.secondaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(16.dp),
-            )
-            return@Column
-        }
-        val limit = service.preferences.settings.altitudeLimit
-        val problem = if (action == MountAction.GOTO && observer != null) {
-            MountTargeting.altitudeProblem(resolved, observer, now, limit)
-        } else {
-            null
-        }
-        val notAligned = if (action == MountAction.GOTO) MountText.notAlignedBanner(snapshot) else null
-        val canConfirm = !isWorking && problem == null && notAligned == null && !resolved.isSun
-
-        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            TargetCard(target, resolved, snapshot.status.position?.let { MountText.position(it, app.settings.coordinateStyle) })
-            if (action == MountAction.GOTO) {
-                GotoDetails(resolved, service, limit)
-            } else {
-                SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), snapshot.skyWatcher)
+        // What does not fit scrolls: the confirmation has more than a small phone can show. The bottom margin is part
+        // of what scrolls: outside it, the scroll area would end right at the button and cut its rounded corners.
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
+            if (resolved == null || target == null || snapshot.state != MountConnectionState.CONNECTED) {
+                Text(
+                    if (snapshot.state != MountConnectionState.CONNECTED) "The mount is not connected." else "There is no target or observing location.",
+                    color = palette.secondaryText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
+                )
+                return@Column
             }
-            problem?.let { MountMessage(it.userMessage, isError = true) }
-            notAligned?.let { MountMessage(it, isError = true) }
-            if (action == MountAction.SYNC && snapshot.demo == MountDemoKind.SKYWATCHER) {
+            val limit = service.preferences.settings.altitudeLimit
+            val problem = if (action == MountAction.GOTO && observer != null) {
+                MountTargeting.altitudeProblem(resolved, observer, now, limit)
+            } else {
+                null
+            }
+            val notAligned = if (action == MountAction.GOTO) MountText.notAlignedBanner(snapshot) else null
+            val canConfirm = !isWorking && problem == null && notAligned == null && !resolved.isSun
+
+            // The sections bring a margin of their own; everything else is given the same one.
+            val inset = Modifier.padding(horizontal = 16.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TargetCard(target, resolved, snapshot.status.position?.let { MountText.position(it, app.settings.coordinateStyle) }, inset)
+                if (action == MountAction.GOTO) {
+                    GotoDetails(resolved, service, limit, inset)
+                } else {
+                    SyncDetails(resolved, snapshot.status.position?.angularSeparation(resolved.j2000), snapshot.skyWatcher, inset)
+                }
+                problem?.let { Box(inset) { MountMessage(it.userMessage, isError = true) } }
+                notAligned?.let { Box(inset) { MountMessage(it, isError = true) } }
+                if (action == MountAction.SYNC && snapshot.demo == MountDemoKind.SKYWATCHER) {
+                    LodestarButton(
+                        "Centre the simulated mount on ${target.name}",
+                        onClick = {
+                            isWorking = true
+                            failure = null
+                            scope.launch {
+                                val result = service.centreDemo(resolved)
+                                isWorking = false
+                                if (result is MountResult.Failure) failure = result.message
+                            }
+                        },
+                        modifier = inset.fillMaxWidth(),
+                        kind = LodestarButtonKind.SECONDARY,
+                        enabled = !isWorking,
+                    )
+                }
+                if (resolved.isSun) Box(inset) { MountMessage(MountTargeting.SUN_REFUSAL, isError = true) }
+                if (action == MountAction.SYNC && !resolved.isSun) {
+                    SettingsSection(title = "Phone alignment") {
+                        SettingsToggleRow(
+                            title = "Also align the phone on this target",
+                            checked = alignsPhone,
+                            onCheckedChange = { alignsPhone = it },
+                            caption = "Uses the same centred frame to correct the phone's compass and bracket, as Align does.",
+                        )
+                    }
+                }
+                failure?.let { Box(inset) { MountMessage(it, isError = true) } }
+                SettingsCaption(
+                    if (action == MountAction.GOTO) {
+                        "Keep people, hands and cables clear of the mount before it moves. Stop is on the Aim screen the whole time."
+                    } else {
+                        "Sync only when the target is in the middle of your camera's frame. Syncing on the wrong star makes later " +
+                            "slews miss."
+                    },
+                    inset,
+                )
                 LodestarButton(
-                    "Centre the simulated mount on ${target.name}",
+                    if (action == MountAction.GOTO) "Start slew" else "Sync mount",
                     onClick = {
                         isWorking = true
                         failure = null
                         scope.launch {
-                            val result = service.centreDemo(resolved)
+                            val result = if (action == MountAction.GOTO) service.goto(resolved) else service.sync(resolved)
                             isWorking = false
-                            if (result is MountResult.Failure) failure = result.message
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    kind = LodestarButtonKind.SECONDARY,
-                    enabled = !isWorking,
-                )
-            }
-            if (resolved.isSun) MountMessage(MountTargeting.SUN_REFUSAL, isError = true)
-            if (action == MountAction.SYNC && !resolved.isSun) {
-                SettingsSection(title = "Phone alignment") {
-                    SettingsToggleRow(
-                        title = "Also align the phone on this target",
-                        checked = alignsPhone,
-                        onCheckedChange = { alignsPhone = it },
-                        caption = "Uses the same centred frame to correct the phone's compass and bracket, as Align does.",
-                    )
-                }
-            }
-            failure?.let { MountMessage(it, isError = true) }
-            SettingsCaption(
-                if (action == MountAction.GOTO) {
-                    "Keep people, hands and cables clear of the mount before it moves. Stop is on the Aim screen the whole time."
-                } else {
-                    "Sync only when the target is in the middle of your camera's frame. Syncing on the wrong star makes later " +
-                        "slews miss."
-                },
-            )
-            LodestarButton(
-                if (action == MountAction.GOTO) "Start slew" else "Sync mount",
-                onClick = {
-                    isWorking = true
-                    failure = null
-                    scope.launch {
-                        val result = if (action == MountAction.GOTO) service.goto(resolved) else service.sync(resolved)
-                        isWorking = false
-                        when (result) {
-                            is MountResult.Failure -> failure = result.message
-                            is MountResult.Success -> {
-                                if (action == MountAction.SYNC && alignsPhone) alignPhone(app, service, target)
-                                onDone()
+                            when (result) {
+                                is MountResult.Failure -> failure = result.message
+                                is MountResult.Success -> {
+                                    if (action == MountAction.SYNC && alignsPhone) alignPhone(app, service, target)
+                                    onDone()
+                                }
                             }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = canConfirm,
-                icon = if (action == MountAction.GOTO) Icons.Outlined.NearMe else Icons.Outlined.MyLocation,
-            )
+                    },
+                    modifier = inset.fillMaxWidth(),
+                    enabled = canConfirm,
+                    icon = if (action == MountAction.GOTO) Icons.Outlined.NearMe else Icons.Outlined.MyLocation,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun TargetCard(target: CelestialObject, resolved: MountTarget, mountPosition: String?) {
+private fun TargetCard(target: CelestialObject, resolved: MountTarget, mountPosition: String?, modifier: Modifier) {
     val palette = LocalPalette.current
     val app = LocalAppModel.current
-    Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CardTitle("Target")
         Text(
             target.name,
@@ -300,11 +328,11 @@ private fun TargetCard(target: CelestialObject, resolved: MountTarget, mountPosi
 }
 
 @Composable
-private fun GotoDetails(resolved: MountTarget, service: MountService, limit: Double) {
+private fun GotoDetails(resolved: MountTarget, service: MountService, limit: Double, modifier: Modifier) {
     val palette = LocalPalette.current
     val from = service.marker?.horizontal
     val summary = MountTargeting.slew(from, resolved.horizontal)
-    Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CardTitle("The slew")
         if (from != null) InfoRow("From", "${AppFormat.azimuth(from.azimuth)} · ${AppFormat.altitude(from.altitude)}")
         InfoRow("To", "${AppFormat.azimuth(resolved.horizontal.azimuth)} · ${AppFormat.altitude(resolved.horizontal.altitude)}")
@@ -318,9 +346,9 @@ private fun GotoDetails(resolved: MountTarget, service: MountService, limit: Dou
 }
 
 @Composable
-private fun SyncDetails(resolved: MountTarget, mountOffset: Double?, skyWatcher: MountSkyWatcherInfo?) {
+private fun SyncDetails(resolved: MountTarget, mountOffset: Double?, skyWatcher: MountSkyWatcherInfo?, modifier: Modifier) {
     val palette = LocalPalette.current
-    Column(Modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth().card(palette), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CardTitle("Sync")
         Text(
             if (skyWatcher == null) {
@@ -347,7 +375,7 @@ private fun alignPhone(app: AppModel, service: MountService, target: CelestialOb
         service.postNotice("The mount is synced. The phone could not be aligned: its sensors are not delivering data.", true)
         return
     }
-    val date = Instant.now()
+    val date = app.clock.now
     val apparent = SkyFrame(date, observer).horizontal(target, refraction = true)
     val point = AlignmentPoint(sample.rawAttitude, apparent, date, target.name)
     try {

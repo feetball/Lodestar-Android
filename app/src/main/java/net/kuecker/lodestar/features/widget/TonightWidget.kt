@@ -107,6 +107,10 @@ internal object WidgetModels {
     /** The app's preferences file; the widget reads the saved settings from it when the app has not stored its inputs yet. */
     private const val APP_PREFERENCES = "lodestar"
 
+    /** The time the widgets are worked out for: now. Only the debug widget host of the screenshots replaces it. */
+    @Volatile
+    var clock: () -> Instant = Instant::now
+
     /** The stored inputs, as the widgets and the refresh work use them. */
     fun inputs(context: Context): WidgetInputs {
         val app = context.applicationContext
@@ -116,8 +120,7 @@ internal object WidgetModels {
     /** The widget for the app's current observer, worked out on a background thread. */
     suspend fun current(context: Context): WidgetModel = withContext(Dispatchers.Default) {
         val app = context.applicationContext
-        val now = Instant.now()
-        build(app, WidgetSnapshotCache.snapshot(inputs(app), now))
+        build(app, WidgetSnapshotCache.snapshot(inputs(app), clock()))
     }
 
     /** A sample for the widget picker: a dark-sky site on a summer evening, worked out by the same code. */

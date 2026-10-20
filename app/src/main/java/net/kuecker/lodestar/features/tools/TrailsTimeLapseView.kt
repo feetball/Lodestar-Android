@@ -21,6 +21,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.app.ScreenshotScreen
+import net.kuecker.lodestar.app.ScreenshotScreenEffect
 import net.kuecker.lodestar.kit.phototools.ExposureRule
 import net.kuecker.lodestar.kit.phototools.LensSetup
 import net.kuecker.lodestar.kit.phototools.SensorFormat
@@ -110,6 +112,7 @@ fun TrailsTimeLapseScreen(onBack: () -> Unit) {
     val inputs = rememberWhilePushed("tools.trails.inputs") { TrailsInputs(myCamera) }
     val scroll = rememberWhilePushed("tools.trails.scroll") { ScrollState(0) }
     val dismissKeyboard = rememberKeyboardDismissal()
+    ScreenshotScreenEffect(ScreenshotScreen.TIME_LAPSE) { inputs.mode = TrailsMode.TIME_LAPSE }
     ToolsScreenFrame(title = "Star Trails & Time-Lapse", onBack = onBack) {
         Column(Modifier.weight(1f).imePadding().nestedScroll(dismissKeyboard).verticalScroll(scroll)) {
             FormSection(title = "Plan") {

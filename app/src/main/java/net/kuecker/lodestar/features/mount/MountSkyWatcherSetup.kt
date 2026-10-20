@@ -49,15 +49,18 @@ import net.kuecker.lodestar.shared.SettingsDivider
 import net.kuecker.lodestar.shared.SettingsRow
 import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.theme.LocalPalette
-import java.time.Instant
 
 /** Milliseconds between the refreshes of the list of suggested stars (the sky turns slowly). */
 private const val SUGGESTION_REFRESH_MS = 30_000L
 
 /** The name of an arrangement in the texts and the pickers. */
-internal fun mountArrangementTitle(mode: SkyWatcherMountMode): String = when (mode) {
-    SkyWatcherMountMode.ALT_AZIMUTH -> "Alt-azimuth (AZ-GTi on its tripod)"
-    SkyWatcherMountMode.EQUATORIAL -> "Equatorial (Star Adventurer GTi, EQ mounts, AZ-GTi on a wedge)"
+internal fun mountArrangementTitle(mode: SkyWatcherMountMode): String {
+    val title = when (mode) {
+        SkyWatcherMountMode.ALT_AZIMUTH -> "Alt-azimuth (AZ-GTi on its tripod)"
+        SkyWatcherMountMode.EQUATORIAL -> "Equatorial (Star Adventurer GTi, EQ mounts, AZ-GTi on a wedge)"
+    }
+    // Each name in the parentheses stays whole, so a narrow row wraps between them and not inside one.
+    return AppFormat.unbreakableNames(title)
 }
 
 /** What to do with the mount before it is switched on, for each arrangement. */
@@ -250,7 +253,9 @@ private fun MountAlignmentSuggestionRows(service: MountService, snapshot: MountS
     LaunchedEffect(observer, catalog) {
         if (observer == null || catalog == null) return@LaunchedEffect
         while (true) {
-            candidates = withContext(Dispatchers.Default) { MountAlignmentSuggestions.candidates(catalog, observer, Instant.now()) }
+            // The app's clock, like the rest of the mount screens (a screenshot's frozen time holds).
+            val now = app.clock.now
+            candidates = withContext(Dispatchers.Default) { MountAlignmentSuggestions.candidates(catalog, observer, now) }
             delay(SUGGESTION_REFRESH_MS)
         }
     }
@@ -300,7 +305,7 @@ private fun MountAlignmentSuggestionRows(service: MountService, snapshot: MountS
                         "Go to",
                         onClick = {
                             app.select(candidate.obj)
-                            scope.launch { service.goto(MountTargeting.target(candidate.obj, observer, Instant.now())) }
+                            scope.launch { service.goto(MountTargeting.target(candidate.obj, observer, app.clock.now)) }
                         },
                         kind = LodestarButtonKind.SECONDARY,
                         modifier = Modifier.semantics { contentDescription = "Slew the mount to ${candidate.obj.name}" },

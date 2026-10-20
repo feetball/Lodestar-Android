@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!-- Debug builds only: hosts the Tonight widgets in an AppWidgetHost so that tools/capture_review.sh can
+             photograph them without a launcher. Exported so that `adb shell am start` can open it. -->
+        <activity
+            android:name=".debug.WidgetHostActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity,ExportedActivity" />
+    </application>
+
+</manifest>

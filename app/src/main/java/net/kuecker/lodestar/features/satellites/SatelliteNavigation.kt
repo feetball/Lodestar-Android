@@ -50,6 +50,7 @@ fun SatelliteNavigationEffect(onOpen: (SatelliteScreen) -> Unit) {
     LaunchedEffect(requests.pending) {
         requests.take()?.let(latest)
     }
+    SatelliteScreenshotEffect(requests)
 }
 
 /** The content of a pushed satellite [screen]; [onBack] pops it. */

@@ -191,9 +191,13 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         syncServices()
         scope.launch {
             catalog.load()
-            val screenshotTarget = ScreenshotMode.current?.targetID?.let(catalog::objectWithID)
+            val screenshotID = ScreenshotMode.current?.targetID
+            val screenshotTarget = screenshotID?.let(catalog::objectWithID)
             if (screenshotTarget != null) {
                 target = screenshotTarget
+            } else if (screenshotID != null) {
+                // A downloaded comet joins the catalog when the feed's fixture has been installed (screenshot mode).
+                restoreWhenCataloged(screenshotID)
             } else if (target == null) {
                 settings.recentObjectIDs.firstOrNull()?.let { id ->
                     val found = catalog.objectWithID(id)
@@ -396,13 +400,17 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
 
     /** Debug builds: demo site, fixed time, display mode and camera pointing for store screenshots. */
     private fun applyScreenshotMode(demo: ScreenshotMode) {
+        // Every screenshot starts from a fresh installation as far as the online feeds go (see ScreenshotMode.onlineFeeds).
+        online.resetForScreenshots()
         val site = net.kuecker.lodestar.model.SavedSite.create(
             demo.siteName, demo.latitude, demo.longitude, demo.elevation, demo.timeZoneIdentifier,
+            horizon = if (demo.hasSkyline) ScreenshotMode.demoSkyline() else null,
         )
         settingsStore.update { s ->
             s.copy(
                 hasCompletedOnboarding = true,
-                cameraPreviewEnabled = false,
+                cameraPreviewEnabled = demo.showsCamera,
+                focalLength = demo.focalLength ?: AppSettings().focalLength,
                 nightMode = if (demo.nightMode) NightModeSetting.ON else NightModeSetting.OFF,
                 savedSites = site?.let(::listOf) ?: s.savedSites,
                 locationSource = site?.let { LocationSource.Site(it.id) } ?: s.locationSource,

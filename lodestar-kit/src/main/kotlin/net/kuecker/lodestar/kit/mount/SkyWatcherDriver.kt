@@ -210,17 +210,20 @@ class SkyWatcherDriver(
     }
 
     /**
-     * Ends the session. Servo tracking (alt-azimuth mounts) is stopped, because the mount would otherwise keep turning at the last
-     * rate; a sidereal tracking equatorial mount keeps tracking, and a running slew is left to finish.
+     * Ends the session. Servo tracking (alt-azimuth mounts) and a nudge are stopped, because the mount would otherwise keep turning
+     * at the last rate; a sidereal tracking equatorial mount keeps tracking, and a running slew is left to finish.
      */
     override fun disconnect() {
         if (!connected) return
         connected = false
-        if (motion == Motion.TRACKING && resolvedStrategy == SkyWatcherTrackingStrategy.SERVO) {
-            try {
-                stopAxes()
-            } catch (error: MountError) {
-                // Best effort: the link is probably gone.
+        if (motion == Motion.NUDGING || (motion == Motion.TRACKING && resolvedStrategy == SkyWatcherTrackingStrategy.SERVO)) {
+            // Best effort: the link is probably gone. Each axis gets its own try, so that a failure on one does not leave the other running.
+            for (axis in SkyWatcherAxis.entries) {
+                try {
+                    link.command(SkyWatcherCommand.STOP_MOTION, axis, "", "stop")
+                } catch (error: MountError) {
+                    // Nothing more can be done about this axis.
+                }
             }
         }
         motion = Motion.STOPPED
@@ -511,6 +514,12 @@ class SkyWatcherDriver(
         for (axis in SkyWatcherAxis.entries) link.command(SkyWatcherCommand.STOP_MOTION, axis, "", "stop")
     }
 
+    /** Stops both axes without braking (the protocol's instant stop), for a move that has run into a limit of the mount. */
+    @Throws(MountError::class)
+    private fun stopAxesAtOnce() {
+        for (axis in SkyWatcherAxis.entries) link.command(SkyWatcherCommand.INSTANT_STOP, axis, "", "stop")
+    }
+
     @Throws(MountError::class)
     private fun waitUntilStopped() {
         for (iteration in 0 until stopPolls) {
@@ -566,14 +575,19 @@ class SkyWatcherDriver(
 
     // MARK: Choosing axis angles
 
-    /** The axis angles for [place] at [at], within the limits; throws the mount's limit errors. */
+    /**
+     * The axis angles for [place] at [at], within the limits; throws the mount's limit errors. [overheadSlack] degrees are allowed
+     * above the overhead limit (tracking uses it, see [trackingOverheadSlackDegrees]).
+     */
     @Throws(MountError::class)
-    private fun choose(place: EquatorialCoordinate, at: Instant, near: Reading, keepSide: Boolean): Choice {
+    private fun choose(place: EquatorialCoordinate, at: Instant, near: Reading, keepSide: Boolean, overheadSlack: Double = 0.0): Choice {
         val limits = configuration.limits
         val sidereal = lst(at)
         val altitude = SkyWatcherSky.altitude(place, sidereal, location.latitude)
         if (altitude < limits.minimumAltitudeDegrees) throw MountError.MountHorizonLimit
-        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && altitude > limits.maximumAltitudeDegrees) throw MountError.MountOverheadLimit
+        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && altitude > limits.maximumAltitudeDegrees + overheadSlack) {
+            throw MountError.MountOverheadLimit
+        }
         val direction = SkyWatcherSky.localDirection(place, sidereal, location.latitude, resolvedMode)
         val solutions = model.solutions(direction, near.axis1)
         if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH) {
@@ -786,7 +800,13 @@ class SkyWatcherDriver(
     @Throws(MountError::class)
     private fun servoStep(reading: Reading, lead: Double, anchorAt: (Instant) -> EquatorialCoordinate) {
         val at = reading.time.addingTimeInterval(lead)
-        val wanted = choose(anchorAt(at), at, reading, true)
+        val wanted = choose(anchorAt(at), at, reading, true, if (motion == Motion.TRACKING) trackingOverheadSlackDegrees else 0.0)
+        // Beyond the azimuth limit of an alt-azimuth mount `choose` answers with the same direction from another turn, a jump of
+        // nearly a full turn. Tracking would be stopped by the rate check below, but a nudge is only clamped to the rate limit and
+        // would unwind the cable at full speed: both end here as at any other limit.
+        if (resolvedMode == SkyWatcherMountMode.ALT_AZIMUTH && abs(wanted.axis1 - reading.axis1) > 180.0) {
+            throw MountError.OutsideMountLimits
+        }
         val limit = configuration.limits.maximumAxisRateDegreesPerSecond
         var rate1 = (wanted.axis1 - reading.axis1) / lead
         var rate2 = (wanted.axis2 - reading.axis2) / lead
@@ -800,8 +820,15 @@ class SkyWatcherDriver(
     }
 
     @Throws(MountError::class)
-    private fun endNudge() {
+    private fun endNudge(atLimit: Boolean = false) {
         nudge = null
+        if (atLimit) {
+            // The nudge ran into a limit of the mount. The axes still turn at the nudge rate, and braking them would carry the
+            // mount on past the limit (0.75 degrees from the fastest nudge): stop them at once, so that the mount rests where the
+            // limit was found, tracking goes on from there, and nothing travels on until the next poll if it cannot.
+            stopAxesAtOnce()
+            waitUntilStopped()
+        }
         refreshStatuses()
         val reading = readAxes()
         anchor = pointing(reading)
@@ -934,8 +961,8 @@ class SkyWatcherDriver(
             lastServo = clock.now()
         } catch (limit: MountError) {
             if (limit.isCommunicationFailure) throw limit
-            // The nudge has reached a limit of the mount: end it here and go on tracking from where the mount is.
-            endNudge()
+            // The nudge has reached a limit of the mount: end it here and go on tracking from where the mount comes to rest.
+            endNudge(atLimit = true)
         }
     }
 
@@ -948,6 +975,14 @@ class SkyWatcherDriver(
         private const val minimumCosine: Double = 0.05
         private const val maximumDeclination: Double = 89.5
         private const val nudgeGraceSeconds: Double = 2.0
+
+        /**
+         * How far above the overhead limit an alt-azimuth mount may keep tracking. A nudge towards the limit ends where the mount
+         * is when the limit is found, which can be above it (the axes were turning, and the pointing model adds a few tenths of a
+         * degree to the altitude the driver sees); tracking has to be able to go on from there for a while, and a target that
+         * creeps over the limit by sidereal motion stops it soon enough. A goto or a nudge still stops at the limit itself.
+         */
+        private const val trackingOverheadSlackDegrees: Double = 1.0
         private const val nudgeLeadSeconds: Double = 0.5
         private const val nudgeUpdateSeconds: Double = 0.5
         private const val trackingLeadExtraSeconds: Double = 0.5

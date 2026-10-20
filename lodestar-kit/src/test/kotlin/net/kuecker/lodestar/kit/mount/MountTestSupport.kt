@@ -5,6 +5,7 @@ import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.foundation.instantFromTimeIntervalSince1970
+import java.time.Instant
 
 /** A controller wired to a simulator, with everything a test wants to look at. */
 class MountRig(
@@ -31,6 +32,12 @@ object MountTestSupport {
     /** 2026-10-18 04:00 UTC, about 22:04 the evening before in Colorado: right ascension 22.7 h is near the meridian. */
     val start = instantFromTimeIntervalSince1970(1_792_296_000.0)
 
+    /**
+     * 2026-10-18 19:00 UTC, 13:00 in Colorado (local apparent noon is at 18:47 UTC): the Sun stands about 40 degrees up in
+     * the south, at right ascension 13.5 h and declination -9.6 degrees.
+     */
+    val midday = instantFromTimeIntervalSince1970(1_792_350_000.0)
+
     /** The Andromeda galaxy's centre (J2000): high in the east at [start]. */
     val andromeda = EquatorialCoordinate.fromRightAscensionHours(0.7123, 41.2689)
 
@@ -53,9 +60,10 @@ object MountTestSupport {
         settings: MountSettings = MountSettings.standard,
         chunkSize: Int = 0,
         slewRate: Double = 4.0,
+        begin: Instant = start,
         configure: (MountRig) -> Unit = {},
     ): MountRig {
-        val clock = ManualMountClock(start)
+        val clock = ManualMountClock(begin)
         val mount = MountSimulatorModel(clock, parkPosition, slewRate)
         val driver: MountDriver
         var stream: MountSimulatedStreamTransport? = null

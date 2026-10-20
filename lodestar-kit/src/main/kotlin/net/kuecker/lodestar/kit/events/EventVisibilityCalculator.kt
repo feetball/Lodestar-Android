@@ -187,8 +187,17 @@ internal class EventVisibilityCalculator(
         )
     }
 
+    /**
+     * The night (local noon to noon) that contains [date]. The day is decided by comparing [date] with its own local noon
+     * rather than by shifting 12 absolute hours, which lands an hour off on the 23- and 25-hour days of a time change.
+     */
     private fun twilight(date: Instant): NightTwilight {
-        val reference = date.addingTimeInterval(-12 * 3600.0)
+        val own = TwilightCalculator.nightInterval(date, timeZone)
+        val reference = if (date >= own.start) {
+            date
+        } else {
+            runCatching { date.atZone(timeZone).minusDays(1).toInstant() }.getOrElse { date.addingTimeInterval(-86_400.0) }
+        }
         val key = TwilightCalculator.nightInterval(reference, timeZone).start
         return nights.getOrPut(key) { TwilightCalculator.night(reference, observer, timeZone) }
     }

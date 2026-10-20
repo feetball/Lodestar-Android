@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  * 0xFFF) and ASCOM alpyca's discovery module (UDP 32227, `alpacadiscovery1`, `{"AlpacaPort": n}`, IPv6 group `ff12::a1:9aca`).
  */
 class AlpacaCodecTests {
-    private fun ok(value: String?, client: Int, server: Int = 1): AlpacaHTTPResponse {
+    private fun ok(value: String?, client: Int, server: Long = 1): AlpacaHTTPResponse {
         val valueText = if (value == null) "" else "\"Value\": $value, "
         return AlpacaHTTPResponse(
             200, "{$valueText\"ClientTransactionID\": $client, \"ServerTransactionID\": $server, \"ErrorNumber\": 0, \"ErrorMessage\": \"\"}",
@@ -188,8 +188,8 @@ class AlpacaCodecTests {
         val ra = builder.rightAscension()
         val reply = AlpacaResponseParser.parse(ok("12.5", ra.clientTransactionID, 17), ra)
         assertEquals(12.5, reply.doubleValue())
-        assertEquals(ra.clientTransactionID, reply.clientTransactionID)
-        assertEquals(17, reply.serverTransactionID)
+        assertEquals(ra.clientTransactionID.toLong(), reply.clientTransactionID)
+        assertEquals(17L, reply.serverTransactionID)
         val slewing = builder.slewing()
         assertEquals(true, AlpacaResponseParser.parse(ok("true", slewing.clientTransactionID), slewing).booleanValue())
         val system = builder.equatorialSystem()
@@ -290,6 +290,26 @@ class AlpacaCodecTests {
         }
         assertTrue(error.detail.length <= AlpacaCodec.maximumMessageLength)
         assertTrue(error.detail.startsWith("bad thing"))
+    }
+
+    @Test
+    fun testTransactionIDsMayUseTheWholeUnsigned32BitRange() {
+        // The Alpaca API defines both transaction ids as uint32: a server may count milliseconds or hash into it.
+        val request = AlpacaRequestBuilder().slewing()
+        val reply = AlpacaResponseParser.parse(ok("true", request.clientTransactionID, 3_000_000_000L), request)
+        assertEquals(true, reply.booleanValue())
+        assertEquals(3_000_000_000L, reply.serverTransactionID)
+        val largest = AlpacaResponseParser.parse(ok("true", request.clientTransactionID, 4_294_967_295L), request)
+        assertEquals(4_294_967_295L, largest.serverTransactionID)
+        // Beyond uint32, negative-beyond-int32 and fractions are still garbage.
+        for (server in listOf("4294967296", "-2147483648", "1.5", "1e10")) {
+            val body = "{\"Value\": true, \"ClientTransactionID\": ${request.clientTransactionID}, \"ServerTransactionID\": $server, " +
+                "\"ErrorNumber\": 0, \"ErrorMessage\": \"\"}"
+            assertFailsWith<MountError.MalformedReply>(server) { AlpacaResponseParser.parse(AlpacaHTTPResponse(200, body), request) }
+        }
+        // The error number keeps its stricter range.
+        val wild = "{\"ClientTransactionID\": ${request.clientTransactionID}, \"ErrorNumber\": 3000000000}"
+        assertFailsWith<MountError.MalformedReply>("ErrorNumber") { AlpacaResponseParser.parse(AlpacaHTTPResponse(200, wild), request) }
     }
 
     @Test

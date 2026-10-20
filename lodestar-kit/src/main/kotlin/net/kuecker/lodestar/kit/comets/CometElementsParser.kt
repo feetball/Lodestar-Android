@@ -60,8 +60,11 @@ object CometElementsParser {
         if (month < 1 || month > 12) {
             throw SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_MONTH, month.toDouble())
         }
-        val day = decimalField(columns, 23, 29, SmallBodyField.PERIHELION_DAY, 0.0, 32.0)
-        if (day >= 32.0) throw SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, day)
+        // The day starts at 1.0 and stays below the first of the next month, so an impossible date cannot roll over.
+        val day = decimalField(columns, 23, 29, SmallBodyField.PERIHELION_DAY, 1.0, 32.0)
+        if (day >= (RecordFields.daysInMonth(year, month) + 1).toDouble()) {
+            throw SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, day)
+        }
         val perihelionTime = RecordFields.julianDay(year, month, 1) + (day - 1.0)
 
         // Orbit.

@@ -20,7 +20,10 @@ import kotlin.math.sqrt
  * `r = q + e·χ²·C(z)` and the perifocal position is `x = q − χ²·C(z)`, `y = √(q(1 + e))·χ·(1 − z·S(z))`. One formula
  * covers ellipses, parabolas and hyperbolas without a special case near `e = 1`. The left-hand side increases
  * monotonically with `χ` (its derivative is `r ≥ q`) and `|χ| ≤ k|Δt|/q`, so a safeguarded Newton iteration
- * (bisection whenever a step leaves the bracket) always converges, typically in four to six steps.
+ * (bisection whenever a step leaves the bracket or does not at least halve the step before the last one) always
+ * converges, typically in four to six steps and in well under a hundred even for a hyperbola that is far from
+ * perihelion with a huge `(e − 1)/q`, where the start value is far too high and plain Newton steps would be tiny.
+ * A result whose residual is still large after the iteration is not returned.
  *
  * Elliptic orbits are reduced to |Δt| ≤ half a period first, so any date works; for parabolic and hyperbolic orbits
  * the date must be within [maximumUnboundSpanDays] of perihelion (the body is then far beyond Neptune anyway).
@@ -33,8 +36,14 @@ object OrbitPropagator {
     /** The largest |t − perihelion| in days for which a parabolic or hyperbolic orbit is evaluated (about 137 years). */
     const val maximumUnboundSpanDays: Double = 50_000.0
 
-    private const val maximumIterations = 100
+    private const val maximumIterations = 200
     private const val relativeTolerance = 1e-14
+
+    /**
+     * The largest residual of Kepler's equation, relative to `k·|Δt|`, of a solution that is accepted; a converged one
+     * is within about 1e-12 of zero, an iteration that ran out of steps is orders of magnitude off.
+     */
+    private const val residualTolerance = 1e-9
 
     /** Rotation from the J2000 mean ecliptic to the J2000 mean equator (the one the planetary theory uses). */
     private val eclipticToEquatorialJ2000: Matrix3 = Matrix3.rotationX(AstroMath.radians(Obliquity.j2000))
@@ -126,8 +135,8 @@ object OrbitPropagator {
 
     /**
      * The orbital-plane position [days] after perihelion for a conic with perihelion distance [q] and eccentricity [e],
-     * or `null` if an input is not finite, `q <= 0`, `e < 0`, or [days] is beyond [maximumUnboundSpanDays] for an
-     * unbound orbit.
+     * or `null` if an input is not finite, `q <= 0`, `e < 0`, [days] is beyond [maximumUnboundSpanDays] for an
+     * unbound orbit, or the iteration did not converge.
      */
     internal fun perifocal(q: Double, e: Double, days: Double): Perifocal? {
         if (!(q > 0 && e >= 0 && days.isFinite())) return null
@@ -149,6 +158,9 @@ object OrbitPropagator {
         var high = tau / q
         var chi = initialGuess(q, e, tau)
         if (!(chi > low && chi < high)) chi = 0.5 * high
+        // The last two steps, for the safeguard below; the first may be as long as the bracket.
+        var previousStep = high - low
+        var lastStep = previousStep
         for (iteration in 0 until maximumIterations) {
             val z = alpha * chi * chi
             val residual = e * chi * chi * chi * stumpffS(z) + q * chi - tau
@@ -156,15 +168,26 @@ object OrbitPropagator {
             if (residual > 0) high = chi else low = chi
             val derivative = e * chi * chi * stumpffC(z) + q
             var next = chi - residual / derivative
-            if (!(next > low && next < high)) next = 0.5 * (low + high)
+            // Bisect when the Newton step leaves the bracket or is longer than half the step before the last one (as
+            // `rtsafe` in Numerical Recipes does). Far above the root of a hyperbola the residual grows like exp(√−z),
+            // Newton only lowers √−z by about 1 per step and the bracket does not tighten, so it would need hundreds.
+            if (!(next > low && next < high) || abs(next - chi) > 0.5 * previousStep) {
+                next = 0.5 * (low + high)
+            }
             val step = abs(next - chi)
+            previousStep = lastStep
+            lastStep = step
             chi = next
             if (step <= relativeTolerance * chi) break
         }
         val z = alpha * chi * chi
         val c = stumpffC(z)
+        val s = stumpffS(z)
+        // An iteration that ran out of steps is far from a root: refuse it instead of returning its position.
+        val finalResidual = e * chi * chi * chi * s + q * chi - tau
+        if (!(abs(finalResidual) <= residualTolerance * tau)) return null
         val x = q - chi * chi * c
-        val y = sqrt(q * (1 + e)) * chi * (1 - z * stumpffS(z))
+        val y = sqrt(q * (1 + e)) * chi * (1 - z * s)
         val r = e * chi * chi * c + q
         val signedY = if (elapsed < 0) -y else y
         if (!(x.isFinite() && signedY.isFinite() && r.isFinite())) return null

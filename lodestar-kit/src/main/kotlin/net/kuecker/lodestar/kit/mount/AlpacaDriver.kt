@@ -185,8 +185,17 @@ class AlpacaDriver(
             MountNudgeDirection.NORTH -> configuration.secondaryPositiveIsNorth
             MountNudgeDirection.SOUTH -> !configuration.secondaryPositiveIsNorth
         }
-        perform(requests.moveAxis(axis, if (positive) magnitude else -magnitude))
-        movingAxes.add(axis)
+        // The mount may have executed the request although its reply was lost, so the axis counts as moving from the moment
+        // the request is sent and `stopNudge` always sends rate 0 for it. Only a refusal by the mount (not a failure of the
+        // link) says for sure that nothing moves.
+        val wasMoving = movingAxes.contains(axis)
+        if (!wasMoving) movingAxes.add(axis)
+        try {
+            perform(requests.moveAxis(axis, if (positive) magnitude else -magnitude))
+        } catch (error: MountError) {
+            if (!wasMoving && !error.isCommunicationFailure) movingAxes.remove(axis)
+            throw error
+        }
     }
 
     @Throws(MountError::class)
@@ -202,7 +211,9 @@ class AlpacaDriver(
         val dateRequest = requests.setUTCDate(date)
         perform(requests.setSiteLatitude(location.latitude))
         perform(requests.setSiteLongitude(location.longitude))
-        perform(requests.setSiteElevation(location.elevation))
+        // ASCOM limits SiteElevation to -300...10000 m, narrower than the engine's -1000...12000 m (the Dead Sea is at about
+        // -430 m), and a device answers InvalidValue to anything outside.
+        perform(requests.setSiteElevation(location.elevation.coerceIn(-300.0, 10_000.0)))
         perform(dateRequest)
     }
 

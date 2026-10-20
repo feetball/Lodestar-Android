@@ -94,6 +94,15 @@ sealed class MountError(message: String) : Exception(message) {
             "Lodestar won't slew there.",
     )
 
+    /**
+     * Lodestar's own safety check: the Sun is up and the target is [separationDegrees] from it, closer than the
+     * [limitDegrees] exclusion zone. A telescope pointed there can burn the eye or the camera.
+     */
+    data class NearSun(val separationDegrees: Double, val limitDegrees: Double) : MountError(
+        "The target is ${formatFixed(separationDegrees, 1)}° from the Sun, closer than the ${formatFixed(limitDegrees, 0)}° " +
+            "safety limit. Lodestar won't slew there.",
+    )
+
     /** The mount refused the target because it is below the mount's own horizon limit. */
     data object MountHorizonLimit : MountError("The target is below the mount's horizon limit.")
 
@@ -349,6 +358,11 @@ data class MountSettings private constructor(
     val maximumNudgeSeconds: Double,
     /** A sync that would move the mount by more than this many degrees is refused (180 allows everything). */
     val maximumSyncOffsetDegrees: Double,
+    /**
+     * While the Sun is up, targets closer to it than this many degrees are refused. It can be made smaller or larger
+     * within 5...45 degrees but not switched off.
+     */
+    val sunExclusionDegrees: Double,
 ) {
     companion object {
         /** The default settings. */
@@ -365,6 +379,7 @@ data class MountSettings private constructor(
             maximumConsecutiveFailures: Int = 3,
             maximumNudgeSeconds: Double = 10.0,
             maximumSyncOffsetDegrees: Double = 180.0,
+            sunExclusionDegrees: Double = 15.0,
         ): MountSettings = MountSettings(
             altitudeLimit = sane(altitudeLimit, 0.0, -10.0, 60.0),
             horizonLookaheadSeconds = sane(horizonLookaheadSeconds, 60.0, 0.0, 1800.0),
@@ -375,6 +390,7 @@ data class MountSettings private constructor(
             maximumConsecutiveFailures = maximumConsecutiveFailures.coerceIn(1, 10),
             maximumNudgeSeconds = sane(maximumNudgeSeconds, 10.0, 0.1, 30.0),
             maximumSyncOffsetDegrees = sane(maximumSyncOffsetDegrees, 180.0, 0.1, 180.0),
+            sunExclusionDegrees = sane(sunExclusionDegrees, 15.0, 5.0, 45.0),
         )
 
         private fun sane(value: Double, default: Double, lower: Double, upper: Double): Double =

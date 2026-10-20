@@ -266,6 +266,24 @@ class CometsParsingTests {
     }
 
     @Test
+    fun cometPerihelionDayMustExistInItsMonth() {
+        val good = CometsTestData.cometPonsBrooks
+        fun line(year: String, month: String, day: String): String =
+            replacing(replacing(replacing(good, 15, 18, year), 20, 21, month), 23, 29, day)
+        // A day the month does not have used to roll over into the next month, and a day before the 1st into the previous one.
+        assertEquals(SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, 31.5), cometError(line("2026", " 2", "31.5000")))
+        assertEquals(SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, 29.0), cometError(line("2025", " 2", "29.0000")))
+        assertEquals(SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, 30.0), cometError(line("2024", " 2", "30.0000")))
+        assertEquals(SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, 31.0), cometError(line("2026", " 4", "31.0000")))
+        assertEquals(SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, 0.5), cometError(line("2026", " 4", "0.5000")))
+        assertEquals(SmallBodyParseError.FieldOutOfRange(SmallBodyField.PERIHELION_DAY, 0.0), cometError(line("2026", " 4", "0.0000")))
+        // The first instant of a month, the leap day and the last fraction of a 30-day month are fine.
+        assertEquals(2_460_310.5, comet(line("2024", " 1", "1.0000")).orbit.perihelionJulianDayTT, 1e-9)
+        assertEquals(2_460_369.5, comet(line("2024", " 2", "29.0000")).orbit.perihelionJulianDayTT, 1e-9)
+        assertEquals(2_460_431.4999, comet(line("2024", " 4", "30.9999")).orbit.perihelionJulianDayTT, 1e-6)
+    }
+
+    @Test
     fun cometPhotometryIsOptionalAndDefaultsTheSlope() {
         val good = CometsTestData.cometPonsBrooks
         assertNull(comet(replacing(good, 92, 100, "")).photometry)

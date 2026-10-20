@@ -383,6 +383,42 @@ class CometsOrbitTests {
     }
 
     @Test
+    fun farHyperbolasConvergeToTheClassicalSolution() {
+        // Barker's parabola, the start of the iteration, is far too high when (e - 1) / q is large (for q = 0.01 and
+        // e = 10 it puts sqrt(-z) at 240 where the root is at 15), and plain Newton steps then only lower it by about 1.
+        // That used to run out of iterations with r around 1e58 AU. The reference solves e sinh H - H = M by bisection.
+        val cases = listOf(
+            Triple(0.01, 10.0, 50_000.0), Triple(0.01, 10.0, -50_000.0), Triple(0.01, 5.0, 20_000.0),
+            Triple(1e-5, 100.0, 50_000.0), Triple(0.01, 100.0, -50_000.0),
+        )
+        for ((q, e, days) in cases) {
+            val a = q / (e - 1)
+            val meanAnomaly = OrbitPropagator.gaussianGravitationalConstant * abs(days) / (a * sqrt(a))
+            var low = 0.0
+            var high = 100.0
+            repeat(200) {
+                val middle = 0.5 * (low + high)
+                if (e * sinh(middle) - middle > meanAnomaly) {
+                    high = middle
+                } else {
+                    low = middle
+                }
+            }
+            val anomaly = 0.5 * (low + high)
+            val r = a * (e * cosh(anomaly) - 1)
+            val x = a * (e - cosh(anomaly))
+            val y = (if (days < 0) -1.0 else 1.0) * a * sqrt(e * e - 1) * sinh(anomaly)
+            val position = assertNotNull(OrbitPropagator.perifocal(q, e, days), "q = $q, e = $e, dt = $days")
+            assertEquals(r, position.r, 1e-9 * r, "distance q = $q, e = $e, dt = $days")
+            assertEquals(x, position.x, 1e-9 * r, "x q = $q, e = $e, dt = $days")
+            assertEquals(y, position.y, 1e-9 * r, "y q = $q, e = $e, dt = $days")
+        }
+        val orbit = elements(q = 0.01, e = 10.0, t = 2_460_000.0)
+        val distance = assertNotNull(OrbitPropagator.heliocentricDistance(orbit, 2_460_000.0 + 50_000.0))
+        assertTrue(distance > 25_000.0 && distance < 26_000.0, "distance $distance AU")
+    }
+
+    @Test
     fun invalidInputsToTheSolverGiveNothing() {
         // The semi-major axis overflows, so the period is not a number.
         assertNull(OrbitPropagator.perifocal(1e300, 1.0 - 1e-16, 1.0))

@@ -174,10 +174,12 @@ public struct MountSettings: Hashable, Sendable {   // every value is clamped in
     public let maximumConsecutiveFailures: Int      // 1…10, default 3: this many failed polls end the session
     public let maximumNudgeSeconds: Double          // 0.1…30, default 10
     public let maximumSyncOffsetDegrees: Double     // 0.1…180, default 180 (= no limit): wrong-star guard
+    public let sunExclusionDegrees: Double          // 5…45, default 15: no goto this close to the Sun while it is up
     public static let standard: MountSettings
     public init(altitudeLimit: Double = 0, horizonLookaheadSeconds: Double = 60, maximumSlewSeconds: Double = 300,
                 slewStartGraceSeconds: Double = 5, arrivalToleranceDegrees: Double = 0.25, pollIntervalSeconds: Double = 1,
-                maximumConsecutiveFailures: Int = 3, maximumNudgeSeconds: Double = 10, maximumSyncOffsetDegrees: Double = 180) }
+                maximumConsecutiveFailures: Int = 3, maximumNudgeSeconds: Double = 10, maximumSyncOffsetDegrees: Double = 180,
+                sunExclusionDegrees: Double = 15) }
 ```
 ```kotlin
 enum class MountProtocol(val rawValue: String) { LX200, NEXSTAR, ALPACA; companion object { fun fromRawValue(raw: String): MountProtocol? } }
@@ -198,7 +200,8 @@ data class MountSettings private constructor(…same properties…) {
     companion object { val standard: MountSettings
         operator fun invoke(altitudeLimit: Double = 0.0, horizonLookaheadSeconds: Double = 60.0, maximumSlewSeconds: Double = 300.0,
             slewStartGraceSeconds: Double = 5.0, arrivalToleranceDegrees: Double = 0.25, pollIntervalSeconds: Double = 1.0,
-            maximumConsecutiveFailures: Int = 3, maximumNudgeSeconds: Double = 10.0, maximumSyncOffsetDegrees: Double = 180.0): MountSettings } }
+            maximumConsecutiveFailures: Int = 3, maximumNudgeSeconds: Double = 10.0, maximumSyncOffsetDegrees: Double = 180.0,
+            sunExclusionDegrees: Double = 15.0): MountSettings } }
 ```
 
 ### `MountError` — typed, user-explainable
@@ -207,6 +210,7 @@ data class MountSettings private constructor(…same properties…) {
 public enum MountError: Error, Hashable, Sendable, LocalizedError {
     case notConnected, busy, slewInProgress
     case belowHorizonLimit(altitude: Double, limit: Double)       // Lodestar's own refusal
+    case nearSun(separationDegrees: Double, limitDegrees: Double) // Lodestar's own refusal: the Sun is up and too close
     case mountHorizonLimit, mountOverheadLimit, outsideMountLimits // the mount's refusals
     case notAligned, parked, standby, notTracking
     case notSupported(feature: MountFeature)
@@ -228,6 +232,7 @@ for payloads: `BelowHorizonLimit(altitude, limit)`, `NotSupported(feature)`, `Ti
 | `busy` | The mount is busy. Try again in a moment. |
 | `slewInProgress` | The mount is already slewing. Stop it before starting another move. |
 | `belowHorizonLimit(-3.3, 0)` | The target is at -3.3°, below your altitude limit of 0.0°. Lodestar won't slew there. |
+| `nearSun(8.2, 15)` | The target is 8.2° from the Sun, closer than the 15° safety limit. Lodestar won't slew there. |
 | `mountHorizonLimit` | The target is below the mount's horizon limit. |
 | `mountOverheadLimit` / `outsideMountLimits` | The target is above the mount's overhead limit. / … outside the mount's movement limits. |
 | `notAligned` | The mount is not aligned. Do a star alignment on the mount first, then try again. |
@@ -323,6 +328,9 @@ disconnected --connect--> idle --goto--> slewing --poll: arrived / stopped short
 Rules the controller enforces (all tested against the simulators of all three protocols):
 - **Altitude limit**: `goto` computes the target's geometric altitude with `SkyFrame` for the observer at *now* and at *now + horizonLookaheadSeconds*;
   below `altitudeLimit` → `.belowHorizonLimit(altitude:limit:)`, nothing is sent. (Default 0°; the Settings screen should expose it.)
+- **Sun exclusion**: `goto` also compares the target with the Sun, at *now* and at *now + horizonLookaheadSeconds*, in the horizontal frame without
+  refraction. While the Sun is above −1° and the target is closer than `sunExclusionDegrees` (default 15°, 5…45, never off) → `.nearSun(separationDegrees:limitDegrees:)`,
+  nothing is sent. It compares positions, so Venus near inferior conjunction, a new Moon or a comet in the glare are refused as well as the Sun.
 - **No second slew**: `goto` while `.slewing` → `.slewInProgress`, while `.nudging` → `.busy`, while the mount's own "slewing" flag is set (a move started on the hand
   controller) → `.slewInProgress`. Call `abort()` first. `sync` follows the same rules; `nudge` is refused while slewing.
 - **Timeouts**: every driver exchange has a deadline (LX200 3 s, NexStar 5.5 s, Alpaca 10 s by default); a slew longer than `maximumSlewSeconds` is aborted
@@ -491,7 +499,7 @@ public final class AlpacaRequestBuilder {                          // stateful: 
     //      setTracking(_:), pulseGuide(direction:durationMilliseconds:) throws, moveAxis(_:degreesPerSecond:) throws,
     //      setSiteLatitude(_:) / setSiteLongitude(_:) / setSiteElevation(_:) throws, setUTCDate(_:) throws
 }
-public struct AlpacaReply { clientTransactionID: Int?, serverTransactionID: Int?, value: MountJSON?
+public struct AlpacaReply { clientTransactionID: Int?, serverTransactionID: Int?, value: MountJSON?   // Kotlin: both ids are Long? (uint32 on the wire)
     func booleanValue() throws -> Bool;  doubleValue() throws -> Double;  integerValue() throws -> Int;  textValue() throws -> String;  integerList() throws -> [Int] }
 public enum AlpacaResponseParser {
     static func parse(_ response: AlpacaHTTPResponse, for request: AlpacaHTTPRequest) throws -> AlpacaReply

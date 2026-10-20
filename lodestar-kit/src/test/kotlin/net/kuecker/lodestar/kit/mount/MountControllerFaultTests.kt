@@ -63,12 +63,93 @@ class MountControllerFaultTests {
             val rig = MountTestSupport.rig(name)
             rig.controller.connect()
             rig.controller.goto(andromeda)
+            val stopsBefore = rig.mount.stopsReceived
             silence(rig, 100)
             rig.controller.poll()
             rig.controller.poll()
             val status = rig.controller.poll()
             assertEquals(MountPhase.DISCONNECTED, status.phase, name)
             assertEquals(MountSlewOutcome.Failed(MountError.ConnectionLost), status.outcome, name)
+            // Giving up on the mount tells it to stop first.
+            assertTrue(rig.mount.stopsReceived > stopsBefore, name)
+        }
+    }
+
+    @Test
+    fun testALinkThatDiesDuringANudgeStopsTheNudgeBeforeTheSessionEnds() {
+        for (name in rigNames) {
+            val rig = MountTestSupport.rig(name, MountSettings(maximumNudgeSeconds = 30.0))
+            rig.controller.connect()
+            rig.controller.nudge(MountNudgeDirection.NORTH, MountNudgeRate.FIND, 30.0)
+            assertTrue(rig.mount.isNudging, name)
+            silence(rig, 100)
+            rig.controller.poll()
+            assertEquals(MountPhase.NUDGING, rig.controller.status.phase, name)
+            assertTrue(rig.mount.isNudging, name)
+            rig.controller.poll()
+            val status = rig.controller.poll()
+            assertEquals(MountPhase.DISCONNECTED, status.phase, name)
+            assertEquals(MountError.ConnectionLost, status.lastError, name)
+            assertFalse(rig.mount.isNudging, name)
+        }
+    }
+
+    @Test
+    fun testAFailedStopDoesNotStopTheSessionFromEnding() {
+        val rig = MountTestSupport.rig("alpaca-topocentric", MountSettings(maximumNudgeSeconds = 30.0))
+        rig.controller.connect()
+        rig.controller.nudge(MountNudgeDirection.NORTH, MountNudgeRate.FIND, 30.0)
+        silence(rig, 100)
+        rig.alpacaSimulator?.inject("moveaxis", AlpacaFault.Timeout, 10)
+        rig.controller.poll()
+        rig.controller.poll()
+        val status = rig.controller.poll()
+        assertEquals(MountPhase.DISCONNECTED, status.phase)
+        assertEquals(MountError.ConnectionLost, status.lastError)
+    }
+
+    @Test
+    fun testAnAlpacaMoveWhoseReplyWasLostIsStillStopped() {
+        val clock = ManualMountClock(MountTestSupport.start)
+        val mount = MountSimulatorModel(clock, MountTestSupport.parkPosition)
+        val simulator = AlpacaSimulator(clock, mount, canPulseGuide = false)
+        val transport = LostReplyTransport(simulator, "moveaxis")
+        val controller = MountController(AlpacaDriver(transport), MountTestSupport.boulder, MountSettings.standard, clock)
+        controller.connect()
+        val error = assertFailsWith<MountError> { controller.nudge(MountNudgeDirection.EAST, MountNudgeRate.FIND, 5.0) }
+        assertIs<MountError.Timeout>(error)
+        assertEquals(1, transport.lostReplies)
+        assertEquals(MountPhase.IDLE, controller.status.phase)
+        // The mount did carry out the request. The cleanup that follows the failure must send the stop as well.
+        assertEquals(2, simulator.methodLog.count { it == "moveaxis" })
+        assertFalse(mount.isNudging)
+    }
+
+    @Test
+    fun testAnAlpacaMoveTheMountRefusedIsNotStoppedAgain() {
+        val rig = MountTestSupport.rig("alpaca-topocentric")
+        rig.controller.connect()
+        val simulator = assertNotNull(rig.alpacaSimulator)
+        simulator.inject("moveaxis", AlpacaFault.Error(1025, "bad rate"))
+        val error = assertFailsWith<MountError> { rig.controller.nudge(MountNudgeDirection.EAST, MountNudgeRate.FIND, 5.0) }
+        assertIs<MountError.Rejected>(error)
+        // The mount said no, so nothing moves and there is nothing to stop.
+        assertEquals(1, simulator.methodLog.count { it == "moveaxis" })
+        assertFalse(rig.mount.isNudging)
+    }
+
+    /** An Alpaca link that delivers a request to the server but loses the first reply to the method, as a slow Wi-Fi does. */
+    private class LostReplyTransport(private val inner: AlpacaTransport, private val method: String) : AlpacaTransport {
+        var lostReplies: Int = 0
+            private set
+
+        override fun send(request: AlpacaHTTPRequest, timeoutSeconds: Double): AlpacaHTTPResponse {
+            val response = inner.send(request, timeoutSeconds)
+            if (lostReplies == 0 && request.path.endsWith("/$method")) {
+                lostReplies += 1
+                throw MountError.Timeout("simulated")
+            }
+            return response
         }
     }
 

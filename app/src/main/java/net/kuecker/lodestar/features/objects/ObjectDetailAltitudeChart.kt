@@ -70,6 +70,9 @@ internal fun ObjectDetailAltitudeChart(
             },
     ) {
         val labelGap = 6.dp.toPx()
+        // Between two hour labels: the first label sits against the left edge, and on a narrow phone the next one would
+        // otherwise be left out by a pixel or two while its grid line is drawn.
+        val hourLabelGap = 3.dp.toPx()
         val tickLength = 3.dp.toPx()
         val labelHeight = max(hourLabels.maxOfOrNull { it.size.height } ?: 0, degreeLabels.maxOf { it.size.height })
         val plotLeft = 0f
@@ -94,7 +97,7 @@ internal fun ObjectDetailAltitudeChart(
             drawLine(palette.stroke, Offset(tickX, plotTop), Offset(tickX, plotBottom + tickLength), hairline)
             val label = hourLabels[index]
             val labelX = (tickX - label.size.width / 2f).coerceIn(0f, size.width - label.size.width)
-            if (labelX >= previousLabelEnd + labelGap) {
+            if (labelX >= previousLabelEnd + hourLabelGap) {
                 drawText(label, topLeft = Offset(labelX, plotBottom + tickLength + 2.dp.toPx()))
                 previousLabelEnd = labelX + label.size.width
             }

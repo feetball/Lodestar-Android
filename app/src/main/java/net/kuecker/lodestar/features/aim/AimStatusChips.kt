@@ -59,7 +59,9 @@ internal fun AimStatusChips(model: AimViewModel, modifier: Modifier = Modifier) 
         locationItems(app.location.isReducedAccuracy && app.observerContext?.source == LocationSource.Device) +
         skylineItems(app.observerContext?.horizon != null) +
         cameraItems(model.configuration.wantsCameraPreview, app.camera.authorization, app.camera.errorDescription != null)
-    AimFlowLayout(modifier.fillMaxWidth()) {
+    // Close together, and reaching a little into the margin: the usual three chips (compass, alignment, camera) then
+    // fit one row on a 360 dp phone, where a wrapped chip would land on the marker and the horizon under it.
+    AimFlowLayout(modifier.fillMaxWidth(), spacing = 4.dp, lineSpacing = 4.dp, bleed = 6.dp) {
         for (item in items) {
             key(item.id) {
                 if (item.opensSettings) {

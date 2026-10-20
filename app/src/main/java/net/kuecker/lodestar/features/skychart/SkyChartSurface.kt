@@ -64,6 +64,12 @@ private const val LIVE_INTERVAL_NANOS = 33_000_000L
 private const val ZOOM_CHIP_THRESHOLD = 1.05f
 
 /**
+ * The room the chart leaves at the top while a mosaic runs, for the chip with its progress under the first chip line.
+ * On a narrow phone the disc is as wide as the screen and would otherwise start under that chip.
+ */
+private val MOSAIC_CHIP_RESERVE = 40.dp
+
+/**
  * The chart area of the Sky tab: the planisphere with the live camera layer on top, the pinch, drag and tap gestures,
  * the status chips and the callout of the selected object.
  *
@@ -114,6 +120,7 @@ internal fun SkyChartSurface(
         Box(
             Modifier
                 .fillMaxSize()
+                .padding(top = if (mosaic.isActive) MOSAIC_CHIP_RESERVE else 0.dp)
                 .clipToBounds()
                 .pointerInput(model) {
                     detectTapGestures { tap ->
@@ -133,10 +140,11 @@ internal fun SkyChartSurface(
         ) {
             PlanisphereCanvas(content, model, live, palette, layers, rotatesToHeading, mosaic)
             if (layers.cameraView) PlanisphereLiveCanvas(model, live, palette, rotatesToHeading)
-            StatusChips(model, live, layers.cameraView, rotatesToHeading, mosaic)
             AccessibleBodies(visibleBodies, model::select)
             SmallBodyAccessibleMarkers(content.scene.smallBodies, model::select)
         }
+        // From the top edge of the view, not of the chart below the room reserved for them.
+        StatusChips(model, live, layers.cameraView, rotatesToHeading, mosaic)
 
         AnimatedContent(
             targetState = model.selection,

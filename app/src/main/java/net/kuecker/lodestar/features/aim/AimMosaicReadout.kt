@@ -165,9 +165,11 @@ private fun AimMosaicButton(
     val shape = RoundedCornerShape(percent = 50)
     Row(
         modifier
-            .alpha(if (enabled) 1f else 0.4f)
             .heightIn(min = 44.dp)
-            .background(if (isPrimary) palette.accent else palette.surface.copy(alpha = 0.88f), shape)
+            // The opaque base lies outside the dimming, so a dimmed button does not let the sky through.
+            .background(palette.surface.copy(alpha = AIM_PANEL_ALPHA), shape)
+            .alpha(if (enabled) 1f else 0.4f)
+            .background(if (isPrimary) palette.accent else palette.surface.copy(alpha = AIM_PANEL_ALPHA), shape)
             .border(1.dp, if (isPrimary) palette.accent else palette.stroke, shape)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description }

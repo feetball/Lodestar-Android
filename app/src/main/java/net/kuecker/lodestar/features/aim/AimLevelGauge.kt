@@ -1,11 +1,14 @@
 package net.kuecker.lodestar.features.aim
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Straighten
@@ -52,7 +55,7 @@ private fun AimLevelDial(roll: Double?, modifier: Modifier = Modifier) {
     val color = if (isLevel) palette.positive else palette.guidance
     Column(
         modifier
-            .width(66.dp)
+            .width(78.dp)
             .clearAndSetSemantics {
                 contentDescription = "Camera level"
                 stateDescription = if (isLevel) "Level" else rollText
@@ -60,7 +63,8 @@ private fun AimLevelDial(roll: Double?, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        val surface = palette.surface.copy(alpha = 0.7f)
+        // The same backing as the cards, so the sky labels under the dial and its caption do not run through them.
+        val surface = palette.surface.copy(alpha = AIM_PANEL_ALPHA)
         Canvas(Modifier.size(58.dp)) {
             val center = Offset(size.width / 2, size.height / 2)
             drawCircle(surface, radius = size.width / 2, center = center)
@@ -85,7 +89,11 @@ private fun AimLevelDial(roll: Double?, modifier: Modifier = Modifier) {
                 )
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(
+            Modifier.background(surface, CircleShape).padding(horizontal = 4.dp, vertical = 1.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
             Icon(
                 if (isLevel) Icons.Filled.Check else Icons.Outlined.Straighten,
                 contentDescription = null,

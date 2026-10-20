@@ -113,11 +113,13 @@ private fun AimTargetCard(obj: CelestialObject, horizontal: HorizontalCoordinate
                     palette.primaryText,
                     minimumScale = 0.8f,
                 )
+                // Two lines: beside the altitude and azimuth a comet's "Comet · mag ≈ 5.0 · 94° from the Sun" does not
+                // fit one line on a 360 dp phone.
                 Text(
                     subtitle,
                     color = palette.secondaryText,
                     style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }

@@ -11,13 +11,19 @@
     <!-- WorkManager (the widget refresh) asks for this; Lodestar never runs foreground work. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
-    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
-    <!-- Optional: without a magnetometer, Aim runs in Gyro Lock and the heading comes from star alignment. -->
+    <!-- Every hardware feature is optional, so that Play offers the app on any device (a budget tablet may lack an accelerometer,
+         a camera with autofocus or network location). Without the sensors, Aim reports them as unavailable. The permissions above
+         and the portrait lock below imply camera.autofocus, location.network and screen.portrait as required unless declared here. -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <!-- Without a magnetometer, Aim runs in Gyro Lock and the heading comes from star alignment. -->
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
 
     <application
         android:name=".app.LodestarApplication"

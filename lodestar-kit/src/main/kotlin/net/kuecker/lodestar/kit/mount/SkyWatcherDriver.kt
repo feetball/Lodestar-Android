@@ -514,6 +514,12 @@ class SkyWatcherDriver(
         for (axis in SkyWatcherAxis.entries) link.command(SkyWatcherCommand.STOP_MOTION, axis, "", "stop")
     }
 
+    /** Stops both axes without braking (the protocol's instant stop), for a move that has run into a limit of the mount. */
+    @Throws(MountError::class)
+    private fun stopAxesAtOnce() {
+        for (axis in SkyWatcherAxis.entries) link.command(SkyWatcherCommand.INSTANT_STOP, axis, "", "stop")
+    }
+
     @Throws(MountError::class)
     private fun waitUntilStopped() {
         for (iteration in 0 until stopPolls) {
@@ -817,10 +823,10 @@ class SkyWatcherDriver(
     private fun endNudge(atLimit: Boolean = false) {
         nudge = null
         if (atLimit) {
-            // The nudge ran into a limit of the mount. The axes still turn at the nudge rate: stop them now and let the mount come
-            // to rest, so that tracking goes on from where it rests (not from where it was when the limit was found, which would
-            // pull it back) and so that nothing travels on until the next poll if tracking cannot go on from here.
-            stopAxes()
+            // The nudge ran into a limit of the mount. The axes still turn at the nudge rate, and braking them would carry the
+            // mount on past the limit (0.75 degrees from the fastest nudge): stop them at once, so that the mount rests where the
+            // limit was found, tracking goes on from there, and nothing travels on until the next poll if it cannot.
+            stopAxesAtOnce()
             waitUntilStopped()
         }
         refreshStatuses()
@@ -972,11 +978,11 @@ class SkyWatcherDriver(
 
         /**
          * How far above the overhead limit an alt-azimuth mount may keep tracking. A nudge towards the limit ends where the mount
-         * is, and the mount still coasts on while it brakes (0.75 degrees from the fastest nudge at 3 degrees a second and a
-         * deceleration of 6 degrees a second squared); tracking has to be able to go on from where it comes to rest, and a target
-         * that creeps over the limit by sidereal motion stops it soon enough. A goto or a nudge still stops at the limit itself.
+         * is when the limit is found, which can be a hair above it (the axes were turning); tracking has to be able to go on from
+         * there, and a target that creeps over the limit by sidereal motion stops it soon enough. A goto or a nudge still stops at
+         * the limit itself.
          */
-        private const val trackingOverheadSlackDegrees: Double = 1.0
+        private const val trackingOverheadSlackDegrees: Double = 0.5
         private const val nudgeLeadSeconds: Double = 0.5
         private const val nudgeUpdateSeconds: Double = 0.5
         private const val trackingLeadExtraSeconds: Double = 0.5

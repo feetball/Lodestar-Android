@@ -935,7 +935,8 @@ class SkyWatcherMountTests {
         // The mount tracks at the place where the nudge ended.
         val place = rig.trueJ2000()
         SkyWatcherTestSupport.poll(rig, 60)
-        assertTrue(rig.trueJ2000().angularSeparation(place) < 0.05)
+        val moved = rig.trueJ2000().angularSeparation(place)
+        assertTrue(moved < 0.05, "moved $moved degrees from altitude $altitude")
         assertEquals(true, rig.controller.poll().isTracking)
     }
 

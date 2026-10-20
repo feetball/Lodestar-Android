@@ -100,6 +100,12 @@ object AppFormat {
     /** [text] with every space a no-break space, so it moves to the next line whole ("mag 3.4", "NGC 7000", "6h 10m"). */
     fun unbreakable(text: String): String = text.replace(' ', NO_BREAK_SPACE)
 
+    /** [text] with a no-break space before its last word, so a wrapped line is never left with that word alone. */
+    fun withoutWidow(text: String): String {
+        val lastSpace = text.lastIndexOf(' ')
+        return if (lastSpace <= 0) text else text.substring(0, lastSpace) + NO_BREAK_SPACE + text.substring(lastSpace + 1)
+    }
+
     /**
      * A " · "-separated [line] in which each part stays whole and the dot stays with the part before it: a narrow line
      * breaks only after a dot, so no value is split from its unit and no line starts with a dot.

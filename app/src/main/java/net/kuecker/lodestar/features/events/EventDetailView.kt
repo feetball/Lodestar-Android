@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,11 +52,11 @@ import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.events.EventKind
 import net.kuecker.lodestar.model.ObserverContext
 import net.kuecker.lodestar.shared.CardTitle
-import net.kuecker.lodestar.shared.InfoRow
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LodestarButton
 import net.kuecker.lodestar.shared.LodestarButtonKind
 import net.kuecker.lodestar.shared.NeedsLocationView
+import net.kuecker.lodestar.shared.monospacedDigits
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
 import net.kuecker.lodestar.theme.screenBackground
@@ -279,14 +280,28 @@ private fun EventInfoCard(
 @Composable
 private fun EventInfo(row: EventInfoRow) {
     val palette = LocalPalette.current
-    if (row.isDimmed) {
-        // Below the horizon: shown, but quieter.
-        Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
-            Text(row.label, color = palette.tertiaryText, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Text(row.value, color = palette.tertiaryText, style = MaterialTheme.typography.bodyMedium)
-        }
-    } else {
-        InfoRow(row.label, row.value)
+    // Below the horizon: shown, but quieter.
+    val labelColor = if (row.isDimmed) palette.tertiaryText else palette.secondaryText
+    val valueColor = if (row.isDimmed) palette.tertiaryText else palette.primaryText
+    // The longer of the two wraps and the shorter keeps its natural width, so neither is squeezed to a sliver.
+    val labelWraps = row.label.length > row.value.length
+    Row(
+        Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            row.label,
+            color = labelColor,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = if (labelWraps) Modifier.weight(1f) else Modifier,
+        )
+        Text(
+            row.value,
+            color = valueColor,
+            style = MaterialTheme.typography.bodyMedium.monospacedDigits(),
+            textAlign = TextAlign.End,
+            modifier = if (labelWraps) Modifier else Modifier.weight(1f),
+        )
     }
 }
 

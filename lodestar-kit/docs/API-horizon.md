@@ -573,7 +573,7 @@ SplitMix64 generator with the same seeds in both languages. Kotlin-only: the mas
 tolerance, class reference semantics. Swift-only: value-copy semantics of the recorder.
 
 Verification
-- Flat profile vs `RiseSetCalculator`: 6 stars × 4 sites, 9 bodies × 3 sites × 3 dates, rise/transit/set/circumstance and all
+- Flat profile vs `RiseSetCalculator`: 6 stars × 4 sites, 10 bodies × 3 sites × 3 dates, rise/transit/set/circumstance and all
   crossings within 0.5 s (observed 0.0 s).
 - Closed form (Meeus, *Astronomical Algorithms* 2nd ed., eq. 13.6: sin h = sin φ sin δ + cos φ cos δ cos H): a star on the
   celestial equator at 6 h at latitude 0° climbs along azimuth 90° at 15.0411°/h; a 10° mountain to the east delays its rise

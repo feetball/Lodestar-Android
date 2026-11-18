@@ -47,7 +47,7 @@ data class TargetVisibility(
 data class NightSummary(
     val observer: Observer, val night: DateInterval, val twilight: NightTwilight, val referenceDate: Instant,
     val moon: MoonSummary, val astronomicalDarknessIntervals: List<DateInterval>, val darknessIntervals: List<DateInterval>,
-    val milkyWayCore: MilkyWayCoreVisibility, val planets: List<PlanetVisibility>,      // planets: Mercury … Neptune
+    val milkyWayCore: MilkyWayCoreVisibility, val planets: List<PlanetVisibility>,      // planets: Mercury … Neptune, then Pluto
 ) {
     val hasAstronomicalDarkness: Boolean
     val astronomicalDarkHours: Double

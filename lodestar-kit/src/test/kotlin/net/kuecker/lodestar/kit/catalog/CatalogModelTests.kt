@@ -365,7 +365,7 @@ class CatalogModelTests {
         val order = listOf(
             SolarSystemBody.SUN, SolarSystemBody.MOON, SolarSystemBody.VENUS, SolarSystemBody.JUPITER,
             SolarSystemBody.MARS, SolarSystemBody.MERCURY, SolarSystemBody.SATURN, SolarSystemBody.URANUS,
-            SolarSystemBody.NEPTUNE,
+            SolarSystemBody.NEPTUNE, SolarSystemBody.PLUTO,
         )
         val ranking = order.map {
             CelestialObject(
@@ -374,14 +374,15 @@ class CatalogModelTests {
             ).rankingMagnitude
         }
         assertEquals(ranking.sorted(), ranking)
-        assertEquals(9, ranking.toSet().size)
+        assertEquals(10, ranking.toSet().size)
         val nebula = CelestialObject(
             id = "x", name = "x", category = ObjectCategory.NEBULA,
             position = ObjectPosition.Fixed(EquatorialCoordinate(rightAscension = 0.0, declination = 0.0), null),
             isListed = true,
         )
         assertEquals(Double.POSITIVE_INFINITY, nebula.rankingMagnitude)
-        assertTrue((ranking.lastOrNull() ?: 0.0) < 10)
+        assertTrue((ranking.dropLast(1).lastOrNull() ?: 0.0) < 10)
+        assertEquals(14.4, ranking.last(), "Pluto is the faintest of them")
     }
 
     // MARK: Sharing between tasks

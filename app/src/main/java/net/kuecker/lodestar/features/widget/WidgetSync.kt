@@ -12,6 +12,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.BuildConfig
 import net.kuecker.lodestar.app.AppModel
+import net.kuecker.lodestar.features.horizon.HorizonCoverageMemory
+import net.kuecker.lodestar.features.horizon.SiteHorizon
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.model.AppSettings
 
@@ -51,7 +53,11 @@ internal object WidgetUpdater {
         withContext(Dispatchers.IO) {
             val store = WidgetInputsStore(context)
             if (liveDevice != null) store.rememberDeviceLocation(liveDevice)
-            val changed = store.write(WidgetInputsResolver.resolve(settings, liveDevice, store.lastDeviceLocation()))
+            val preferences = HorizonCoverageMemory.preferences(context)
+            val inputs = WidgetInputsResolver.resolve(settings, liveDevice, store.lastDeviceLocation()) { site ->
+                SiteHorizon.resolve(site, preferences).profile
+            }
+            val changed = store.write(inputs)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) publishPreviews(context, store)
             if (!WidgetScheduler.hasWidgets(context)) return@withContext
             WidgetScheduler.ensurePeriodic(context)

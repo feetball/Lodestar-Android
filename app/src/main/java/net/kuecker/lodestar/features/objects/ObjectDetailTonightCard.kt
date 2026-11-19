@@ -16,12 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.horizon.HorizonFormat
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.ephemeris.RiseTransitSet
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.CardTitle
 import net.kuecker.lodestar.shared.InfoRow
+import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
 import java.time.Instant
@@ -77,6 +79,7 @@ private fun Content(obj: CelestialObject, night: ObjectDetailNight, now: Instant
 @Composable
 private fun SkylineNote() {
     val palette = LocalPalette.current
+    val applied = HorizonFormat.applied(LocalAppModel.current.observerContext?.horizonSource)
     Row(
         Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -89,7 +92,7 @@ private fun SkylineNote() {
             modifier = Modifier.size(14.dp),
         )
         Text(
-            "Skyline applied: rising is clearing your recorded skyline and setting is sinking behind it.",
+            "$applied: rising is clearing the skyline and setting is sinking behind it.",
             color = palette.tertiaryText,
             style = MaterialTheme.typography.bodySmall,
         )

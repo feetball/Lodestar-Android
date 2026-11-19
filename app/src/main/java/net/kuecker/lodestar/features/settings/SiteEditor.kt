@@ -169,6 +169,7 @@ internal fun SiteEditor(
             name = draft.name, latitude = point.latitude, longitude = point.longitude, elevation = point.elevation,
             timeZoneIdentifier = zone.id, id = existingSite?.id ?: UUID.randomUUID().toString(),
             horizon = storedHorizon(app.settings, existingSite),
+            terrainHorizon = storedTerrainHorizon(app.settings, existingSite),
         )
         if (site == null) {
             failureMessage = "This position cannot be saved. Check the latitude, longitude and elevation."
@@ -268,6 +269,15 @@ internal fun SiteEditor(
                         (abs(existingSite.latitude - location.latitude) > MOVED_POSITION_DEGREES ||
                             abs(existingSite.longitude - location.longitude) > MOVED_POSITION_DEGREES),
                 )
+                val hasMovedAway = existingSite != null && location != null &&
+                    (abs(existingSite.latitude - location.latitude) > MOVED_POSITION_DEGREES ||
+                        abs(existingSite.longitude - location.longitude) > MOVED_POSITION_DEGREES)
+                SiteTerrainSection(
+                    site = existingSite,
+                    movedAway = hasMovedAway,
+                    draftElevation = draft.elevation,
+                    onUseElevation = { draft = draft.copy(elevation = it) },
+                )
                 if (existingSite != null) {
                     SettingsSection(title = "Delete") {
                         if (isConfirmingDelete) {
@@ -313,6 +323,10 @@ internal fun SiteEditor(
  */
 private fun storedHorizon(settings: AppSettings, site: SavedSite?): HorizonProfile? =
     site?.let { original -> settings.savedSites.firstOrNull { it.id == original.id }?.horizon }
+
+/** The terrain horizon stored with [site] now; computing saves at once, like recording a skyline. */
+private fun storedTerrainHorizon(settings: AppSettings, site: SavedSite?): HorizonProfile? =
+    site?.let { original -> settings.savedSites.firstOrNull { it.id == original.id }?.terrainHorizon }
 
 private fun initialDraft(target: SiteEditorTarget): SiteDraft = when (target) {
     is SiteEditorTarget.New -> target.draft

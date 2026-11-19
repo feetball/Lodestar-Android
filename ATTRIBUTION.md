@@ -139,6 +139,37 @@ values unchanged; the clear-spell sentence is its own summary and does not imply
 the location rounded to 0.1° (at most four decimals are allowed), an identifying User-Agent, honours `Expires` and
 `If-Modified-Since`, and is made only while the app is in use.
 
+### Terrain elevation tiles
+
+The optional terrain horizon (Settings > Online Data > Terrain horizons, off by default) is computed from elevation tiles that
+are downloaded at run time, only when the user asks a site for its terrain horizon, from the **Terrain Tiles** of the AWS Open
+Data registry (<https://registry.opendata.aws/terrain-tiles/>), managed by Mapzen, a Linux Foundation project (Tilezen /
+Joerd, <https://github.com/tilezen/joerd>). The files are `skadi/<N47>/<N47E008>.hgt.gz` (1° x 1° tiles of 3601 x 3601
+big-endian 16-bit metres, void -32768) at `https://s3.amazonaws.com/elevation-tiles-prod/skadi/`. They are not part of the app;
+they are deleted after the calculation, and only the resulting 360-value skyline is kept with the site. The tile set merges
+NASA SRTM, USGS GMTED2010 and 3DEP (NED), EU-DEM and several national surveys; each source's terms are collected in Tilezen's
+attribution page (<https://github.com/tilezen/joerd/blob/master/docs/attribution.md>), and the registry names that page as the
+licence. SRTM, GMTED2010 and 3DEP are public domain; the USGS asks for credit. The attribution the tile set requires (the app
+shows it under Settings > Data Credits) is:
+
+- ArcticDEM terrain data DEM(s) were created from DigitalGlobe, Inc., imagery and funded under National Science Foundation awards 1043681, 1559691, and 1542736;
+- Australia terrain data © Commonwealth of Australia (Geoscience Australia) 2017;
+- Austria terrain data © offene Daten Österreichs – Digitales Geländemodell (DGM) Österreich;
+- Canada terrain data contains information licensed under the Open Government Licence – Canada;
+- Europe terrain data produced using Copernicus data and information funded by the European Union - EU-DEM layers;
+- Global ETOPO1 terrain data U.S. National Oceanic and Atmospheric Administration;
+- Mexico terrain data source: INEGI, Continental relief, 2016;
+- New Zealand terrain data Copyright 2011 Crown copyright (c) Land Information New Zealand and the New Zealand Government (All rights reserved);
+- Norway terrain data © Kartverket;
+- United Kingdom terrain data © Environment Agency copyright and/or database right 2015. All rights reserved;
+- United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey.
+
+**Changes made by Lodestar:** it reads the elevations, interpolates them bilinearly along 360 rays, applies earth curvature
+and standard refraction, and keeps the highest apparent altitude per degree of azimuth, rounded to 0.1 degree. The data is a
+surface model (it sees tree tops and roofs where the radar did), the tiles are 30 m (1 arc-second) or 90 m (3 arc-second)
+samples, and the result is for planning only. The request carries the app's name and version as User-Agent; the server sees the
+IP address and which 1 degree tiles are asked for.
+
 ### d3-celestial — `constellations.json` and `milkyway.json`
 
 - **Title:** d3-celestial
@@ -251,7 +282,7 @@ the app.
 > Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); lunar theory after J. Meeus.
 >
 > Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital elements: IAU Minor Planet Center; weather forecast from
-> MET Norway (CC BY 4.0).
+> MET Norway (CC BY 4.0); terrain elevation data from the AWS Open Data Terrain Tiles (SRTM and GMTED2010 courtesy of the U.S. Geological Survey, and the national sources credited in ATTRIBUTION.md).
 
 ## Reproducing and updating
 

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import net.kuecker.lodestar.features.horizon.SiteHorizon
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
 import net.kuecker.lodestar.kit.ephemeris.horizontal
@@ -158,10 +159,12 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
                 }
                 is LocationSource.Site -> {
                     val site = settings.savedSites.firstOrNull { it.id == source.id } ?: return null
+                    // The recorded skyline and the terrain horizon, as they apply together (see SiteHorizon).
+                    val skyline = SiteHorizon.resolve(site, localPreferences)
                     ObserverContext(
                         observer = Observer(site.location, atmosphere),
                         timeZone = site.timeZone ?: ZoneId.systemDefault(), name = site.name, source = source,
-                        horizon = site.horizon,
+                        horizon = skyline.profile, horizonSource = skyline.source,
                     )
                 }
             }

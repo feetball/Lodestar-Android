@@ -9,6 +9,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.mosaic.MosaicSession
 import net.kuecker.lodestar.features.satellites.SatelliteAimText
+import net.kuecker.lodestar.model.HorizonSource
+import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.SkylineSummary
 
 /**
@@ -20,14 +22,14 @@ import net.kuecker.lodestar.shared.SkylineSummary
 @Composable
 internal fun AimAccessibilitySummary(model: AimViewModel, isActive: Boolean, modifier: Modifier = Modifier) {
     val frame = rememberAimFrame(model, 1_000, isActive)
-    val description = summary(model, frame)
+    val description = summary(model, frame, LocalAppModel.current.observerContext?.horizonSource)
     Box(modifier.size(1.dp).semantics { contentDescription = description })
 }
 
-private fun summary(model: AimViewModel, frame: AimFrame?): String {
+private fun summary(model: AimViewModel, frame: AimFrame?, skylineSource: HorizonSource?): String {
     if (frame == null) return "Waiting for the motion sensors."
     val skyline = model.skyContent?.snapshot?.horizon?.takeUnless { it.isFlat }
-        ?.let { " ${SkylineSummary.describe(it)} It is drawn as a line, with the ground below it shaded." }.orEmpty()
+        ?.let { " ${SkylineSummary.describe(it, skylineSource)} It is drawn as a line, with the ground below it shaded." }.orEmpty()
     if (model.mosaic.isActive) return mosaicSummary(model.mosaic, frame) + skyline
     model.satellite.source?.let { return SatelliteAimText.spoken(it, frame) + skyline }
     val target = model.guidanceTarget ?: return "No target. Use the Target button to choose one.$skyline"

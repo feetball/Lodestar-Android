@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.mosaic.MosaicSession
 import net.kuecker.lodestar.features.smallbodies.SmallBodyAccessibleMarkers
 import net.kuecker.lodestar.features.smallbodies.SmallBodyChartMarkers
+import net.kuecker.lodestar.model.HorizonSource
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
@@ -113,7 +114,10 @@ internal fun SkyChartSurface(
     }
 
     val mosaicStatus = mosaic.takeIf { content.scene.mosaic?.plan === it.plan }?.spokenStatus
-    val summary = remember(content, timeZone, mosaicStatus) { accessibilitySummary(content.scene, timeZone, mosaicStatus) }
+    val skylineSource = LocalAppModel.current.observerContext?.horizonSource
+    val summary = remember(content, timeZone, mosaicStatus, skylineSource) {
+        accessibilitySummary(content.scene, timeZone, mosaicStatus, skylineSource)
+    }
     val visibleBodies = remember(content) { content.scene.bodies.filter { it.isAboveHorizon } }
 
     Box(modifier.fillMaxSize()) {
@@ -242,7 +246,12 @@ private fun AccessibleBodies(bodies: List<SkyChartBodyMarker>, onSelect: (Celest
     }
 }
 
-private fun accessibilitySummary(scene: SkyChartScene, timeZone: ZoneId, mosaicStatus: String?): String {
+private fun accessibilitySummary(
+    scene: SkyChartScene,
+    timeZone: ZoneId,
+    mosaicStatus: String?,
+    skylineSource: HorizonSource?,
+): String {
     val time = AppFormat.dateTime(scene.date, timeZone)
     val parts = arrayListOf("Sky chart for $time, looking up with north at the top.")
     val visible = scene.bodies.filter { it.isAboveHorizon }
@@ -250,7 +259,7 @@ private fun accessibilitySummary(scene: SkyChartScene, timeZone: ZoneId, mosaicS
     visible.mapTo(parts, ::description)
     SmallBodyChartMarkers.spokenSummary(scene.smallBodies)?.let(parts::add)
     scene.skyline?.let {
-        parts.add("${SkylineSummary.describe(it.profile)} It is drawn as a darker band around the edge of the chart.")
+        parts.add("${SkylineSummary.describe(it.profile, skylineSource)} It is drawn as a darker band around the edge of the chart.")
     }
     if (mosaicStatus != null) parts.add("$mosaicStatus The panels are outlined on the chart, the current one highlighted.")
     return parts.joinToString(" ")

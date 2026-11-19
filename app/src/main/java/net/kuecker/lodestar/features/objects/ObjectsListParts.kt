@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import net.kuecker.lodestar.app.AppTab
+import net.kuecker.lodestar.features.horizon.HorizonFormat
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.monospacedDigits
@@ -195,6 +196,7 @@ internal fun ObjectsCatalogueChips(
 @Composable
 internal fun ObjectsSkylineNote(modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
+    val applied = HorizonFormat.applied(LocalAppModel.current.observerContext?.horizonSource)
     Row(
         modifier
             .fillMaxWidth()
@@ -205,7 +207,7 @@ internal fun ObjectsSkylineNote(modifier: Modifier = Modifier) {
     ) {
         Icon(Icons.Outlined.Terrain, contentDescription = null, tint = palette.secondaryText, modifier = Modifier.size(14.dp))
         Text(
-            "Skyline applied: up now, rising and the horizon filter follow your recorded skyline.",
+            "$applied: up now, rising and the horizon filter follow the skyline.",
             color = palette.tertiaryText,
             style = MaterialTheme.typography.bodySmall,
         )

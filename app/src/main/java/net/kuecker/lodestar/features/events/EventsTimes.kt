@@ -1,6 +1,8 @@
 package net.kuecker.lodestar.features.events
 
 import net.kuecker.lodestar.features.tonight.TonightFormat
+import net.kuecker.lodestar.kit.ephemeris.GalileanMoons
+import net.kuecker.lodestar.kit.ephemeris.GreatRedSpot
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.events.ContactVisibility
 import net.kuecker.lodestar.kit.events.EclipseContact
@@ -14,6 +16,7 @@ import net.kuecker.lodestar.shared.AppFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** One line of the "Local times" or "From here" card. [isDimmed] greys out what happens with the subject below the horizon. */
 internal data class EventInfoRow(val label: String, val value: String, val isDimmed: Boolean = false)
@@ -79,6 +82,22 @@ internal object EventsTimes {
             }
             is EventDetails.LunarEclipse -> lunarRows(event, details, zone, ::add)
             is EventDetails.SolarEclipse -> solarRows(event, details, zone, ::add)
+            is EventDetails.GreatRedSpotTransit -> {
+                val transit = details.transit
+                add("Crosses the central meridian", EventsFormat.whenText(event.date, zone))
+                add("Well placed", "${TonightFormat.window(transit.wellPlaced, zone)} (±${GreatRedSpot.wellPlacedMinutes.roundToInt()} min)")
+                add("Longitude (System II)", AngleFormatter.formatDegrees(transit.longitude, 0))
+            }
+            is EventDetails.JupiterMoonEvent -> {
+                add("Time", EventsFormat.whenText(event.date, zone))
+                add("Accuracy", "About ±${GalileanMoons.accuracyMinutes.roundToInt()} minutes")
+            }
+            is EventDetails.PlanetStation -> {
+                val station = details.station
+                add("Station", EventsFormat.whenText(event.date, zone))
+                add("Motion", station.kind.displayName.replaceFirstChar { it.uppercase() })
+                add("Ecliptic longitude", AngleFormatter.formatDegrees(station.longitude, 1))
+            }
         }
         // The dark window the visibility computed, for the events that are seen at night.
         val visibility = event.visibility
@@ -236,5 +255,7 @@ internal object EventsTimes {
         is EventDetails.GreatestElongation -> details.elongation.planet.displayName
         is EventDetails.FullMoonSpecial, is EventDetails.LunarEclipse -> "Moon"
         is EventDetails.SolarEclipse, is EventDetails.Season, is EventDetails.EarthApsis -> "Sun"
+        is EventDetails.GreatRedSpotTransit, is EventDetails.JupiterMoonEvent -> "Jupiter"
+        is EventDetails.PlanetStation -> details.station.planet.displayName
     }
 }

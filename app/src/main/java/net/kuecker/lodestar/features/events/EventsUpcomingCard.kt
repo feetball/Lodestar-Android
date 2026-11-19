@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import net.kuecker.lodestar.features.tonight.rememberPeriodicNow
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.events.EventDetails
+import net.kuecker.lodestar.kit.events.EventKind
 import net.kuecker.lodestar.model.ObserverContext
 import net.kuecker.lodestar.shared.CardTitle
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -55,9 +56,10 @@ internal fun EventsUpcomingCard(
     // The card only needs to notice the day change and events that pass, not every tick of the clock.
     val now = rememberPeriodicNow(5 * 60_000L)
     val today = Snapshot.withoutReadObservation { app.clock.now }
-    val key = remember(context, now) { EventsCalculator.key(context, today) }
+    val greatRedSpot = app.settings.greatRedSpotOrDefault
+    val key = remember(context, now, greatRedSpot) { EventsCalculator.key(context, today, greatRedSpot) }
 
-    LaunchedEffect(key) { model.refresh(context, app.clock.now) }
+    LaunchedEffect(key) { model.refresh(context, app.clock.now, greatRedSpot) }
 
     val result = model.result?.takeIf { it.key == key }
     val upcoming = remember(result, now) { result?.let { upcomingEvents(it.events, now) } }
@@ -77,7 +79,7 @@ internal fun EventsUpcomingCard(
                 Note(failure)
                 LodestarButton(
                     "Try Again",
-                    onClick = { scope.launch { model.refresh(context, app.clock.now) } },
+                    onClick = { scope.launch { model.refresh(context, app.clock.now, greatRedSpot) } },
                     modifier = Modifier.fillMaxWidth(),
                     kind = LodestarButtonKind.SECONDARY,
                     icon = Icons.Outlined.Refresh,
@@ -108,8 +110,12 @@ internal fun upcomingEvents(events: List<AstronomicalEvent>, now: Instant): List
     return soon.ifEmpty { ahead.take(3) }
 }
 
-/** Moon conjunctions come every few days; the card keeps the ones where the Moon covers the other body from here. */
+/**
+ * Moon conjunctions come every few days; the card keeps the ones where the Moon covers the other body from here. The
+ * Great Red Spot and moon events of Jupiter come by the dozen and stay in the calendar and on Jupiter's own screen.
+ */
 private fun isWorthTheCard(event: AstronomicalEvent): Boolean {
+    if (event.kind == EventKind.GREAT_RED_SPOT_TRANSIT || event.kind == EventKind.JUPITER_MOON_EVENT) return false
     val conjunction = (event.details as? EventDetails.Conjunction)?.conjunction ?: return true
     if (!conjunction.involvesMoon) return true
     return conjunction.topocentric?.isOccultation == true

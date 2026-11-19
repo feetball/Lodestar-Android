@@ -19,7 +19,9 @@ import kotlin.test.assertTrue
  *   extremum found on a 4001-point grid over the two days around the 6-hourly sign change of the rate and refined by a
  *   parabola through 101 points. Mars retrograde begins 2024-12-06 23:33:09 UT (126.171°) and direct motion resumes
  *   2025-02-24 01:59:50 UT (107.015°), Mars again 2027-01-10 12:59:11 UT; Mercury retrograde begins 2026-02-26
- *   06:48:10 UT and direct motion resumes 2026-03-20 19:32:50 UT; Jupiter retrograde begins 2026-12-13 00:56:36 UT.
+ *   06:48:10 UT and direct motion resumes 2026-03-20 19:32:50 UT; Jupiter retrograde begins 2026-12-13 00:56:36 UT;
+ *   Saturn 2026-07-26 19:56:14 and 2026-12-10 23:31:11; Neptune 2026-07-07 10:54:57 and 2026-12-12 22:18:08; Venus
+ *   2026-10-03 07:15:55 and 2026-11-14 00:27:28 UT.
  */
 class EventsJupiterTests {
     // MARK: Stations
@@ -33,10 +35,10 @@ class EventsJupiterTests {
         assertEquals(PlanetStationKind.RETROGRADE_BEGINS, first.station.kind)
         assertEquals(PlanetStationKind.DIRECT_MOTION_RESUMES, second.station.kind)
         assertEquals(SolarSystemBody.MARS, first.station.planet)
-        assertInstant("2024-12-06T23:33:09Z", found[0].date, 3 * 3600.0, "Mars retrograde")
-        assertInstant("2025-02-24T01:59:50Z", found[1].date, 3 * 3600.0, "Mars direct")
-        assertNear(126.171, first.station.longitude, 0.05, "Mars longitude")
-        assertNear(107.015, second.station.longitude, 0.05, "Mars longitude")
+        assertInstant("2024-12-06T23:33:09Z", found[0].date, 180.0, "Mars retrograde")
+        assertInstant("2025-02-24T01:59:50Z", found[1].date, 180.0, "Mars direct")
+        assertNear(126.171, first.station.longitude, 0.01, "Mars longitude")
+        assertNear(107.015, second.station.longitude, 0.01, "Mars longitude")
         assertTrue(found.all { it.visibility == null && it.kind == EventKind.PLANET_STATION })
     }
 
@@ -44,11 +46,23 @@ class EventsJupiterTests {
     fun testMercuryAndJupiterStationsAgainstDE440s() {
         val mercury = PlanetStations.find(SolarSystemBody.MERCURY, utc("2026-01-01T00:00:00Z"), utc("2026-04-30T00:00:00Z"))
         assertEquals(2, mercury.size)
-        assertInstant("2026-02-26T06:48:10Z", mercury[0].date, 3 * 3600.0, "Mercury retrograde")
-        assertInstant("2026-03-20T19:32:50Z", mercury[1].date, 3 * 3600.0, "Mercury direct")
+        assertInstant("2026-02-26T06:48:10Z", mercury[0].date, 180.0, "Mercury retrograde")
+        assertInstant("2026-03-20T19:32:50Z", mercury[1].date, 180.0, "Mercury direct")
         val jupiter = PlanetStations.find(SolarSystemBody.JUPITER, utc("2026-11-01T00:00:00Z"), utc("2027-01-31T00:00:00Z"))
         assertEquals(1, jupiter.size)
-        assertInstant("2026-12-13T00:56:36Z", jupiter[0].date, 12 * 3600.0, "Jupiter retrograde")
+        assertInstant("2026-12-13T00:56:36Z", jupiter[0].date, 180.0, "Jupiter retrograde")
+        // Saturn, Neptune and Venus in 2026 (DE440s): the six stations agree to 2 minutes as well.
+        val others = listOf(
+            Triple(SolarSystemBody.SATURN, "2026-07-26T19:56:14Z", "2026-12-10T23:31:11Z"),
+            Triple(SolarSystemBody.NEPTUNE, "2026-07-07T10:54:57Z", "2026-12-12T22:18:08Z"),
+            Triple(SolarSystemBody.VENUS, "2026-10-03T07:15:55Z", "2026-11-14T00:27:28Z"),
+        )
+        for ((planet, first, second) in others) {
+            val found = PlanetStations.find(planet, utc("2026-06-01T00:00:00Z"), utc("2026-12-31T00:00:00Z"))
+            assertEquals(2, found.size, planet.rawValue)
+            assertInstant(first, found[0].date, 180.0, "$planet retrograde")
+            assertInstant(second, found[1].date, 180.0, "$planet direct")
+        }
     }
 
     @Test

@@ -15,7 +15,7 @@ import java.time.Instant
  * once warm: about 0.1 s without an observer and 0.2 s with one (the conjunctions take half of it; the visibility of an event
  * a fraction of a millisecond); the first call of a process needs about 1 s for class loading and the planetary series.
  * The stations add about 30 ms a year; the Great Red Spot and moon events of [EventOptions.jupiterEventDays] days about
- * 30 ms a day. Nothing is cached between calls. Run it on a background thread and keep the result.
+ * 1 ms a day. Nothing is cached between calls. Run it on a background thread and keep the result.
  */
 object EventCalculator {
     /** The longest interval, in days, that [events] searches; longer intervals are cut at this length. */

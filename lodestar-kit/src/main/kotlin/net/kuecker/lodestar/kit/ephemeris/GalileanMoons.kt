@@ -199,7 +199,9 @@ data class GalileanMoonEvent(
  * chapter 44: each moon moves on a circle in Jupiter's equatorial plane with periodic corrections, seen from the Earth
  * through the planet's declination. The same circles seen from the Sun give the shadows.
  *
- * The positions are good to about 0.1 Jupiter radius, which is the [accuracyMinutes] of the event times.
+ * The positions are good to about 0.1 Jupiter radius, which is the [accuracyMinutes] of the event times: against JPL's
+ * satellite ephemeris (Horizons, jup365) the 139 phenomena of three six-day windows between 2026 November and 2027
+ * February came within 1.8 minutes rms and 6 minutes at the worst (Callisto), see the tests.
  */
 object GalileanMoons {
     /** About how far the event times can be off, in minutes: the moons' offsets are good to about 0.1 Jupiter radius. */
@@ -308,7 +310,7 @@ object GalileanMoons {
      * the years 1 to 4001 gives nothing. A phenomenon already under way at [from] has no start event.
      *
      * The moons are sampled every [sampleSeconds] and each change is refined by bisection to under a second. The times
-     * are only as good as the positions: about [accuracyMinutes] minutes. Cost: about 30 ms for a day.
+     * are only as good as the positions: about [accuracyMinutes] minutes. Cost: about 1 ms for a day.
      */
     fun events(from: Instant, to: Instant): List<GalileanMoonEvent> {
         if (!(from >= distantPast && to <= distantFuture && to >= from)) return emptyList()

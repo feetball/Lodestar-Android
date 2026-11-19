@@ -38,11 +38,12 @@ class EphemerisJupiterTests {
     @Test
     fun testJupiterPhysicalMatchesMeeusExample43a() {
         val state = JupiterPhysical.state(example)
-        assertNear(268.06, state.systemILongitude, 0.03, "ω1")
-        assertNear(72.74, state.systemIILongitude, 0.03, "ω2")
+        // The book prints two decimals; the port gives 268.0628, 72.7351, -2.4847, -2.1981 and 24.8008.
+        assertNear(268.06, state.systemILongitude, 0.01, "ω1")
+        assertNear(72.74, state.systemIILongitude, 0.01, "ω2")
         assertNear(-2.48, state.earthDeclination, 0.01, "DE")
         assertNear(-2.20, state.sunDeclination, 0.01, "DS")
-        assertNear(24.80, state.positionAngle, 0.03, "P")
+        assertNear(24.80, state.positionAngle, 0.01, "P")
         assertNear(5.6, state.distanceAU, 0.5, "Δ")
     }
 

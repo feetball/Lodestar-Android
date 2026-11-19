@@ -50,9 +50,9 @@ data class PlanetStation(
  * longitude of date changes sign.
  *
  * The rate is the central difference of the longitude over half a day, sampled every two days and refined by Brent's
- * method. A longitude curve is flat at a station, so the instant is sensitive to the ephemeris: it is good to a few
- * hours for the inner planets and to about a day for the outer ones (see the tests for the comparison with JPL's
- * DE440s). Cost for one year of all seven planets: about 30 ms.
+ * method. A longitude curve is flat at a station, so the instant is sensitive to the ephemeris, yet the 11 stations of
+ * Mercury, Venus, Mars, Jupiter, Saturn and Neptune compared with JPL's DE440s (see the tests) agree to 2 minutes.
+ * Cost for one year of all seven planets: about 30 ms.
  */
 object PlanetStations {
     private val planets: List<SolarSystemBody> = listOf(

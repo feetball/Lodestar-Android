@@ -370,7 +370,7 @@ public struct LocalSolarCircumstances: Sendable, Hashable { kind; c1, c2, maximu
 ## Jupiter (Great Red Spot, Galilean moons) and planet stations
 
 Three kinds, all opt-in (`EventKind.calendarKinds`; they are not in `defaultKinds`, so the widgets and the Tonight card that ask for the
-defaults do not fill up with moon events). The Great Red Spot and moon events are *dense* (about 2.4 transits and 6 moon events a day), so
+defaults do not fill up with moon events). The Great Red Spot and moon events are *dense* (about 2.4 transits and 8 moon events a day), so
 `EventCalculator` lists them only for the first `EventOptions.jupiterEventDays` (default 2) days from `from`; stations are rare and cover the
 whole interval. Without an observer the three have no visibility; with one, all three use the planet's night-window visibility
 (Sun below −6°, planet above `minimumAltitude`). For the Great Red Spot and the moons the window is cut down to the stretch around the
@@ -386,7 +386,7 @@ data class JupiterPhysicalState(val systemILongitude: Double, val systemIILongit
 
 data class GreatRedSpot private constructor(val longitude: Double, val epoch: Instant, val driftPer30Days: Double) {
     fun systemIILongitude(date: Instant): Double                         // straight-line drift from the epoch, [0, 360)
-    fun transits(from: Instant, to: Instant): List<GreatRedSpotTransit>  // CM II = the spot's longitude; <= maximumSpanDays; ~1 ms a day
+    fun transits(from: Instant, to: Instant): List<GreatRedSpotTransit>  // CM II = the spot's longitude; <= maximumSpanDays; ~0.1 ms a day
     companion object { const val referenceLongitude = 91.0; val referenceEpoch: Instant   // 2026-06-01T00:00Z
                        const val referenceDriftPer30Days = 1.75; val reference: GreatRedSpot
                        const val wellPlacedMinutes = 50.0; const val maximumSpanDays = 366.0; const val maximumDriftPer30Days = 30.0
@@ -403,7 +403,7 @@ data class GalileanMoonsState(val earthDeclination: Double, val sunDeclination: 
 data class GalileanMoonEvent(val moon: GalileanMoon, val phenomenon: GalileanPhenomenon, val edge: GalileanEdge, val date: Instant) { val title: String }
 object GalileanMoons { const val accuracyMinutes = 5.0; const val maximumSpanDays = 30.0; const val sampleSeconds = 60.0
     fun positions(julianDate: JulianDate): GalileanMoonsState
-    fun events(from: Instant, to: Instant): List<GalileanMoonEvent> }        // 1-minute sampling, bisection to < 1 s; ~30 ms a day
+    fun events(from: Instant, to: Instant): List<GalileanMoonEvent> }        // 1-minute sampling, bisection to < 1 s; ~1 ms a day
 
 // events package
 enum class PlanetStationKind { RETROGRADE_BEGINS, DIRECT_MOTION_RESUMES }  // displayName "retrograde motion begins" / "direct motion resumes"
@@ -429,7 +429,7 @@ public enum PlanetStations { public static func find(planet: SolarSystemBody, fr
 
 * **Physical ephemeris** — Meeus, *Astronomical Algorithms* ch. 43, the full method (steps 1–18): pole of 1950.0 with its precession,
   System I and II phases, light-time corrected geocentric position from the kit's VSOP87 Earth and Jupiter, the phase correction, and aberration and
-  nutation of the pole's direction. Example 43.a (1992 Dec 16 0h TD): ω1 268.06°, ω2 72.74°, DE −2.48°, DS −2.20°, P 24.80°, matched to [PHYS_TOL].
+  nutation of the pole's direction. Example 43.a (1992 Dec 16 0h TD): ω1 268.06°, ω2 72.74°, DE −2.48°, DS −2.20°, P 24.80°, matched to 0.01° (the port gives 268.0628°, 72.7351°, −2.4847°, −2.1981°, 24.8008°).
 * **Great Red Spot** — a dated constant, `GreatRedSpot.reference`: System II longitude 91° on 2026-06-01 drifting 1.75° a month, the values Sky & Telescope's
   "Transit Times of Jupiter's Great Red Spot" tool assumes for 2026 (from JUPOS trends). Other sources differ by several degrees: IMCCE's JGRS (JUPOS measurements)
   gives 103.5° at 2026-11-19 21:27 UT (this default: 100.8°) and 94.5° on 2026-06-03; the BAA/ALPO-Japan have L2 = 77° on 2025-09-01; the Flandrau
@@ -446,7 +446,8 @@ public enum PlanetStations { public static func find(planet: SolarSystemBody, fr
   differing from JPL's by rms 1.8 min and 6 min at the worst (Callisto 5.6 min rms, Ganymede 3 min rms, Io and Europa about 1 min), hence the **±5 minutes** of
   `accuracyMinutes` and of the apps' text.
 * **Stations** — the instants at which the central difference over half a day of the apparent geocentric ecliptic longitude of date changes sign (2-day
-  grid, Brent). [STATION_TEXT]
+  grid, Brent). Compared with Skyfield 1.55 and JPL's DE440s (apparent ecliptic longitude of date, extremum on a fine grid), the 11 stations of Mercury,
+  Venus, Mars, Jupiter, Saturn and Neptune in 2024–2026 that the tests check differ by 0 to 105 s (the worst: Saturn's 2026-12-10), the longitudes by under 0.002°.
 * **Not in the engine**: the moons' phenomena of the Sun-side (mutual events), Jupiter's flattening, penumbral shadows, Saturn's rings.
 
 ## Accuracy and verification (sources in the test comments)
@@ -483,9 +484,9 @@ degrades slowly with distance from the present: for years beyond ~2035 add the �
 | `OppositionFinder`, `GreatestElongationFinder` one year | 6 ms each |
 | `SeasonFinder`, `EarthApsisFinder` | < 1 ms |
 | `FullMoonSpecialFinder` / `LunarEclipseFinder` / `SolarEclipseFinder` one year | 5–8 ms each (+ 2 ms per observer for local circumstances) |
-| `PlanetStations.events` one year (seven planets) | [STATION_COST] |
-| `GalileanMoons.events` one day | [MOON_COST] |
-| `GreatRedSpot.transits` one day / one year | [GRS_COST] |
+| `PlanetStations.events` one year (seven planets) | ~30 ms (cold JVM) |
+| `GalileanMoons.events` 30 days (~240 events) | ~35 ms; one day about 1 ms |
+| `GreatRedSpot.transits` one year (~880 transits) | ~30 ms |
 | `EventCalculator.events` one year, no observer | ~100 ms |
 | `EventCalculator.events` one year, with observer (~150 events with visibility) | 165–215 ms |
 | `EventCalculator.visibility(of:…)` for one event | 0.3–1 ms |

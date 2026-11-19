@@ -59,7 +59,7 @@ data class GreatRedSpot private constructor(
      * The crossings of the central meridian from [from] to [to] (both inclusive), in time order: about 2.4 a day.
      * Intervals longer than [maximumSpanDays] are cut short; a reversed interval or one outside the years 1 to 4001
      * gives nothing. Each transit is found by Newton steps on [JupiterPhysical.state], accurate to the second for the
-     * given longitude. Cost: about 1 ms for a day.
+     * given longitude. Cost: about 0.1 ms for a day.
      */
     fun transits(from: Instant, to: Instant): List<GreatRedSpotTransit> {
         if (!(from >= distantPast && to <= distantFuture && to >= from)) return emptyList()

@@ -49,6 +49,7 @@ import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.app.AppTab
 import net.kuecker.lodestar.features.objects.ObjectsTopBar
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
+import net.kuecker.lodestar.kit.events.EventDetails
 import net.kuecker.lodestar.kit.events.EventKind
 import net.kuecker.lodestar.model.ObserverContext
 import net.kuecker.lodestar.shared.CardTitle
@@ -92,6 +93,7 @@ private fun EventDetailContent(event: AstronomicalEvent, context: ObserverContex
     val times = remember(event, context, plan) { EventsTimes.times(event, context, plan) }
     val visibility = remember(event, context) { EventsTimes.visibilityRows(event, context) }
     val isSolarEclipse = event.kind == EventKind.SOLAR_ECLIPSE
+    val meteorShower = (event.details as? EventDetails.MeteorShower)?.peak?.shower
 
     Column(
         modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -100,6 +102,7 @@ private fun EventDetailContent(event: AstronomicalEvent, context: ObserverContex
         if (isSolarEclipse) EventsSolarSafetyNotice()
         EventDetailHeader(event, context)
         EventActions(event, context)
+        if (meteorShower != null) EventsMeteorCameraCard(event, meteorShower, context)
         if (visibility.isNotEmpty()) {
             EventInfoCard("From Here", Icons.Outlined.Visibility, visibility) {
                 EventVisibilityNote(event)

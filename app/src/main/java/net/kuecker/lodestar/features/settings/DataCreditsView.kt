@@ -202,7 +202,7 @@ internal data class DataCredit(
                 author = "Google and JetBrains",
                 license = "Apache 2.0", licenseURL = "https://www.apache.org/licenses/LICENSE-2.0",
                 sourceURL = "https://developer.android.com/jetpack/androidx",
-                notice = "Android Jetpack (Compose, Activity, Lifecycle, CameraX, Core), the Kotlin standard library, " +
+                notice = "Android Jetpack (Compose, Activity, Lifecycle, CameraX, Core, ExifInterface), the Kotlin standard library, " +
                     "kotlinx.coroutines, kotlinx.serialization and the Material icons for Compose.",
             ),
         )

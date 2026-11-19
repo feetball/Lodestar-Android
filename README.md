@@ -11,7 +11,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
 
 - **Guided aiming** — a live finder (camera view or virtual sky) with the target marker, an arrow pointing the
   shortest way, "Pan right 23.4° / Tilt up 12.1°" read-outs for pan-tilt heads, an on-target state with haptics,
-  optional audio ticks, a level gauge, and the outline of *your* camera's frame.
+  optional audio ticks, a level gauge, and the outline of *your* camera's frame. Keep a **camera profile** for each
+  body and lens, start from a smart-telescope preset (Seestar, Dwarf, Vespera) or read a profile from a photo's
+  EXIF data, and switch with one tap; a **fisheye** lens gets a curved or circular frame.
 - **Star alignment** and **Gyro Lock** — centre a bright star once to correct the compass and the bracket; keep
   the heading on the gyroscope, safe from the camera body's magnetism.
 - **Any mount** — back camera along the lens (portrait, landscape, upside down) or the phone flat on top.

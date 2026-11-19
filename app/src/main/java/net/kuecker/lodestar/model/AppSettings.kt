@@ -164,7 +164,10 @@ data class AppSettings(
     /** Attitude smoothing time constant in seconds. */
     val smoothingTimeConstant: Double = 0.12,
 
-    // Camera and lens (for the framing rectangle and exposure tools)
+    // Camera and lens (for the framing rectangle and exposure tools). The camera profiles are the source; the single
+    // camera keys below them follow the active profile (see `sanitized`), so code that reads them keeps working.
+    val cameraProfiles: List<CameraProfile> = emptyList(),
+    val activeCameraProfileID: String? = null,
     val sensorID: String = SensorFormat.fullFrame.id,
     val customSensorWidth: Double = 36.0,
     val customSensorHeight: Double = 24.0,
@@ -207,18 +210,63 @@ data class AppSettings(
 ) {
     val atmosphere: Atmosphere get() = Atmosphere(pressureMillibars, temperatureCelsius)
 
-    /** Clamps numeric preferences into their supported ranges (protects against corrupted storage). */
+    /**
+     * The camera and lens in use: the stored profile with [activeCameraProfileID], else the first one, else a profile
+     * made from the single camera keys (before the profiles exist).
+     */
+    val activeCameraProfile: CameraProfile
+        get() = cameraProfiles.firstOrNull { it.id == activeCameraProfileID }
+            ?: cameraProfiles.firstOrNull()
+            ?: singleCameraProfile()
+
+    /** The camera of the single camera keys as a profile, with the identifier of the migrated profile. */
+    private fun singleCameraProfile(): CameraProfile = CameraProfile.create(
+        CameraProfile.DEFAULT_NAME, sensorID, customSensorWidth, customSensorHeight, focalLength, aperture, pixelPitch,
+        id = CameraProfile.MIGRATED_ID,
+    )
+
+    /**
+     * Takes a change that [previous] settings went through to its single camera keys alone (code that predates the
+     * profiles writes them) into the active profile. A change to the profiles themselves wins, and so does any
+     * change to the profiles made together with one to the keys; [sanitized] then lets the keys follow the profile.
+     */
+    fun reconcilingCamera(previous: AppSettings): AppSettings {
+        val keysChanged = sensorID != previous.sensorID || customSensorWidth != previous.customSensorWidth ||
+            customSensorHeight != previous.customSensorHeight || focalLength != previous.focalLength ||
+            aperture != previous.aperture || pixelPitch != previous.pixelPitch
+        val profilesChanged = cameraProfiles != previous.cameraProfiles ||
+            activeCameraProfileID != previous.activeCameraProfileID
+        if (!keysChanged || profilesChanged || cameraProfiles.isEmpty()) return this
+        val active = activeCameraProfile
+        val updated = active.edited(
+            sensorID = sensorID, customSensorWidth = customSensorWidth, customSensorHeight = customSensorHeight,
+            focalLength = focalLength, aperture = aperture, pixelPitch = pixelPitch,
+        )
+        return copy(cameraProfiles = cameraProfiles.map { if (it.id == active.id) updated else it })
+    }
+
+    /**
+     * Clamps numeric preferences into their supported ranges (protects against corrupted storage), makes sure there
+     * is a camera profile and an active one (the first start with profiles turns the single camera into "My camera"),
+     * and sets the single camera keys to the active profile.
+     */
     fun sanitized(): AppSettings {
         fun clamp(v: Double, range: ClosedFloatingPointRange<Double>, fallback: Double) =
             if (v.isFinite()) v.coerceIn(range) else fallback
         val source = locationSource
+        val profiles = cameraProfiles.distinctBy { it.id }.take(MAXIMUM_CAMERA_PROFILES)
+            .ifEmpty { listOf(singleCameraProfile()) }
+        val active = profiles.firstOrNull { it.id == activeCameraProfileID } ?: profiles.first()
         return copy(
+            cameraProfiles = profiles,
+            activeCameraProfileID = active.id,
+            sensorID = active.sensorID,
+            customSensorWidth = active.customSensorWidth,
+            customSensorHeight = active.customSensorHeight,
+            focalLength = active.focalLength,
+            aperture = active.aperture,
+            pixelPitch = active.pixelPitch,
             smoothingTimeConstant = clamp(smoothingTimeConstant, 0.0..1.0, 0.12),
-            customSensorWidth = clamp(customSensorWidth, 1.0..100.0, 36.0),
-            customSensorHeight = clamp(customSensorHeight, 1.0..100.0, 24.0),
-            focalLength = clamp(focalLength, 4.0..2000.0, 24.0),
-            aperture = clamp(aperture, 0.95..32.0, 2.8),
-            pixelPitch = pixelPitch?.takeIf { it.isFinite() && it in 0.5..20.0 },
             nightIntensity = clamp(nightIntensity, 0.25..1.0, 0.7),
             nightBrightness = clamp(nightBrightness, 0.01..1.0, 0.2),
             starMagnitudeLimit = clamp(starMagnitudeLimit, 1.0..6.5, 5.0),
@@ -238,6 +286,7 @@ data class AppSettings(
 
     companion object {
         const val MAXIMUM_SAVED_SITES = 100
+        const val MAXIMUM_CAMERA_PROFILES = 50
         const val MAXIMUM_RECENTS = 20
         const val MAXIMUM_FAVORITES = 200
 
@@ -252,6 +301,8 @@ data class AppSettings(
                 put("mountPresetID", JsonPrimitive(s.mountPresetID))
                 put("headingSource", json.encodeToJsonElement(HeadingSource.serializer(), s.headingSource))
                 put("smoothingTimeConstant", JsonPrimitive(s.smoothingTimeConstant))
+                put("cameraProfiles", JsonArray(s.cameraProfiles.map(CameraProfile::toJson)))
+                s.activeCameraProfileID?.let { put("activeCameraProfileID", JsonPrimitive(it)) }
                 put("sensorID", JsonPrimitive(s.sensorID))
                 put("customSensorWidth", JsonPrimitive(s.customSensorWidth))
                 put("customSensorHeight", JsonPrimitive(s.customSensorHeight))
@@ -291,6 +342,7 @@ data class AppSettings(
                 o[key]?.let { runCatching { json.decodeFromJsonElement(serializer, it) }.getOrNull() } ?: fallback
             val strings = ListSerializer(String.serializer())
             val sites = (o["savedSites"] as? JsonArray)?.mapNotNull(SavedSite::fromJson) ?: emptyList()
+            val profiles = (o["cameraProfiles"] as? JsonArray)?.mapNotNull(CameraProfile::fromJson) ?: emptyList()
             return AppSettings(
                 hasCompletedOnboarding = value("hasCompletedOnboarding", Boolean.serializer(), d.hasCompletedOnboarding),
                 locationSource = value("locationSource", LocationSource.serializer(), d.locationSource),
@@ -298,6 +350,8 @@ data class AppSettings(
                 mountPresetID = value("mountPresetID", String.serializer(), d.mountPresetID),
                 headingSource = value("headingSource", HeadingSource.serializer(), d.headingSource),
                 smoothingTimeConstant = value("smoothingTimeConstant", Double.serializer(), d.smoothingTimeConstant),
+                cameraProfiles = profiles,
+                activeCameraProfileID = value("activeCameraProfileID", String.serializer().nullable, d.activeCameraProfileID),
                 sensorID = value("sensorID", String.serializer(), d.sensorID),
                 customSensorWidth = value("customSensorWidth", Double.serializer(), d.customSensorWidth),
                 customSensorHeight = value("customSensorHeight", Double.serializer(), d.customSensorHeight),

@@ -268,7 +268,7 @@ changed so the terms above can be re-checked.
 
 | Library | License |
 | --- | --- |
-| Android Jetpack (AndroidX: Compose, Activity, Lifecycle, CameraX, Core) | Apache-2.0 |
+| Android Jetpack (AndroidX: Compose, Activity, Lifecycle, CameraX, Core, ExifInterface) | Apache-2.0 |
 | Kotlin standard library, kotlinx.coroutines, kotlinx.serialization | Apache-2.0 |
 | Material Components / Material Icons for Compose | Apache-2.0 |
 | MapLibre Native for Android (<https://github.com/maplibre/maplibre-native>) | BSD-2-Clause |

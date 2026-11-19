@@ -44,8 +44,8 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * The buttons of the screen: target, align, mosaic, camera, night mode and zoom, in a row or, in a wide HUD, in a
- * column (`axis` = vertical).
+ * The buttons of the screen: target, align, mosaic, camera, night mode and zoom, and with several camera profiles the
+ * frame menu, in a row or, in a wide HUD, in a column (`axis` = vertical).
  */
 @Composable
 internal fun AimControlsBar(
@@ -66,6 +66,8 @@ internal fun AimControlsBar(
     val mount = rememberMountService()
     val showsMount = mount.preferences.hasConnectedBefore || mount.snapshot.state != MountConnectionState.DISCONNECTED ||
         mount.snapshot.lostConnection
+    // Switching between cameras at the tripod needs more than one profile.
+    val showsFrame = app.settings.cameraProfiles.size > 1
 
     // Both layouts hold the same buttons; each one gets the weight (row) or half the width (two columns) it needs.
     val buttons: List<@Composable (Modifier) -> Unit> = listOfNotNull(
@@ -118,10 +120,11 @@ internal fun AimControlsBar(
         },
         { slot -> AimFieldOfViewButton(model, buttonHeight, slot) },
         if (showsMount) { slot -> MountAimButton(buttonHeight, slot) } else null,
+        if (showsFrame) { slot -> AimFrameMenuButton(buttonHeight, slot) } else null,
     )
     if (axis == Orientation.Horizontal) {
-        // Closer together when the Mount button makes it seven.
-        val spacing = if (buttons.size > 6) 4.dp else 8.dp
+        // Closer together when the Mount or Frame button makes it seven, or both make it eight.
+        val spacing = if (buttons.size > 7) 2.dp else if (buttons.size > 6) 4.dp else 8.dp
         Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
             for (button in buttons) button(Modifier.weight(1f))
         }

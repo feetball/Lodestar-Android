@@ -11,7 +11,6 @@ import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.pointing.GuidanceState
-import net.kuecker.lodestar.kit.pointing.PinholeProjection
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -91,12 +90,12 @@ internal fun SkyOverlayRenderer.drawHorizon() {
 
 /** The DSLR's picture as an outline on the sky, with a crosshair at its centre. */
 internal fun SkyOverlayRenderer.drawDSLRFrame() {
-    val outline = PinholeProjection.dslrFrameOutline(
-        frame.pointing, configuration.lensFrame.horizontal, configuration.lensFrame.vertical, samplesPerEdge = 4,
-    )
+    val lensFrame = scratch.lensFrame
+    lensFrame.update(configuration.lensSetup)
+    lensFrame.intoWorld(frame.pointing)
     val world = scratch.world
     world.clear()
-    world.addPolyline(outline, closed = true, frustum = frustum)
+    world.addPackedPolyline(lensFrame.world, lensFrame.count, closed = true, frustum = frustum)
     strokeWorld(world, palette.dslrFrame, 2f, StrokeCap.Round, StrokeJoin.Round)
     if (!projector.project(frame.pointing.boresightVector) || !isVisible(projector.x, projector.y, 0f)) return
     val centerX = projector.x

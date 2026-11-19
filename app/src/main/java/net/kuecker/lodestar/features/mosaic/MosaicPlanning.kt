@@ -12,6 +12,7 @@ import net.kuecker.lodestar.kit.mosaic.MosaicPlan
 import net.kuecker.lodestar.kit.mosaic.MosaicPlanner
 import net.kuecker.lodestar.kit.mosaic.MosaicRegion
 import net.kuecker.lodestar.kit.mosaic.MosaicWarning
+import net.kuecker.lodestar.kit.phototools.LensProjection
 import net.kuecker.lodestar.kit.phototools.LensSetup
 import java.time.Instant
 import kotlin.math.roundToInt
@@ -70,6 +71,10 @@ internal object MosaicPlanning {
 
     /** Plans [inputs]; never throws. */
     fun plan(inputs: MosaicPlanningInputs): MosaicPlanOutcome {
+        // Panels are rectangles on the sky; a fisheye frame is not one.
+        if (inputs.lens.projection != LensProjection.RECTILINEAR) {
+            return MosaicPlanOutcome.Problem("Mosaics need a rectilinear lens. Choose another camera profile in Settings.")
+        }
         val setup = inputs.setup
         val title: String
         val region: MosaicRegion

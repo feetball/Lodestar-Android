@@ -232,9 +232,9 @@ object GalileanMoons {
         val psi = asin(AstroMath.clamp(earthSun / delta * sin(k), -1.0, 1.0))
         val lambda = AstroMath.radians(34.35 + 0.083091 * d + 0.329 * sinV) + b
         val sunDeclination = AstroMath.radians(3.12) * sin(lambda + AstroMath.radians(42.8))
-        val earthDeclination = sunDeclination -
-            AstroMath.radians(2.22) * sin(psi) * cos(lambda + AstroMath.radians(22.0)) -
-            AstroMath.radians(1.3) * (sunJupiter - delta) / delta * sin(lambda - AstroMath.radians(100.5))
+        val earthTermPhase = AstroMath.radians(2.22) * sin(psi) * cos(lambda + AstroMath.radians(22.0))
+        val earthTermDistance = AstroMath.radians(1.3) * (sunJupiter - delta) / delta * sin(lambda - AstroMath.radians(100.5))
+        val earthDeclination = sunDeclination - earthTermPhase - earthTermDistance
         val dd = d - delta / 173
         val u1 = AstroMath.radians(163.8069 + 203.4058646 * dd) + psi - b
         val u2 = AstroMath.radians(358.414 + 101.2916335 * dd) + psi - b

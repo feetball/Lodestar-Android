@@ -96,9 +96,8 @@ object JupiterPhysical {
         val deltaS = asin(cosEpsilon0 * sinLatitude + sinEpsilon0 * cosLatitude * sinLongitude)
         val sinDelta0 = sin(delta0)
         val cosDelta0 = cos(delta0)
-        val sunDeclination = asin(
-            AstroMath.clamp(-sinDelta0 * sin(deltaS) - cosDelta0 * cos(deltaS) * cos(alpha0 - alphaS), -1.0, 1.0),
-        )
+        val sunTerm = -sinDelta0 * sin(deltaS) - cosDelta0 * cos(deltaS) * cos(alpha0 - alphaS)
+        val sunDeclination = asin(AstroMath.clamp(sunTerm, -1.0, 1.0))
 
         // Steps 11 to 13: the Earth's declination and the central meridians.
         val u = geocentric.y * cosEpsilon0 - geocentric.z * sinEpsilon0
@@ -110,14 +109,14 @@ object JupiterPhysical {
         val sinAlpha0Alpha = sin(alpha0 - alpha)
         val cosAlpha0Alpha = cos(alpha0 - alpha)
         val zeta = atan2(sinDelta0 * cosDelta * cosAlpha0Alpha - sinDelta * cosDelta0, cosDelta * sinAlpha0Alpha)
-        val earthDeclination = asin(AstroMath.clamp(-sinDelta0 * sinDelta - cosDelta0 * cosDelta * cosAlpha0Alpha, -1.0, 1.0))
+        val earthTerm = -sinDelta0 * sinDelta - cosDelta0 * cosDelta * cosAlpha0Alpha
+        val earthDeclination = asin(AstroMath.clamp(earthTerm, -1.0, 1.0))
         var omega1 = w1 - AstroMath.degrees(zeta) - systemIPhaseDegreesPerAU * delta
         var omega2 = w2 - AstroMath.degrees(zeta) - systemIIPhaseDegreesPerAU * delta
 
         // Step 14: the phase correction.
-        var phase = AstroMath.degrees(
-            (2 * radius * delta + earthDistance * earthDistance - radius * radius - delta * delta) / (4 * radius * delta),
-        )
+        val phaseNumerator = 2 * radius * delta + earthDistance * earthDistance - radius * radius - delta * delta
+        var phase = AstroMath.degrees(phaseNumerator / (4 * radius * delta))
         if (sin(longitude - earthLongitude) < 0) phase = -phase
         omega1 += phase
         omega2 += phase
@@ -134,11 +133,12 @@ object JupiterPhysical {
         val sinEarthLongitude = sin(earthLongitude)
         val cosEarthLongitude = cos(earthLongitude)
         val aberration = AstroMath.radians(aberrationConstant)
-        alpha += aberration * (cosAlpha * cosEarthLongitude * cosEpsilon + sinAlpha * sinEarthLongitude) / cosDelta
-        delta1 += aberration * (
-            cosEarthLongitude * cosEpsilon * (sinEpsilon / cosEpsilon * cosDelta - sinAlpha * sinDelta) +
-                cosAlpha * sinDelta * sinEarthLongitude
-            )
+        val aberrationAlpha = (cosAlpha * cosEarthLongitude * cosEpsilon + sinAlpha * sinEarthLongitude) / cosDelta
+        val tanEpsilon = sinEpsilon / cosEpsilon
+        val aberrationInner = tanEpsilon * cosDelta - sinAlpha * sinDelta
+        val aberrationDelta = cosEarthLongitude * cosEpsilon * aberrationInner + cosAlpha * sinDelta * sinEarthLongitude
+        alpha += aberration * aberrationAlpha
+        delta1 += aberration * aberrationDelta
         val tanDelta = sinDelta / cosDelta
         val deltaAlpha = (cosEpsilon + sinEpsilon * sinAlpha * tanDelta) * dPsi - cosAlpha * tanDelta * dEpsilon
         val deltaDelta = sinEpsilon * cosAlpha * dPsi + sinAlpha * dEpsilon

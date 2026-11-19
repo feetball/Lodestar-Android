@@ -192,6 +192,8 @@ Rules (the *subject* is what the event is about):
 | full-Moon special | the Moon (exact, moving) | Sun below −0.8333° (after sunset), Moon ≥ `minimumAltitude` | −0.8333° |
 | lunar eclipse | the Moon | the umbral phase U1…U4 (P1…P4 for a penumbral eclipse) while the Moon's centre is above −0.5667° | 0 (not applied) |
 | solar eclipse | the Sun | the part of C1…C4 with the Sun's centre above −0.8333° | 0 (not applied) |
+| planet station | the planet (its place at the station for the whole night) | Sun below −6°, planet ≥ `minimumAltitude` | −6° |
+| Great Red Spot transit, moon event | Jupiter | as for a planet, then cut down to ±50 min (transit) or ±`accuracyMinutes` (moon event) around the event | −6° |
 | equinox, solstice, apsis | — | `visibility == nil` | — |
 
 "That night" is the local noon-to-noon interval (in `EventOptions.timeZone`, see its default above) that contains the event; the

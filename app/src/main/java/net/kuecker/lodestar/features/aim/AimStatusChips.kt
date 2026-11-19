@@ -50,7 +50,7 @@ private data class ChipItem(
     val opensSettings: Boolean = false,
 )
 
-/** The row of status chips at the top: sensors, compass, alignment, location and camera. */
+/** The row of status chips at the top: the time preview, sensors, compass, alignment, location and camera. */
 @Composable
 internal fun AimStatusChips(model: AimViewModel, modifier: Modifier = Modifier) {
     val app = LocalAppModel.current
@@ -59,6 +59,8 @@ internal fun AimStatusChips(model: AimViewModel, modifier: Modifier = Modifier) 
         locationItems(app.location.isReducedAccuracy && app.observerContext?.source == LocationSource.Device) +
         skylineItems(app.observerContext?.horizon != null) +
         cameraItems(model.configuration.wantsCameraPreview, app.camera.authorization, app.camera.errorDescription != null)
+    // The preview comes first: it is what the rest of the screen is showing.
+    AimPreviewChip(model)
     // Close together, and reaching a little into the margin: the usual three chips (compass, alignment, camera) then
     // fit one row on a 360 dp phone, where a wrapped chip would land on the marker and the horizon under it.
     AimFlowLayout(modifier.fillMaxWidth(), spacing = 4.dp, lineSpacing = 4.dp, bleed = 6.dp) {

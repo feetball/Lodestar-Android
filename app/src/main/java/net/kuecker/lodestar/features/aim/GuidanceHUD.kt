@@ -131,6 +131,7 @@ private fun TallLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
                 Modifier.onGloballyPositioned { if (model.hudRotation == rotation) model.hudPanels = it.boundsInRoot() },
             )
             MountHudCard(model.guidanceTarget)
+            AimTimeBar(model, onSheet)
             AimControlsBar(model, onSheet)
         }
         // Below the chips and clear of the arrow around the reticle.
@@ -152,6 +153,7 @@ private fun WideLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
                 Modifier.onGloballyPositioned { if (model.hudRotation == rotation) model.hudPanels = null },
             )
             MountHudCard(model.guidanceTarget)
+            AimTimeBar(model, onSheet)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             AimLevelGauge(model, isActive)

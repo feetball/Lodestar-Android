@@ -101,6 +101,8 @@ data class AimSkyInputs(
     val target: CelestialObject?,
     /** The site's recorded skyline, or `null` for an open horizon. */
     val horizon: HorizonProfile?,
+    /** Seconds from now the sky is previewed at; 0 while live (see [AimViewModel.previewOffset]). */
+    val previewOffset: Double = 0.0,
 )
 
 /** The sheets the Aim screen presents. */
@@ -108,6 +110,7 @@ enum class AimSheet {
     TARGET_PICKER,
     ALIGNMENT,
     MOSAIC,
+    PREVIEW_TIME,
 }
 
 /** When the target is next above the horizon, for the below-horizon warning. */

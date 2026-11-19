@@ -21,8 +21,10 @@ same astronomy engine ported line for line from Swift to Kotlin.
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
   targets, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
 - **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
-  solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
-  and where to look and a button to aim at it.
+  solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, the stations
+  of the planets, and for planet imagers the Great Red Spot's transits and the Galilean moons' transits, shadows
+  and eclipses (with a "Moons Tonight" diagram on Jupiter's screen), each with when and where to look and a button
+  to aim at it.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
 - **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set

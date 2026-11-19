@@ -85,9 +85,9 @@ class AimPreviewTest {
     @Test
     fun theSameDayIsTheObserversDay() {
         val berlin = ZoneId.of("Europe/Berlin")
-        // 23:30 Berlin time and 00:30 the next day are different days there, though 59 minutes apart in UTC.
+        // 23:30 Berlin time and 00:30 the next day are different days there, but the same day in UTC.
         val late = Instant.parse("2026-10-17T21:30:00Z")
-        assertTrue(AimPreview.isSameDay(late, late.plusSeconds(1800), berlin))
+        assertTrue(AimPreview.isSameDay(late, late.minusSeconds(1800), berlin))
         assertFalse(AimPreview.isSameDay(late.plusSeconds(3600), late, berlin))
         assertTrue(AimPreview.isSameDay(late.plusSeconds(3600), late, ZoneId.of("UTC")))
     }

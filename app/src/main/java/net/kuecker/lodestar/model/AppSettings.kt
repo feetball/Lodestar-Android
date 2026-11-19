@@ -192,6 +192,8 @@ data class AppSettings(
     val showConstellationNames: Boolean = true,
     val showDeepSkyObjects: Boolean = true,
     val showMilkyWay: Boolean = true,
+    /** A thin ring on the sky chart's horizon that is brighter toward the artificial light. */
+    val showHorizonGlow: Boolean = true,
     /** Deep-sky objects drawn in the sky views, up to this `Prominence` level (1 showpieces … 4 everything). */
     val deepSkyProminence: Int = 2,
     val starMagnitudeLimit: Double = 5.0,
@@ -272,6 +274,7 @@ data class AppSettings(
                 put("showConstellationNames", JsonPrimitive(s.showConstellationNames))
                 put("showDeepSkyObjects", JsonPrimitive(s.showDeepSkyObjects))
                 put("showMilkyWay", JsonPrimitive(s.showMilkyWay))
+                put("showHorizonGlow", JsonPrimitive(s.showHorizonGlow))
                 put("deepSkyProminence", JsonPrimitive(s.deepSkyProminence))
                 put("starMagnitudeLimit", JsonPrimitive(s.starMagnitudeLimit))
                 put("coordinateStyle", json.encodeToJsonElement(CoordinateStyle.serializer(), s.coordinateStyle))
@@ -318,6 +321,7 @@ data class AppSettings(
                 showConstellationNames = value("showConstellationNames", Boolean.serializer(), d.showConstellationNames),
                 showDeepSkyObjects = value("showDeepSkyObjects", Boolean.serializer(), d.showDeepSkyObjects),
                 showMilkyWay = value("showMilkyWay", Boolean.serializer(), d.showMilkyWay),
+                showHorizonGlow = value("showHorizonGlow", Boolean.serializer(), d.showHorizonGlow),
                 deepSkyProminence = value("deepSkyProminence", Int.serializer(), d.deepSkyProminence),
                 starMagnitudeLimit = value("starMagnitudeLimit", Double.serializer(), d.starMagnitudeLimit),
                 coordinateStyle = value("coordinateStyle", CoordinateStyle.serializer(), d.coordinateStyle),

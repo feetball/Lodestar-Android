@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.model.AppSettings
 import net.kuecker.lodestar.model.LocationSource
 import net.kuecker.lodestar.model.SavedSite
+import net.kuecker.lodestar.features.skyquality.SkyQualityLine
 import net.kuecker.lodestar.services.LocationService
 import net.kuecker.lodestar.shared.ChipTone
 import net.kuecker.lodestar.shared.InfoRow
@@ -226,6 +227,7 @@ private fun SettingsDeviceLocationRow(isSelected: Boolean, location: LocationSer
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text("Current Location", color = palette.primaryText, style = MaterialTheme.typography.bodyLarge)
             Text(statusText(location), color = palette.secondaryText, style = MaterialTheme.typography.bodySmall)
+            SkyQualityLine(location.stableLocation)
         }
         if (location.isAuthorized && location.isReducedAccuracy) {
             StatusChip(Icons.Outlined.LocationSearching, "Approximate", tone = ChipTone.WARNING)
@@ -259,6 +261,7 @@ private fun SettingsSavedSiteRow(site: SavedSite, isSelected: Boolean, now: Inst
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(site.name, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge)
                 Text(subtitle(site, now), color = palette.secondaryText, style = MaterialTheme.typography.bodySmall)
+                SkyQualityLine(site.location)
                 if (site.horizon != null) {
                     Text(
                         "Horizon: ${rememberSiteHorizonStatus(site)}",

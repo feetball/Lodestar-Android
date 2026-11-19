@@ -106,6 +106,13 @@ internal fun SettingsSkyDisplaySection() {
             onCheckedChange = { shown -> store.update { it.copy(showMilkyWay = shown) } },
         )
         SettingsDivider()
+        SettingsToggleRow(
+            title = "Horizon glow",
+            checked = settings.showHorizonGlow,
+            onCheckedChange = { shown -> store.update { it.copy(showHorizonGlow = shown) } },
+            caption = "A thin ring along the sky chart's horizon that is brighter toward the artificial light around you.",
+        )
+        SettingsDivider()
         SettingsSliderRow(
             title = "Faintest stars",
             valueText = AppFormat.magnitude(settings.starMagnitudeLimit),

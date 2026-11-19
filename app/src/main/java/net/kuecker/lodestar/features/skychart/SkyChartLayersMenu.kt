@@ -77,6 +77,7 @@ internal fun SkyChartLayersMenu(
         LayerRow("Deep-sky objects", settings.showDeepSkyObjects) { isOn ->
             store.update { it.copy(showDeepSkyObjects = isOn) }
         }
+        LayerRow("Horizon glow", settings.showHorizonGlow) { isOn -> store.update { it.copy(showHorizonGlow = isOn) } }
         LayerRow("Star names", preferences.showsStarNames) { preferences.showsStarNames = it }
         LayerRow("Altitude grid", preferences.showsAltitudeGrid) { preferences.showsAltitudeGrid = it }
         LayerRow("Camera view", preferences.showsCameraView) { preferences.showsCameraView = it }

@@ -76,7 +76,7 @@ internal fun ObjectDetailPhotographyCard(
         LensRows(photography, lens)
         photography.framing?.let { FramingRow(it, photography.frame.longSide / photography.frame.shortSide) }
         ExposureRows(photography)
-        snapshot?.moon?.let { MoonRows(it, obj.category, zone) }
+        snapshot?.moon?.let { MoonRows(it, MoonImpact.assessmentKind(obj), zone) }
     }
 }
 

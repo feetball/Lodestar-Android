@@ -2,6 +2,9 @@ package net.kuecker.lodestar.kit.planning
 
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import net.kuecker.lodestar.kit.catalog.CatalogFixture
+import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.catalog.DeepSkyCatalogue
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import kotlin.math.max
 import kotlin.math.min
@@ -133,6 +136,57 @@ class PlanningMoonImpactTests {
         for (code in listOf("G", "GPair", "GTrpl", "GGroup", "OCl", "GCl", "RfN", "DrkN", "Neb", "*Ass", "**", "*", "Other", "Nova")) {
             assertFalse(MoonImpact.isEmissionLineTarget(ObjectCategory.fromOpenNGCType(code)), code)
         }
+    }
+
+    @Test
+    fun testGenericNebulaeWithASharplessNumberAreEmissionLineTargets() {
+        val catalog = CatalogFixture.catalog()
+        val generic = catalog.deepSkyObjects.filter { it.category == ObjectCategory.NEBULA }
+        val sharpless = generic.filter { DeepSkyCatalogue.SHARPLESS in it.catalogues }
+        // The data decides: a generic nebula counts exactly when it has a Sharpless number.
+        assertTrue(sharpless.size >= 5)
+        assertTrue(sharpless.size < generic.size)
+        for (nebula in generic) {
+            assertEquals(nebula in sharpless, MoonImpact.isEmissionLineTarget(nebula), nebula.id)
+            assertFalse(MoonImpact.isEmissionLineTarget(nebula.category), nebula.id)
+        }
+        // The Lagoon (Sh2-25) and Trifid (Sh2-30) nebulae are generic nebulae in the catalog and H II regions in the sky;
+        // the Iris Nebula (Caldwell 4, no Sharpless number) is a reflection nebula.
+        val lagoon = checkNotNull(catalog.objectWithID("dso.M8"))
+        val trifid = checkNotNull(catalog.objectWithID("dso.M20"))
+        val iris = checkNotNull(catalog.objectWithID("dso.NGC7023"))
+        assertEquals(ObjectCategory.NEBULA, lagoon.category)
+        assertTrue(MoonImpact.isEmissionLineTarget(lagoon))
+        assertTrue(MoonImpact.isEmissionLineTarget(trifid))
+        assertFalse(MoonImpact.isEmissionLineTarget(iris))
+        // A full-ish Moon 50° away is severe for all three; the narrowband filter relaxes the two H II regions only.
+        fun level(target: CelestialObject) =
+            assess(50.0, 0.9, ImagingFilter.NARROWBAND, MoonImpact.assessmentKind(target))
+        assertEquals(MoonImpact.Level.MINOR, level(lagoon))
+        assertEquals(MoonImpact.Level.MINOR, level(trifid))
+        assertEquals(MoonImpact.Level.SEVERE, level(iris))
+    }
+
+    @Test
+    fun testTheAssessmentKindIsTheCategoryExceptForSharplessNebulae() {
+        val catalog = CatalogFixture.catalog()
+        for (obj in catalog.deepSkyObjects) {
+            val isSharplessNebula = obj.category == ObjectCategory.NEBULA && DeepSkyCatalogue.SHARPLESS in obj.catalogues
+            assertEquals(
+                if (isSharplessNebula) ObjectCategory.EMISSION_NEBULA else obj.category,
+                MoonImpact.assessmentKind(obj), obj.id,
+            )
+            // Whatever the kind, the object overload and the category overload agree on it.
+            assertEquals(
+                MoonImpact.isEmissionLineTarget(MoonImpact.assessmentKind(obj)), MoonImpact.isEmissionLineTarget(obj), obj.id,
+            )
+        }
+        // Sharpless numbers on other categories change nothing: a reflection nebula stays one.
+        val reflection = catalog.deepSkyObjects.filter {
+            it.category == ObjectCategory.REFLECTION_NEBULA && DeepSkyCatalogue.SHARPLESS in it.catalogues
+        }
+        assertTrue(reflection.isNotEmpty())
+        for (obj in reflection) assertFalse(MoonImpact.isEmissionLineTarget(obj), obj.id)
     }
 
     @Test

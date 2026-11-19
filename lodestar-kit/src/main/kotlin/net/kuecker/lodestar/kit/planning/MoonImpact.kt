@@ -2,6 +2,8 @@ package net.kuecker.lodestar.kit.planning
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.catalog.DeepSkyCatalogue
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import kotlin.math.max
 import kotlin.math.min
@@ -220,9 +222,9 @@ object MoonImpact {
      * Whether a target of this category shines mainly in emission lines, so that a filter can separate it from
      * moonlight: emission nebulae (OpenNGC `HII`, `EmN`), planetary nebulae (`PN`), supernova remnants (`SNR`) and
      * clusters with nebulosity (`Cl+N`, which are embedded in emission nebulae). Wolf-Rayet shells and similar are
-     * typed `HII` or `EmN` in the catalog. The generic nebula (`Neb`) is left out because that type mixes emission
-     * and reflection nebulae; so are dark and reflection nebulae, galaxies, clusters, stars, the Milky Way and every
-     * solar-system body.
+     * typed `HII` or `EmN` in the catalog. The generic nebula (`Neb`) is left out here because that type mixes
+     * emission and reflection nebulae (see [isEmissionLineTarget] for an object, which tells them apart); so are
+     * dark and reflection nebulae, galaxies, clusters, stars, the Milky Way and every solar-system body.
      */
     fun isEmissionLineTarget(objectKind: ObjectCategory): Boolean = when (objectKind) {
         ObjectCategory.EMISSION_NEBULA,
@@ -232,6 +234,26 @@ object MoonImpact {
         -> true
         else -> false
     }
+
+    /**
+     * Whether [obj] shines mainly in emission lines: its category is one of [isEmissionLineTarget]'s, or it is a
+     * generic nebula (OpenNGC `Neb`) that carries a Sharpless number (`Sh2-25` for M8). Sharpless's catalogue lists
+     * H II regions only (Sharpless 1959, "A Catalogue of H II Regions", ApJS 4, 257), so a generic nebula in it is an
+     * emission nebula, where the other generic nebulae (the Iris Nebula, the Merope Nebula) are reflection nebulae.
+     * The catalogue numbers of the object decide; no object is named.
+     */
+    fun isEmissionLineTarget(obj: CelestialObject): Boolean = isEmissionLineTarget(assessmentKind(obj))
+
+    /**
+     * The kind to hand to [assess] for [obj]: its category, except that a generic nebula with a Sharpless number
+     * counts as an emission nebula (see [isEmissionLineTarget] for an object).
+     */
+    fun assessmentKind(obj: CelestialObject): ObjectCategory =
+        if (obj.category == ObjectCategory.NEBULA && DeepSkyCatalogue.SHARPLESS in obj.catalogues) {
+            ObjectCategory.EMISSION_NEBULA
+        } else {
+            obj.category
+        }
 
     /**
      * How much a target at [level] counts when targets are ranked: 1 for a dark sky, falling to 0.4 for a severe

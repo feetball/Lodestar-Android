@@ -150,7 +150,7 @@ internal object TonightCalculator {
             val peak = visibility.maxAltitudeDuringDarkness ?: continue
             val bestTime = visibility.bestTime
             if (peak.isNaN() || peak < minimumTargetAltitude || bestTime == null) continue
-            val moon = ObjectMoonGeometry.of(obj, summary.observer, bestTime).assess(filter, obj.category)
+            val moon = ObjectMoonGeometry.of(obj, summary.observer, bestTime).assess(filter, MoonImpact.assessmentKind(obj))
             val weighted = score(obj, peak) * MoonImpact.moonFreeWeight(moon.level)
             candidates.add(Candidate(obj, visibility, peak, weighted, moon))
         }

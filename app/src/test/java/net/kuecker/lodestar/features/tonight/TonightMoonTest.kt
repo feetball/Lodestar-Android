@@ -36,7 +36,7 @@ class TonightMoonTest {
     private fun targets(report: TonightReport): List<TonightTarget> =
         (report.targets as TonightTargetsOutcome.Ranked).targets.filter { it.note == null }
 
-    private fun isEmissionLine(target: TonightTarget) = MoonImpact.isEmissionLineTarget(target.obj.category)
+    private fun isEmissionLine(target: TonightTarget) = MoonImpact.isEmissionLineTarget(target.obj)
 
     @Test
     fun theNightsUnderTestHaveTheMoonsPhaseThatTheyAreMeantFor() {
@@ -51,7 +51,7 @@ class TonightMoonTest {
             assertEquals(TonightCalculator.targetLimit, ranked.size)
             for (target in ranked) {
                 val geometry = ObjectMoonGeometry.of(target.obj, observer, target.peakTime)
-                assertEquals(geometry.assess(filter, target.obj.category), assertNotNull(target.moon), target.id)
+                assertEquals(geometry.assess(filter, MoonImpact.assessmentKind(target.obj)), assertNotNull(target.moon), target.id)
             }
         }
     }

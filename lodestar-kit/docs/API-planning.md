@@ -226,12 +226,14 @@ object MoonImpact {
     fun relaxationSteps(separation: Double, illuminatedFraction: Double,
                         filter: ImagingFilter, objectKind: ObjectCategory): Int         // 0, 1 or 2
     fun isEmissionLineTarget(objectKind: ObjectCategory): Boolean           // Swift isEmissionLineTarget(_:)
+    fun isEmissionLineTarget(obj: CelestialObject): Boolean                 // Swift isEmissionLineTarget(_ object:); also generic nebulae with a Sharpless number
+    fun assessmentKind(obj: CelestialObject): ObjectCategory                // Swift assessmentKind(of:); NEBULA with a Sharpless number -> EMISSION_NEBULA, else the category
     fun moonFreeWeight(level: Level): Double                                // Swift moonFreeWeight(level:)
 }
 ```
 Swift side by side: `enum ImagingFilter: String, CaseIterable, Codable, Identifiable` (`.none`, `.lightPollution`, `.dualNarrowband`, `.narrowband`),
-`enum MoonImpact` with `MoonImpact.Level` (`.moonDown`, `.minor`, `.moderate`, `.severe`; `CaseIterable, Codable`) and the same four functions as
-`static func`s with the same argument labels. `allCases` is `entries` in Kotlin.
+`enum MoonImpact` with `MoonImpact.Level` (`.moonDown`, `.minor`, `.moderate`, `.severe`; `CaseIterable, Codable`) and the same functions as
+`static func`s with the same argument labels (`isEmissionLineTarget(_:)` has a category and an object overload; `assessmentKind(of:)`). `allCases` is `entries` in Kotlin.
 
 Rule (the `NONE` result is the apps' former rule, moved unchanged):
 1. The Moon counts only when `moonAltitude > 0`; anything else, NaN and ±∞ included, is `MOON_DOWN` whatever the filter.
@@ -239,8 +241,9 @@ Rule (the `NONE` result is the apps' former rule, moved unchanged):
 3. `proximity = min(max(1 − separation / 120, 0.25), 1)` and `effect = illuminatedFraction × proximity`: `effect ≥ 0.5` is `SEVERE`, `effect ≥ 0.2`
    `MODERATE`, else `MINOR`.
 4. The filter then lowers the level by `relaxationSteps` steps, never below `MINOR`. Only emission-line targets are relaxed (`isEmissionLineTarget`:
-   emission nebula `HII`/`EmN`, planetary nebula `PN`, supernova remnant `SNR`, cluster with nebula `Cl+N`; the generic nebula `Neb` is not, because that
-   OpenNGC type mixes emission and reflection nebulae; galaxies, clusters, stars, reflection and dark nebulae, comets, planets, the Milky Way are not).
+   emission nebula `HII`/`EmN`, planetary nebula `PN`, supernova remnant `SNR`, cluster with nebula `Cl+N`; the generic nebula `Neb` is not by category, because that
+   OpenNGC type mixes emission and reflection nebulae, but it is for an object that carries a Sharpless number (`Sh2-25` for M8: 11 of the 60 generic
+   nebulae, Sharpless 1959 lists H II regions only; `isEmissionLineTarget(obj)` / `assessmentKind(obj)`, data-driven, no object is named); galaxies, clusters, stars, reflection and dark nebulae, comets, planets, the Milky Way are not).
 
 | Filter | Steps (emission-line targets) |
 | --- | --- |
@@ -334,10 +337,11 @@ Changed Swift tests (platform-specific):
   once before the timed run, and `withTaskGroup` becomes a six-thread `ExecutorService`.
 - `PolarAlignmentTests.testAstrometryMatchesTheBundledStarCatalog` is **pending** on the Catalog area (it reads the bundled `stars.json`).
 
-`PlanningMoonImpactTests` (18, new with `MoonImpact`; same names, grids and expected values in both languages): the `NONE` result equals a copy of the old
+`PlanningMoonImpactTests` (20, new with `MoonImpact`; same names, grids and expected values in both languages): the `NONE` result equals a copy of the old
 app rule on a 8 × 73 × 41 × 24 grid, the broadband cut-offs, the Moon down, non-finite and out-of-range input, the emission-line set (also from the
 OpenNGC codes), each filter's step rule with its seam cases (39.999°/40°, 59.999°/60°, 30°/30.001°, 0.4999/0.5), non-emission targets unchanged, the
-level floor, the weights and the raw values of both enums.
+level floor, the weights and the raw values of both enums, and (against the bundled catalog) generic nebulae with a Sharpless number counting as
+emission-line targets while the Iris Nebula does not.
 
 Extras (not in Swift): `PlanningApiTests` (10: enum JSON shapes and raw-value lookups, `Hemisphere.fromLatitude` for non-numbers, `IntervalSet` and the saturated
 instants, sampler frame spacing and caps, non-finite samples, every documented call form of `visibility` and `altitudeCurve`, `PolarScopeReading` copies).

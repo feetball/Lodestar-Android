@@ -16,10 +16,11 @@ same astronomy engine ported line for line from Swift to Kotlin.
   the heading on the gyroscope, safe from the camera body's magnetism.
 - **Any mount** — back camera along the lens (portrait, landscape, upside down) or the phone flat on top.
 - **Objects** — 9,000+ stars and 690+ galaxies, nebulae and clusters (all 110 Messier objects), the planets, the
-  Moon and the Milky Way core; search, group, sort, favourites, custom RA/Dec targets; rise/set, altitude chart,
-  framing and longest exposure for each object.
+  Moon and the Milky Way core; search, group, sort (also by the hours an object is visible tonight above your
+  recorded skyline) and filter (visible for at least an hour tonight), favourites, custom RA/Dec targets;
+  rise/set, altitude chart, framing and longest exposure for each object.
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
-  targets, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
+  targets ranked by the hours they stay clear of your skyline, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
 - **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
   solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
   and where to look and a button to aim at it.

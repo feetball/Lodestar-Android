@@ -129,6 +129,11 @@ internal object ObjectDetailCalculator {
             hourTicks = hourTicks(chartRange, context.timeZone),
             bestInDarkness = bestPoint(obj, observer, samples, darkness, events.transit, horizon),
             usesSkyline = horizon != null,
+            unobstructed = if (horizon != null && darkness != null) {
+                ObjectsTonight.visibility(obj, observer, darkness, horizon.profile)
+            } else {
+                null
+            },
         )
     }
 
@@ -136,12 +141,8 @@ internal object ObjectDetailCalculator {
      * The twilight of the night that contains [date]: the one that began at noon yesterday while it is still
      * before sunrise, otherwise the one that begins at noon today.
      */
-    private fun currentTwilight(context: ObserverContext, date: Instant): NightTwilight {
-        val yesterday = date.atZone(context.timeZone).minusDays(1).toInstant()
-        val previous = TwilightCalculator.night(yesterday, context.observer, context.timeZone)
-        if (date < previous.interval.end && date < (previous.sunrise ?: previous.interval.end)) return previous
-        return TwilightCalculator.night(date, context.observer, context.timeZone)
-    }
+    private fun currentTwilight(context: ObserverContext, date: Instant): NightTwilight =
+        ObjectsTonight.twilight(context.observer, context.timeZone, date)
 
     /** The object's apparent altitude at [date] and, with a skyline, whether that is above it. */
     private fun sample(obj: CelestialObject, observer: Observer, date: Instant, horizon: HorizonVisibility?): ObjectDetailAltitudeSample {

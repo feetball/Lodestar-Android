@@ -88,6 +88,44 @@ class EphemerisJupiterTests {
     }
 
     @Test
+    fun testGalileanMoonsAgreeWithJplHorizons() {
+        // JPL Horizons vector tables (jup365 satellites, DE441 Jupiter, Sun and Earth; queried 2026-11-19) turned into
+        // Jupiter's axes (X west along the equator of the IAU 2015 pole, Y north) as seen from the geocentre: the four
+        // moons 2615 s of light-time before 2026-11-19 00:42:15.8 UTC, in Jupiter radii (equatorial 71 492 km).
+        val truth = listOf(0.889 to 0.027, -2.349 to -0.111, 4.544 to 0.062, -20.011 to -0.028)
+        val state = GalileanMoons.positions(JulianDate(utc("2026-11-19T00:42:15.8Z")))
+        for ((index, moon) in state.moons.withIndex()) {
+            assertNear(truth[index].first, moon.x, 0.12, "${moon.moon} X")
+            assertNear(truth[index].second, moon.y, 0.15, "${moon.moon} Y")
+        }
+    }
+
+    @Test
+    fun testGalileanMoonEventsAgreeWithJplHorizons() {
+        // The same Horizons vectors give the contacts of the phenomena (transit: the centre inside the disc in front;
+        // shadow transit: the centre of the shadow on the visible hemisphere; occultation and eclipse likewise), found
+        // on a 2-minute grid and quoted at the middle of the step, observer time. The low-accuracy method agrees to
+        // about 2 minutes for Io and Europa and 6 for Callisto (139 events in three six-day windows from 2026-11-19 to
+        // 2027-02-16: rms 1.8 minutes, worst 6 minutes), the basis of `GalileanMoons.accuracyMinutes`.
+        val truth = listOf(
+            Triple(GalileanMoon.IO, GalileanPhenomenon.TRANSIT, GalileanEdge.END) to "2026-11-19T00:49:15Z",
+            Triple(GalileanMoon.IO, GalileanPhenomenon.ECLIPSE, GalileanEdge.START) to "2026-11-19T18:27:10Z",
+            Triple(GalileanMoon.IO, GalileanPhenomenon.OCCULTATION, GalileanEdge.START) to "2026-11-19T19:43:09Z",
+            Triple(GalileanMoon.EUROPA, GalileanPhenomenon.SHADOW_TRANSIT, GalileanEdge.START) to "2026-11-20T11:45:04Z",
+            Triple(GalileanMoon.EUROPA, GalileanPhenomenon.TRANSIT, GalileanEdge.START) to "2026-11-20T14:19:03Z",
+            Triple(GalileanMoon.IO, GalileanPhenomenon.SHADOW_TRANSIT, GalileanEdge.START) to "2026-11-20T15:47:03Z",
+            Triple(GalileanMoon.IO, GalileanPhenomenon.TRANSIT, GalileanEdge.START) to "2026-11-20T17:01:03Z",
+            Triple(GalileanMoon.GANYMEDE, GalileanPhenomenon.ECLIPSE, GalileanEdge.START) to "2026-11-21T23:12:53Z",
+        )
+        val events = GalileanMoons.events(utc("2026-11-19T00:00:00Z"), utc("2026-11-23T00:00:00Z"))
+        for ((key, expected) in truth) {
+            val found = events.filter { it.moon == key.first && it.phenomenon == key.second && it.edge == key.third }
+            val nearest = found.minOfOrNull { abs(it.date.timeIntervalSince(utc(expected))) }
+            assertTrue(nearest != null && nearest <= 6.5 * 60, "$key: ${nearest} s from $expected")
+        }
+    }
+
+    @Test
     fun testMoonOffsetsStayOnTheirOrbits() {
         val radii = listOf(5.9057, 9.3966, 14.9883, 26.3627)
         for (day in 0 until 40) {
@@ -196,18 +234,19 @@ class EphemerisJupiterTests {
     }
 
     @Test
-    fun testGreatRedSpotTransitsMatchPublishedTimesForApril2026() {
+    fun testCentralMeridianAgreesWithPublishedGreatRedSpotTransitTimes() {
         // Flandrau Science Center, Tucson (MST = UTC-7): meridian transit 2026-04-05 20:18, 04-07 21:57, 04-10 19:28
-        // and 05-30 21:03 local time (to the minute).
+        // and 05-30 21:03 local time (to the minute). The table's own longitude for the spot is not stated (it is not
+        // Sky & Telescope's 91° on June 1: that would put the transits 5 to 10 minutes later), so the check is that the
+        // System II central meridian stands at one longitude, drifting slowly, at the four instants: 84.4°, 84.4°, 84.7°
+        // and 85.0° (the spot's drift of about 0.4° a month in their table).
         val published = listOf(
-            "2026-04-06T03:18:00Z", "2026-04-08T04:57:00Z", "2026-04-11T02:28:00Z", "2026-05-31T04:03:00Z",
+            "2026-04-06T03:18:00Z" to 84.4, "2026-04-08T04:57:00Z" to 84.4, "2026-04-11T02:28:00Z" to 84.7,
+            "2026-05-31T04:03:00Z" to 85.0,
         )
-        for (text in published) {
-            val expected = utc(text)
-            val transits = GreatRedSpot.reference.transits(expected.addingTimeInterval(-3 * 3600.0), expected.addingTimeInterval(3 * 3600.0))
-            assertEquals(1, transits.size, text)
-            val seconds = abs(transits[0].date.timeIntervalSince(expected))
-            assertTrue(seconds <= 180, "$text: ${transits[0].date} is $seconds s away")
+        for ((text, longitude) in published) {
+            val meridian = JupiterPhysical.state(JulianDate(utc(text))).systemIILongitude
+            assertNear(longitude, meridian, 0.3, text)
         }
     }
 

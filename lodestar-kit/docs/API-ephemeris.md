@@ -7,6 +7,10 @@ RiseSetProfile, RiseSetSampler, TwilightCalculator). Depends on the Foundation a
 Import with `import net.kuecker.lodestar.kit.ephemeris.*` — that also brings in the `SkyFrame` extension functions
 (`state`, `horizontal`, `topocentricEquatorial`, `geocentricApparentEquatorial`), which a plain class import would miss.
 
+Jupiter's physical ephemeris (`JupiterPhysical`), the Galilean moons (`GalileanMoons`) and the Great Red Spot (`GreatRedSpot`) live in this
+package too; they are documented with the events that use them, in `API-events.md` (section "Jupiter (Great Red Spot, Galilean moons) and
+planet stations").
+
 Conventions used below
 - `public` is the default; `internal` is marked. `Companion` members are listed under their class and are called
   `Foo.bar(...)`. Every Swift `static let/func` is a companion (or `object`) member with the same name.

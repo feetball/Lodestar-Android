@@ -87,34 +87,42 @@ public enum SolarEclipseFinder       { static func events(from: Date, to: Date, 
 
 ```kotlin
 @ConsistentCopyVisibility data class EventOptions private constructor(
-    val kinds: Set<EventKind>,                 // default EventKind.defaultKinds = every kind except EARTH_APSIS
+    val kinds: Set<EventKind>,                 // default EventKind.defaultKinds = the original kinds except EARTH_APSIS; calendars ask for calendarKinds
     val planetConjunctionThreshold: Double,    // degrees, 0…30, default 3
     val moonConjunctionThreshold: Double,      // degrees, 0…30, default 5
     val minimumSolarElongation: Double,        // degrees, 0…90, default 10: closer conjunctions are dropped
     val timeZone: ZoneId?,                     // null: UTC without an observer, else the whole-hour zone of the longitude
     val minimumAltitude: Double,               // degrees, 0…90, default 10: a target must reach it for a viewing window
     val visibleOnly: Boolean,                  // drop events with no viewing window (needs an observer)
+    val jupiterEventDays: Double,              // days from `from` the Great Red Spot and moon events are listed for, 0…30, default 2
+    val greatRedSpot: GreatRedSpot,            // default GreatRedSpot.reference
 ) { companion object { operator fun invoke(kinds: Set<EventKind> = EventKind.defaultKinds, planetConjunctionThreshold: Double = 3.0,
         moonConjunctionThreshold: Double = 5.0, minimumSolarElongation: Double = 10.0, timeZone: ZoneId? = null,
-        minimumAltitude: Double = 10.0, visibleOnly: Boolean = false): EventOptions } }       // non-finite → default; out of range → clamped
+        minimumAltitude: Double = 10.0, visibleOnly: Boolean = false, jupiterEventDays: Double = 2.0,
+        greatRedSpot: GreatRedSpot = GreatRedSpot.reference): EventOptions } }                // non-finite → default; out of range → clamped
 @Serializable enum class EventKind(val rawValue: String) {     // METEOR_SHOWER, CONJUNCTION, OPPOSITION, GREATEST_ELONGATION,
-    val displayName: String                                    // EARTH_APSIS, SEASON, FULL_MOON_SPECIAL, LUNAR_ECLIPSE, SOLAR_ECLIPSE
-    companion object { val defaultKinds: Set<EventKind>; fun fromRawValue(raw: String): EventKind? }
+    val displayName: String                                    // EARTH_APSIS, SEASON, FULL_MOON_SPECIAL, LUNAR_ECLIPSE, SOLAR_ECLIPSE,
+    companion object { val defaultKinds: Set<EventKind>        // GREAT_RED_SPOT_TRANSIT, JUPITER_MOON_EVENT, PLANET_STATION
+                       val calendarKinds: Set<EventKind>       // every kind except EARTH_APSIS
+                       fun fromRawValue(raw: String): EventKind? }
 }
 ```
 ```swift
 public struct EventOptions: Sendable, Hashable {
     public let kinds: Set<EventKind>; public let planetConjunctionThreshold: Double; public let moonConjunctionThreshold: Double
     public let minimumSolarElongation: Double; public let timeZone: TimeZone?; public let minimumAltitude: Double; public let visibleOnly: Bool
+    public let jupiterEventDays: Double; public let greatRedSpot: GreatRedSpot
     public init(kinds: Set<EventKind> = EventKind.defaultKinds, planetConjunctionThreshold: Double = 3, moonConjunctionThreshold: Double = 5,
-                minimumSolarElongation: Double = 10, timeZone: TimeZone? = nil, minimumAltitude: Double = 10, visibleOnly: Bool = false)
+                minimumSolarElongation: Double = 10, timeZone: TimeZone? = nil, minimumAltitude: Double = 10, visibleOnly: Bool = false,
+                jupiterEventDays: Double = 2, greatRedSpot: GreatRedSpot = .reference)
 }
 public enum EventKind: String, CaseIterable, Sendable, Hashable, Codable {    // meteorShower, conjunction, opposition, greatestElongation,
-    public static let defaultKinds: Set<EventKind>; public var displayName: String   // earthApsis, season, fullMoonSpecial, lunarEclipse, solarEclipse
+    public static let defaultKinds: Set<EventKind>; public static let calendarKinds: Set<EventKind>   // earthApsis, season, fullMoonSpecial, lunarEclipse,
+    public var displayName: String                                            // solarEclipse, greatRedSpotTransit, jupiterMoonEvent, planetStation
 }
 ```
 Raw values (JSON): `meteorShower`, `conjunction`, `opposition`, `greatestElongation`, `earthApsis`, `season`, `fullMoonSpecial`,
-`lunarEclipse`, `solarEclipse`; all other enums below serialize as their camel-case raw value in both languages (Kotlin `@Serializable`,
+`lunarEclipse`, `solarEclipse`, `greatRedSpotTransit`, `jupiterMoonEvent`, `planetStation`; all other enums below serialize as their camel-case raw value in both languages (Kotlin `@Serializable`,
 Swift `Codable`).
 
 ## The event
@@ -129,7 +137,9 @@ data class AstronomicalEvent(val date: Instant, val details: EventDetails, val v
 sealed interface EventDetails { val kind: EventKind
     data class MeteorShower(val peak: MeteorShowerPeak); data class Conjunction(val conjunction: …); data class Opposition(val opposition: …)
     data class GreatestElongation(val elongation: …); data class EarthApsis(val apsis: …); data class Season(val season: …)
-    data class FullMoonSpecial(val special: …); data class LunarEclipse(val eclipse: …); data class SolarEclipse(val eclipse: …) }
+    data class FullMoonSpecial(val special: …); data class LunarEclipse(val eclipse: …); data class SolarEclipse(val eclipse: …)
+    data class GreatRedSpotTransit(val transit: GreatRedSpotTransit); data class JupiterMoonEvent(val event: GalileanMoonEvent)
+    data class PlanetStation(val station: PlanetStation) }
 sealed interface AimTarget {
     data class Body(val body: SolarSystemBody); data class Fixed(val position: EquatorialCoordinate, val properMotion: ProperMotion?)   // J2000
     data class Radiant(val shower: MeteorShower)                                                                                        // drifts with the frame's date
@@ -144,13 +154,15 @@ public struct AstronomicalEvent: Sendable, Hashable {
 }
 public enum EventDetails: Sendable, Hashable { case meteorShower(MeteorShowerPeak), conjunction(Conjunction), opposition(Opposition),
     greatestElongation(GreatestElongation), earthApsis(EarthApsis), season(Season), fullMoonSpecial(FullMoonSpecial),
-    lunarEclipse(LunarEclipse), solarEclipse(SolarEclipse); public var kind: EventKind { get } }
+    lunarEclipse(LunarEclipse), solarEclipse(SolarEclipse), greatRedSpotTransit(GreatRedSpotTransit),
+    jupiterMoonEvent(GalileanMoonEvent), planetStation(PlanetStation); public var kind: EventKind { get } }
 public enum AimTarget: Sendable, Hashable { case body(SolarSystemBody), fixed(EquatorialCoordinate, ProperMotion?), radiant(MeteorShower)
     public func horizontal(in frame: SkyFrame, refraction: Bool = true) -> HorizontalCoordinate }
 ```
 `date` is: the peak of a meteor shower; the minimum separation of a conjunction; the opposition; the greatest elongation; the apsis;
 the equinox or solstice; the full Moon; the greatest eclipse of a lunar eclipse; the greatest eclipse **anywhere on Earth** of a solar
-eclipse (the observer's own maximum is `SolarEclipse.local.maximum`).
+eclipse (the observer's own maximum is `SolarEclipse.local.maximum`); the Great Red Spot's meridian transit; the start or end of a moon
+phenomenon; a planet's station.
 
 ### Visibility
 
@@ -355,6 +367,88 @@ public struct LocalSolarCircumstances: Sendable, Hashable { kind; c1, c2, maximu
   A hybrid eclipse is `TOTAL` at some sites and `ANNULAR` at others.
 * `EventVisibility` for a solar eclipse: altitude/azimuth at `maximum`, `bestWindow = visibleInterval`, contacts C1, C2, MAXIMUM, C3, C4 with the Sun's altitude and azimuth.
 
+## Jupiter (Great Red Spot, Galilean moons) and planet stations
+
+Three kinds, all opt-in (`EventKind.calendarKinds`; they are not in `defaultKinds`, so the widgets and the Tonight card that ask for the
+defaults do not fill up with moon events). The Great Red Spot and moon events are *dense* (about 2.4 transits and 6 moon events a day), so
+`EventCalculator` lists them only for the first `EventOptions.jupiterEventDays` (default 2) days from `from`; stations are rare and cover the
+whole interval. Without an observer the three have no visibility; with one, all three use the planet's night-window visibility
+(Sun below −6°, planet above `minimumAltitude`). For the Great Red Spot and the moons the window is cut down to the stretch around the
+event (±50 minutes for a transit, ±`GalileanMoons.accuracyMinutes` for a moon event): `isObservable` then means Jupiter is up and the sky dark
+*while it happens*, so `visibleOnly` keeps just those. `aimTargets` is Jupiter (the planet for a station).
+
+```kotlin
+// ephemeris package
+object JupiterPhysical { fun state(julianDate: JulianDate): JupiterPhysicalState }            // Meeus ch. 43, steps 1–18; ~20 µs
+data class JupiterPhysicalState(val systemILongitude: Double, val systemIILongitude: Double,   // central meridians ω1, ω2, [0, 360)
+    val earthDeclination: Double, val sunDeclination: Double,                                  // DE, DS, degrees
+    val positionAngle: Double, val distanceAU: Double)                                         // P of the north pole [0, 360); Δ
+
+data class GreatRedSpot private constructor(val longitude: Double, val epoch: Instant, val driftPer30Days: Double) {
+    fun systemIILongitude(date: Instant): Double                         // straight-line drift from the epoch, [0, 360)
+    fun transits(from: Instant, to: Instant): List<GreatRedSpotTransit>  // CM II = the spot's longitude; <= maximumSpanDays; ~1 ms a day
+    companion object { const val referenceLongitude = 91.0; val referenceEpoch: Instant   // 2026-06-01T00:00Z
+                       const val referenceDriftPer30Days = 1.75; val reference: GreatRedSpot
+                       const val wellPlacedMinutes = 50.0; const val maximumSpanDays = 366.0; const val maximumDriftPer30Days = 30.0
+                       fun create(longitude: Double, epoch: Instant, driftPer30Days: Double = 1.75): GreatRedSpot? } }   // null: non-finite, |drift| > 30, epoch outside years 1…4001
+data class GreatRedSpotTransit(val date: Instant, val longitude: Double, val wellPlaced: DateInterval)   // date ± 50 min
+
+enum class GalileanMoon { IO, EUROPA, GANYMEDE, CALLISTO }                  // displayName, initial ("I" "E" "G" "C"), rawValue
+enum class GalileanPhenomenon { TRANSIT, SHADOW_TRANSIT, OCCULTATION, ECLIPSE }
+enum class GalileanEdge { START, END }
+data class GalileanMoonPosition(val moon: GalileanMoon, val x: Double, val y: Double, val z: Double,   // Jupiter radii: x west, y north, z towards us
+    val shadow: GalileanShadow?, val isEclipsed: Boolean) { val isInTransit: Boolean; val isBehindDisc: Boolean }
+data class GalileanShadow(val x: Double, val y: Double)                      // where the moon's shadow falls on the visible disc
+data class GalileanMoonsState(val earthDeclination: Double, val sunDeclination: Double, val moons: List<GalileanMoonPosition>)
+data class GalileanMoonEvent(val moon: GalileanMoon, val phenomenon: GalileanPhenomenon, val edge: GalileanEdge, val date: Instant) { val title: String }
+object GalileanMoons { const val accuracyMinutes = 5.0; const val maximumSpanDays = 30.0; const val sampleSeconds = 60.0
+    fun positions(julianDate: JulianDate): GalileanMoonsState
+    fun events(from: Instant, to: Instant): List<GalileanMoonEvent> }        // 1-minute sampling, bisection to < 1 s; ~30 ms a day
+
+// events package
+enum class PlanetStationKind { RETROGRADE_BEGINS, DIRECT_MOTION_RESUMES }  // displayName "retrograde motion begins" / "direct motion resumes"
+data class PlanetStation(val planet: SolarSystemBody, val kind: PlanetStationKind, val longitude: Double)
+object PlanetStations { fun find(planet: SolarSystemBody, from: Instant, to: Instant): List<AstronomicalEvent>   // Mercury…Neptune; others give []
+                        fun events(from: Instant, to: Instant): List<AstronomicalEvent> }                         // all seven, in time order
+```
+```swift
+public enum JupiterPhysical { public static func state(at julianDate: JulianDate) -> JupiterPhysicalState }
+public struct GreatRedSpot: Sendable, Hashable { public let longitude: Double, epoch: Date, driftPer30Days: Double
+    public init?(longitude: Double, epoch: Date, driftPer30Days: Double = 1.75)
+    public func systemIILongitude(at date: Date) -> Double
+    public func transits(from: Date, to: Date) -> [GreatRedSpotTransit]
+    public static let referenceLongitude, referenceEpoch, referenceDriftPer30Days, reference, wellPlacedMinutes, maximumSpanDays, maximumDriftPer30Days }
+public enum GalileanMoons { public static let accuracyMinutes = 5.0, maximumSpanDays = 30.0, sampleSeconds = 60.0
+    public static func positions(at julianDate: JulianDate) -> GalileanMoonsState
+    public static func events(from: Date, to: Date) -> [GalileanMoonEvent] }
+public enum PlanetStations { public static func find(planet: SolarSystemBody, from: Date, to: Date) -> [AstronomicalEvent]
+                             public static func events(from: Date, to: Date) -> [AstronomicalEvent] }
+```
+(The other types are as in Kotlin: `JupiterPhysicalState`, `GreatRedSpotTransit`, `GalileanMoon`, `GalileanPhenomenon`, `GalileanEdge`, `GalileanShadow`,
+`GalileanMoonPosition`, `GalileanMoonsState`, `GalileanMoonEvent`, `PlanetStationKind`, `PlanetStation`.)
+
+* **Physical ephemeris** — Meeus, *Astronomical Algorithms* ch. 43, the full method (steps 1–18): pole of 1950.0 with its precession,
+  System I and II phases, light-time corrected geocentric position from the kit's VSOP87 Earth and Jupiter, the phase correction, and aberration and
+  nutation of the pole's direction. Example 43.a (1992 Dec 16 0h TD): ω1 268.06°, ω2 72.74°, DE −2.48°, DS −2.20°, P 24.80°, matched to [PHYS_TOL].
+* **Great Red Spot** — a dated constant, `GreatRedSpot.reference`: System II longitude 91° on 2026-06-01 drifting 1.75° a month, the values Sky & Telescope's
+  "Transit Times of Jupiter's Great Red Spot" tool assumes for 2026 (from JUPOS trends). Other sources differ by several degrees: IMCCE's JGRS (JUPOS measurements)
+  gives 103.5° at 2026-11-19 21:27 UT (this default: 100.8°) and 94.5° on 2026-06-03; the BAA/ALPO-Japan have L2 = 77° on 2025-09-01; the Flandrau
+  Science Center's 2026 transit table implies about 85° in April–May. One degree of longitude is 1.65 minutes of transit time, so a few degrees are a few
+  minutes: the apps let the user enter their own longitude (`GreatRedSpot.create`, counted from the day it is entered). A transit is where the
+  System II meridian equals the spot's longitude; spacing 9 h 55 min 40 s ± the drift. "Well placed" is ±50 minutes (30° of longitude).
+* **Galilean moons** — Meeus ch. 44, the low-accuracy method: orbital longitudes `u` and radii `r` with the book's periodic corrections, seen through
+  the planet's declination (`X = r sin u`, `Y = −r cos u sin DE`, `Z = r cos u cos DE`). The **shadows** use the same circles seen from the Sun
+  (`u − ψ`, `DS`, `ψ` the Sun–Jupiter–Earth angle): the shadow axis meets Jupiter's sphere at `P − t ŝ`, and it is on the disc when that point faces the Earth
+  (`shadow != nil`); a moon is eclipsed when it is behind the planet from the Sun and within one radius of the axis (a cylinder: the umbra's narrowing is
+  under 0.05 radius at Callisto). Jupiter's disc is round with radius 1; the 6.5 % flattening is ignored. **Accuracy** — checked against JPL Horizons
+  (jup365 satellite vectors, DE441 Jupiter, Sun and Earth, turned into the same axes) in three six-day windows (2026-11-19, 2026-12-28, 2027-02-10): the offsets
+  are within 0.05 (Io, Europa), 0.04 (Ganymede) and 0.05 (Callisto) radius in X and 0.13 radius in Y; all 139 phenomena of the windows were found, with times
+  differing from JPL's by rms 1.8 min and 6 min at the worst (Callisto 5.6 min rms, Ganymede 3 min rms, Io and Europa about 1 min), hence the **±5 minutes** of
+  `accuracyMinutes` and of the apps' text.
+* **Stations** — the instants at which the central difference over half a day of the apparent geocentric ecliptic longitude of date changes sign (2-day
+  grid, Brent). [STATION_TEXT]
+* **Not in the engine**: the moons' phenomena of the Sun-side (mutual events), Jupiter's flattening, penumbral shadows, Saturn's rings.
+
 ## Accuracy and verification (sources in the test comments)
 
 | Check | Reference | Result |
@@ -372,6 +466,10 @@ public struct LocalSolarCircumstances: Sendable, Hashable { kind; c1, c2, maximu
 | Perihelion/aphelion 2026 | USNO | 87 s / 15 min |
 | Meteor maxima 2026 (Lyrids, Perseids, ε-Perseids, Draconids, Leonids, Geminids) | IMO calendar text | ≤ 25 min (the IMO text rounds some to the hour) |
 | Supermoon 2026-01-03, other specials | JPL Horizons distances | ≤ 2 km |
+| Jupiter's physical ephemeris, Example 43.a | Meeus | see the Jupiter section |
+| Galilean moons, Example 44.a and the exercise of 1988-11-23 | Meeus | X, Y to 0.006 (two decimals printed) |
+| Galilean moons and their phenomena, 139 events 2026-11-19…2027-02-16 | JPL Horizons vectors (jup365) | rms 1.8 min, worst 6 min |
+| Stations: Mars 2024-12-06 and 2025-02-24, Mercury 2026, Jupiter 2026-12-13 | Skyfield 1.55 with DE440s | see the Jupiter section |
 
 Time scale: events are computed in TT and reported in UT with the kit's ΔT model (≈ 69 s in 2026, extrapolated afterwards). Accuracy
 degrades slowly with distance from the present: for years beyond ~2035 add the ΔT uncertainty (several seconds) to the eclipse times.
@@ -385,6 +483,9 @@ degrades slowly with distance from the present: for years beyond ~2035 add the �
 | `OppositionFinder`, `GreatestElongationFinder` one year | 6 ms each |
 | `SeasonFinder`, `EarthApsisFinder` | < 1 ms |
 | `FullMoonSpecialFinder` / `LunarEclipseFinder` / `SolarEclipseFinder` one year | 5–8 ms each (+ 2 ms per observer for local circumstances) |
+| `PlanetStations.events` one year (seven planets) | [STATION_COST] |
+| `GalileanMoons.events` one day | [MOON_COST] |
+| `GreatRedSpot.transits` one day / one year | [GRS_COST] |
 | `EventCalculator.events` one year, no observer | ~100 ms |
 | `EventCalculator.events` one year, with observer (~150 events with visibility) | 165–215 ms |
 | `EventCalculator.visibility(of:…)` for one event | 0.3–1 ms |

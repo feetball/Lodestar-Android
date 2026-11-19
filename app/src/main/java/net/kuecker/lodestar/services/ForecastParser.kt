@@ -10,10 +10,36 @@ import java.time.Instant
 import java.time.format.DateTimeParseException
 
 /**
- * Cloud cover at one forecast time, in percent of the sky (0…100): the whole sky and the low, medium and high layers.
- * MET Norway gives hourly values for about the first two and a half days, then every six hours.
+ * The forecast at one time: cloud cover in percent of the sky (0…100), the whole sky and the low, medium and high
+ * layers, and the weather that comes with it. MET Norway gives hourly values for about the first two and a half days,
+ * then every six hours. The weather values are `null` where the answer has none or a value outside its physical range:
+ * the six-hourly part has no gusts and no fog.
+ *
+ * @property temperature Air temperature in °C (−90…60).
+ * @property dewPoint Dew point temperature in °C (−90…60).
+ * @property humidity Relative humidity in percent (0…100).
+ * @property windSpeed Wind speed in m/s (0…100).
+ * @property windGust Speed of the strongest gust in m/s (0…100).
+ * @property windFromDirection The direction the wind blows from, in degrees clockwise from north ([0, 360)).
+ * @property fog Fog area fraction in percent (0…100).
  */
-class CloudHour(val time: Instant, val total: Double, val low: Double, val medium: Double, val high: Double)
+class CloudHour(
+    val time: Instant,
+    val total: Double,
+    val low: Double,
+    val medium: Double,
+    val high: Double,
+    val temperature: Double? = null,
+    val dewPoint: Double? = null,
+    val humidity: Double? = null,
+    val windSpeed: Double? = null,
+    val windGust: Double? = null,
+    val windFromDirection: Double? = null,
+    val fog: Double? = null,
+) {
+    /** Air temperature minus dew point in °C, never below 0; `null` when either is missing. */
+    val dewPointSpread: Double? get() = ForecastNight.dewPointSpread(temperature, dewPoint)
+}
 
 /**
  * MET Norway's cloud forecast for one grid point.
@@ -36,12 +62,24 @@ class CloudForecast(
     val key: String? get() = if (latitude != null && longitude != null) OnlineCoordinates.key(latitude, longitude) else null
 }
 
-/** Reads the answer of MET Norway's Locationforecast 2.0 (`complete` or `compact`). */
+/**
+ * Reads the answer of MET Norway's Locationforecast 2.0 `complete`: the cloud layers and the weather values of every
+ * forecast time ([CloudHour]). A `compact` answer reads too, without the layers and the fog. The cache keeps the raw
+ * answer, so a download saved before the weather values were read gives them as well.
+ */
 object ForecastParser {
     /** The fewest forecast times a usable answer has. */
     const val minimumHours = 6
 
     private val json = Json
+
+    /** The air and dew point temperatures a forecast value may have, in °C; anything else is dropped. */
+    private val temperatureRange = -90.0..60.0
+
+    /** The wind and gust speeds a forecast value may have, in m/s; anything else is dropped. */
+    private val windRange = 0.0..100.0
+
+    private val directionRange = 0.0..360.0
 
     /** Throws [OnlineDataException] when [bytes] are not a forecast with cloud values. */
     fun parse(bytes: ByteArray): OnlineParsed<CloudForecast> = OnlineParsed(parseForecast(bytes))
@@ -72,6 +110,13 @@ object ForecastParser {
                     percent(details, "cloud_area_fraction_low") ?: 0.0,
                     percent(details, "cloud_area_fraction_medium") ?: 0.0,
                     percent(details, "cloud_area_fraction_high") ?: 0.0,
+                    temperature = number(details, "air_temperature", temperatureRange),
+                    dewPoint = number(details, "dew_point_temperature", temperatureRange),
+                    humidity = percent(details, "relative_humidity"),
+                    windSpeed = number(details, "wind_speed", windRange),
+                    windGust = number(details, "wind_speed_of_gust", windRange),
+                    windFromDirection = number(details, "wind_from_direction", directionRange)?.let { it % 360.0 },
+                    fog = percent(details, "fog_area_fraction"),
                 ),
             )
         }
@@ -88,6 +133,12 @@ object ForecastParser {
     private fun percent(details: JsonObject, name: String): Double? {
         val value = (details[name] as? JsonPrimitive)?.doubleOrNull ?: return null
         return if (value.isFinite()) value.coerceIn(0.0, 100.0) else null
+    }
+
+    /** The finite number [name] in [range], or `null`: a value outside the range is a damaged answer, not a measurement. */
+    private fun number(details: JsonObject, name: String, range: ClosedFloatingPointRange<Double>): Double? {
+        val value = (details[name] as? JsonPrimitive)?.doubleOrNull ?: return null
+        return if (value.isFinite() && value in range) value else null
     }
 
     private fun instantOrNull(text: String): Instant? = try {

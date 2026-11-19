@@ -74,7 +74,7 @@ internal object EventsTransits {
 
     /**
      * The transits of the Sun and the Moon by [satellites] in the [HORIZON_DAYS] days from [start], from [observer]'s site
-     * or within [MAX_GROUND_DISTANCE_METERS] of it, by time. About a quarter of a second on a phone: run it off the main
+     * or within [MAX_GROUND_DISTANCE_METERS] of it, by time. A few hundred milliseconds on a phone: run it off the main
      * thread.
      */
     fun compute(satellites: List<PassSatellite>, observer: Observer, start: Instant): List<EventsTransit> {

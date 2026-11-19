@@ -403,7 +403,7 @@ Kotlin: `SatelliteTransitFinder.transits(satellite, body, observer, from, to, ma
   `maxGroundDistanceMeters` (distance and bearing from the site's tangent plane). Residual at the end below 0.01°, otherwise no centreline.
 - **Duration.** `siteDurationSeconds = 2·√(r² − s²) / ω` (0 when s ≥ r); `centrelineDurationSeconds = 2·r / ω` at the centreline. `ω` is the speed of the
   satellite relative to the body, by a central difference of ±0.5 s; the satellite's own size is not added.
-- **Cost.** Passes × about 100 samples (2 µs) plus about 100 evaluations per candidate: a 14-day ISS search takes ≈ 20 ms on a desktop, well under a second on a phone.
+- **Cost.** Passes × about 100 samples (2 µs) plus about 100 evaluations per candidate: a 14-day ISS search of the Sun and the Moon takes ≈ 30 ms on a desktop, well under a second on a phone.
   The window is limited to 30 days. Run it off the main thread.
 - **Accuracy.** SGP4 and the element set: an ISS element set a day old is good to about 1 s and a few km of centreline position; refresh before the day.
 

@@ -95,8 +95,18 @@ enum class EventKind(val rawValue: String) {
         }
 
     companion object {
-        /** Every kind except [EARTH_APSIS], which is optional. */
-        val defaultKinds: Set<EventKind> = entries.filter { it != EARTH_APSIS }.toSet()
+        /**
+         * The kinds searched unless the options say otherwise: every kind except the Earth's apsides, which are
+         * optional, and the three that arrived with the Jupiter and station events ([GREAT_RED_SPOT_TRANSIT],
+         * [JUPITER_MOON_EVENT], [PLANET_STATION]), which a caller asks for ([calendarKinds]) so that screens that list
+         * "the next event" do not fill up with them.
+         */
+        val defaultKinds: Set<EventKind> = entries
+            .filter { it != EARTH_APSIS && it != GREAT_RED_SPOT_TRANSIT && it != JUPITER_MOON_EVENT && it != PLANET_STATION }
+            .toSet()
+
+        /** Every kind except [EARTH_APSIS]: what an events calendar asks for. */
+        val calendarKinds: Set<EventKind> = entries.filter { it != EARTH_APSIS }.toSet()
 
         /** The kind whose [rawValue] is [raw], or `null` (Swift `init?(rawValue:)`). */
         fun fromRawValue(raw: String): EventKind? = entries.firstOrNull { it.rawValue == raw }
@@ -107,7 +117,7 @@ enum class EventKind(val rawValue: String) {
  * What to search for and how strictly. Built with [invoke], which replaces non-finite values with the
  * defaults and clamps the rest into range; like Swift's initializer, the constructor is not public.
  *
- * @property kinds The kinds of events to include; [EventKind.defaultKinds] (everything except the Earth's apsides).
+ * @property kinds The kinds of events to include; [EventKind.defaultKinds] (the original kinds without the Earth's apsides).
  * @property planetConjunctionThreshold Largest minimum separation in degrees of a planet–planet pair that counts
  * as a conjunction, 0…30, default 3.
  * @property moonConjunctionThreshold Largest minimum geocentric separation in degrees of the Moon from a planet,

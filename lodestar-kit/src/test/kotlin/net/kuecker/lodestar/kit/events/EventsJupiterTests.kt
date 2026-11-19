@@ -148,6 +148,7 @@ class EventsJupiterTests {
         assertEquals(EventKind.PLANET_STATION, EventKind.fromRawValue("planetStation"))
         assertEquals(EventKind.GREAT_RED_SPOT_TRANSIT, EventKind.fromRawValue("greatRedSpotTransit"))
         assertEquals(EventKind.JUPITER_MOON_EVENT, EventKind.fromRawValue("jupiterMoonEvent"))
-        assertTrue(EventKind.defaultKinds.containsAll(listOf(EventKind.PLANET_STATION, EventKind.JUPITER_MOON_EVENT)))
+        assertTrue(EventKind.calendarKinds.containsAll(listOf(EventKind.PLANET_STATION, EventKind.JUPITER_MOON_EVENT, EventKind.GREAT_RED_SPOT_TRANSIT)))
+        assertTrue(EventKind.defaultKinds.none { it == EventKind.PLANET_STATION || it == EventKind.JUPITER_MOON_EVENT || it == EventKind.GREAT_RED_SPOT_TRANSIT })
     }
 }

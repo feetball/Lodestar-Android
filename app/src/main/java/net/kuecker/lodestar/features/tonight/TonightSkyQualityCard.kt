@@ -79,7 +79,7 @@ private fun SkyQualityCardContent(summary: NightSummary, sky: SkyReading, score:
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics(mergeDescendants = true) {},
         )
-        for (part in score.components) ScoreLine(part, detail(part, summary, estimate, score))
+        for (part in score.components) ScoreLine(part, detail(part, summary, estimate))
         TonightNote(
             if (score.includesClouds) {
                 "Out of 10: dark hours, the Moon, the sky's brightness and the cloud forecast."
@@ -131,7 +131,7 @@ private fun ratingText(rating: ImagingRating): String = when (rating) {
 }
 
 /** What one part of the score rests on, in a few words. */
-private fun detail(part: ImagingScoreComponent, summary: NightSummary, estimate: BortleEstimate, score: ImagingScore): String =
+private fun detail(part: ImagingScoreComponent, summary: NightSummary, estimate: BortleEstimate): String =
     when (part.kind) {
         ImagingScoreComponentKind.DARKNESS_HOURS ->
             if (summary.hasAstronomicalDarkness) {

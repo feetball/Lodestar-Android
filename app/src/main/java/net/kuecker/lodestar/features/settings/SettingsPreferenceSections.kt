@@ -2,6 +2,7 @@ package net.kuecker.lodestar.features.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.Composable
@@ -168,5 +169,7 @@ internal fun SettingsToolsSection(onOpen: (SettingsRoute) -> Unit) {
         }
         SettingsDivider()
         SettingsNavigationRow("Polar Alignment", Icons.Outlined.AutoAwesome) { onOpen(SettingsRoute.PolarAlignment) }
+        SettingsDivider()
+        SettingsNavigationRow("Alignment Finder", Icons.Outlined.Landscape) { onOpen(SettingsRoute.AlignmentFinder) }
     }
 }

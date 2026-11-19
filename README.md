@@ -25,6 +25,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
   and where to look and a button to aim at it.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
+  - **Alignment finder** — when does the Milky Way core, the Moon or any object stand over a ridge or in a gap
+    between trees? Pick a point of your recorded skyline (or an azimuth and altitude window), a period, how dark
+    it must be and what the Moon may do, and get the matching nights, with the sky chart at that time and Aim.
 - **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set
   times, Tonight and the charts then use the site's own skyline.
 - **Comets and asteroids** — 216 bright asteroids built in and, optionally, the daily comet file: brightness

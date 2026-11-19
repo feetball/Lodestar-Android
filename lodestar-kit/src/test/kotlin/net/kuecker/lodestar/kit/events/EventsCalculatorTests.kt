@@ -150,7 +150,7 @@ class EventsCalculatorTests {
         assertEquals(
             listOf(
                 "meteorShower", "conjunction", "opposition", "greatestElongation", "earthApsis", "season",
-                "fullMoonSpecial", "lunarEclipse", "solarEclipse",
+                "fullMoonSpecial", "lunarEclipse", "solarEclipse", "greatRedSpotTransit", "jupiterMoonEvent", "planetStation",
             ),
             EventKind.entries.map { it.rawValue },
         )

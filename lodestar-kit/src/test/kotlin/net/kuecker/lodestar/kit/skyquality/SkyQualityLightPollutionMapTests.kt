@@ -74,9 +74,10 @@ class SkyQualityLightPollutionMapTests {
     fun testDecoderRoundTripsASyntheticGrid() {
         val cells = support.cells { row, column ->
             when {
-                row < 600 -> (column / 5 + row / 100) % 16
+                row < 400 -> (column / 5 + row / 100) % 16
                 row < 900 -> 3
-                row < 1200 -> (column + row) % 2 * 9
+                row < 1000 -> (column + row) % 2 * 9
+                row < 1200 -> 11
                 else -> if (column in 100 until 3500) 15 else 0
             }
         }
@@ -84,7 +85,7 @@ class SkyQualityLightPollutionMapTests {
         assertTrue(blob.size < cells.size / 4)
         val map = LightPollutionMap.parse(blob)
         assertContentEquals(cells, map.levels)
-        for (row in listOf(0, 1, 599, 600, 899, 900, 1000, 1199, 1200, 1799)) {
+        for (row in listOf(0, 1, 399, 400, 899, 900, 999, 1000, 1199, 1200, 1799)) {
             for (column in listOf(0, 1, 99, 100, 3499, 3500, 3599, 1234)) {
                 assertEquals(cells[row * 3600 + column].toInt(), map.level(support.centre(row, column)), "$row, $column")
             }

@@ -724,5 +724,5 @@ left open (runs longer than the recorder's interpolation limit, 6°, like `Horiz
 recorded skyline wins everywhere, without a recorded one the terrain does.
 
 **Cost.** `TerrainTile.parse` is one pass over the bytes (13 million samples for a 1 arc-second tile) and allocates the
-sample array (26 MB; 2.9 MB for 1201 × 1201). `TerrainHorizon.profile` takes about 110 000 bilinear samples (Kotlin: __KT__ ms on a desktop
-JVM, Swift: __SW__ ms in a release build). Call both off the main thread. The apps keep at most 4 tiles in memory (104 MB).
+sample array (26 MB; 2.9 MB for 1201 × 1201). `TerrainHorizon.profile` takes about 110 000 bilinear samples; the tests, which also build a
+tile of 1.4 million samples, run in 0.2 to 0.5 s on the JVM and 0.3 to 0.7 s in a Swift Debug build. Call both off the main thread. The apps keep at most 4 tiles in memory (104 MB).

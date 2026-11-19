@@ -92,6 +92,13 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     /** Star-alignment corrections for the current mount and heading source. */
     var alignment by mutableStateOf(AlignmentModel.identity)
 
+    /**
+     * When the current alignment was made: the time of its newest point, or null without an alignment. It follows
+     * the alignment, so a reset clears it, and removing a point never makes an old alignment look fresh.
+     */
+    val alignedAt: Instant?
+        get() = alignment.points.maxOfOrNull { it.timestamp }
+
     private var keepsMotionRunningState by mutableStateOf(false)
 
     /** Keeps the motion sensors running outside the Aim and Sky tabs (e.g. Sensor Diagnostics). */

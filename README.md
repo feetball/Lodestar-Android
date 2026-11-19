@@ -12,8 +12,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
 - **Guided aiming** — a live finder (camera view or virtual sky) with the target marker, an arrow pointing the
   shortest way, "Pan right 23.4° / Tilt up 12.1°" read-outs for pan-tilt heads, an on-target state with haptics,
   optional audio ticks, a level gauge, and the outline of *your* camera's frame.
-- **Star alignment** and **Gyro Lock** — centre a bright star once to correct the compass and the bracket; keep
-  the heading on the gyroscope, safe from the camera body's magnetism.
+- **Star alignment** and **Gyro Lock** — centre a bright star once to correct the compass and the bracket (syncing
+  waits until the phone is held still, stars too close to each other are flagged, and an alignment that is hours old
+  gets a warning chip); keep the heading on the gyroscope, safe from the camera body's magnetism.
 - **Any mount** — back camera along the lens (portrait, landscape, upside down) or the phone flat on top.
 - **Objects** — 9,000+ stars and 690+ galaxies, nebulae and clusters (all 110 Messier objects), the planets, the
   Moon and the Milky Way core; search, group, sort, favourites, custom RA/Dec targets; rise/set, altitude chart,

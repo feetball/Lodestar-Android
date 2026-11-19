@@ -22,7 +22,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
   targets, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
 - **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
   solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
-  and where to look and a button to aim at it.
+  and where to look and a button to aim at it. With the satellite feed on, a section lists when the ISS or Tiangong
+  crosses the Sun or the Moon in the next 14 days, from your site or from a centreline within 50 km, with the time
+  to the second, the duration and the coordinates to copy.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
 - **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set
@@ -34,7 +36,7 @@ same astronomy engine ported line for line from Swift to Kotlin.
   Sky-Watcher AZ-GTi / Star Adventurer GTi (with home position and star alignment); Go to, Sync, nudge arrows and
   an always-available Stop, with altitude limits and a built-in simulated mount to try it without hardware.
 - **Optional online data** — all off until switched on in Settings: ISS and bright-satellite passes (follow one in
-  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast (MET
+  Aim, and the ISS's transits of the Sun and Moon in the Events calendar), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast (MET
   Norway, location rounded to about 10 km).
 - **Home-screen widgets** — Tonight at a glance (dark hours, the Moon, the Milky Way core, the next event) in
   two resizable sizes, worked out on the device; a tap opens Tonight.

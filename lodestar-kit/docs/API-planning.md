@@ -2,7 +2,8 @@
 
 Package `net.kuecker.lodestar.kit.planning`. Port of `LodestarKit/Sources/LodestarKit/Planning/*.swift`
 (IntervalSet, AltitudeSample, AltitudeProfile, DarknessSampler, TargetVisibility, NightPlanner, NightPlanner+Summary,
-NightPlanner+Visibility, NightSummary, PolarAlignment). Depends on the Foundation and Ephemeris areas only (no Catalog).
+NightPlanner+Visibility, NightSummary, PolarAlignment, MoonImpact). Depends on the Foundation and Ephemeris areas only, except
+`MoonImpact`, which takes the Catalog's `ObjectCategory`.
 
 Import with `import net.kuecker.lodestar.kit.planning.*` — **that also brings in `NightPlanner.summary(...)` and every
 `NightPlanner.visibility(...)` overload**, which are extension functions on the `NightPlanner` object (Swift `extension NightPlanner`
@@ -202,6 +203,57 @@ internal class DarknessProfile(val stretches: List<Stretch>) {
 }
 ```
 
+## MoonImpact.kt  (Swift `MoonImpact.swift`)
+
+How much the Moon disturbs a shot of one target, with the imaging filter taken into account. The broadband rule is the one the apps
+always used (the Moon's lit fraction times its proximity to the target); a filter relaxes it only for emission-line targets.
+Pure, constant time, any thread. Import `net.kuecker.lodestar.kit.planning.*`.
+
+```kotlin
+@Serializable enum class ImagingFilter(val rawValue: String) {             // NONE("none"), LIGHT_POLLUTION("lightPollution"),
+    val id: String                                                          // DUAL_NARROWBAND("dualNarrowband"), NARROWBAND("narrowband")
+    val displayName: String                                                 // "None", "Light pollution", "Dual narrowband", "Narrowband"
+    val summary: String                                                     // one line
+    companion object { fun fromRawValue(raw: String): ImagingFilter? }      // Swift init?(rawValue:)
+}
+object MoonImpact {
+    @Serializable enum class Level(val rawValue: String) {                  // MOON_DOWN("moonDown"), MINOR, MODERATE, SEVERE
+        fun lowered(steps: Int): Level                                      // Swift lowered(steps:); stops at MINOR, MOON_DOWN stays
+        companion object { fun fromRawValue(raw: String): Level? }          // Swift init?(rawValue:)
+    }
+    fun assess(moonAltitude: Double, separation: Double, illuminatedFraction: Double,
+               filter: ImagingFilter, objectKind: ObjectCategory): Level
+    fun relaxationSteps(separation: Double, illuminatedFraction: Double,
+                        filter: ImagingFilter, objectKind: ObjectCategory): Int         // 0, 1 or 2
+    fun isEmissionLineTarget(objectKind: ObjectCategory): Boolean           // Swift isEmissionLineTarget(_:)
+    fun moonFreeWeight(level: Level): Double                                // Swift moonFreeWeight(level:)
+}
+```
+Swift side by side: `enum ImagingFilter: String, CaseIterable, Codable, Identifiable` (`.none`, `.lightPollution`, `.dualNarrowband`, `.narrowband`),
+`enum MoonImpact` with `MoonImpact.Level` (`.moonDown`, `.minor`, `.moderate`, `.severe`; `CaseIterable, Codable`) and the same four functions as
+`static func`s with the same argument labels. `allCases` is `entries` in Kotlin.
+
+Rule (the `NONE` result is the apps' former rule, moved unchanged):
+1. The Moon counts only when `moonAltitude > 0`; anything else, NaN and ±∞ included, is `MOON_DOWN` whatever the filter.
+2. A `separation` or `illuminatedFraction` that is not finite gives `MINOR`. Otherwise the fraction is limited to 0…1 and the separation to 0…180°.
+3. `proximity = min(max(1 − separation / 120, 0.25), 1)` and `effect = illuminatedFraction × proximity`: `effect ≥ 0.5` is `SEVERE`, `effect ≥ 0.2`
+   `MODERATE`, else `MINOR`.
+4. The filter then lowers the level by `relaxationSteps` steps, never below `MINOR`. Only emission-line targets are relaxed (`isEmissionLineTarget`:
+   emission nebula `HII`/`EmN`, planetary nebula `PN`, supernova remnant `SNR`, cluster with nebula `Cl+N`; the generic nebula `Neb` is not, because that
+   OpenNGC type mixes emission and reflection nebulae; galaxies, clusters, stars, reflection and dark nebulae, comets, planets, the Milky Way are not).
+
+| Filter | Steps (emission-line targets) |
+| --- | --- |
+| `NONE` | 0 |
+| `LIGHT_POLLUTION` | 1 when `separation ≥ 40°`, else 0 |
+| `DUAL_NARROWBAND` | 1; 2 when `separation ≥ 60°` |
+| `NARROWBAND` | 2; 1 when `separation ≤ 30°` (30° included) and `illuminatedFraction ≥ 0.5` |
+
+`moonFreeWeight` is the multiplier a ranking applies to a target's score: `MOON_DOWN` 1, `MINOR` 0.9, `MODERATE` 0.7, `SEVERE` 0.4 (heuristic values).
+Rationale (narrowband bandwidth against the moonlight continuum, with sources: Krisciunas and Schaefer 1991, PASP 103, 1033; Osterbrock and Ferland 2006)
+is in the type's doc comment; the step counts are a rule of thumb, not a fit to measurements. Observation: a severe level needs a lit fraction of at least 0.5
+(the proximity is at most 1), so the narrowband "at least half lit" condition only decides the result through `relaxationSteps`, not through `assess`.
+
 ---------------------------------------------------------------------------------------------------------
 
 ## Renames & deviations from Swift
@@ -224,7 +276,9 @@ internal class DarknessProfile(val stretches: List<Stretch>) {
 | `AltitudeProfile.sine(atIndex position:)`, `.maximum(from:to:)`, `.offsets(atOrAbove:)` | `sine(position)`, `maximum(startOffset, endOffset)`, `offsets(threshold)` |
 | `DarknessSampler.profile(ofSine:)` / `profile(of:)`, `DarknessProfile.maximum(within:)` / `intervals(atOrAbove:)` | `profile(sine)` / `profile(body)`, `maximum(queries)` / `intervals(threshold)` |
 | `IntervalSet.subtracting(_:from:)`, `.totalDuration(of:)` | `subtracting(removed, base)`, `totalDuration(intervals)` |
-| `Hemisphere.allCases`, `DarknessKind.allCases`, `ScopeView.allCases` | `.entries` |
+| `Hemisphere.allCases`, `DarknessKind.allCases`, `ScopeView.allCases`, `ImagingFilter.allCases`, `MoonImpact.Level.allCases` | `.entries` |
+| `MoonImpact.Level.lowered(steps:)`, `.moonDown` … `.severe`; `ImagingFilter.none` … `.narrowband` | `lowered(steps)`, `MOON_DOWN` … `SEVERE`; `NONE` … `NARROWBAND` |
+| `MoonImpact.isEmissionLineTarget(_:)`, `.moonFreeWeight(level:)` | `isEmissionLineTarget(objectKind)`, `moonFreeWeight(level)` |
 
 ### Types, access
 - `internal` Swift members stay `internal` (`NightPlanner.curveGapCount`, `NightPlanner.upIntervals`, `MilkyWayCoreVisibility.galacticCentre`,
@@ -279,6 +333,11 @@ Changed Swift tests (platform-specific):
 - `PlanningPerformanceTests`: budgets are the Swift release budgets times three (1.5 s for 1 000 targets, 6 s for a summary), each timed computation is run
   once before the timed run, and `withTaskGroup` becomes a six-thread `ExecutorService`.
 - `PolarAlignmentTests.testAstrometryMatchesTheBundledStarCatalog` is **pending** on the Catalog area (it reads the bundled `stars.json`).
+
+`PlanningMoonImpactTests` (18, new with `MoonImpact`; same names, grids and expected values in both languages): the `NONE` result equals a copy of the old
+app rule on a 8 × 73 × 41 × 24 grid, the broadband cut-offs, the Moon down, non-finite and out-of-range input, the emission-line set (also from the
+OpenNGC codes), each filter's step rule with its seam cases (39.999°/40°, 59.999°/60°, 30°/30.001°, 0.4999/0.5), non-emission targets unchanged, the
+level floor, the weights and the raw values of both enums.
 
 Extras (not in Swift): `PlanningApiTests` (10: enum JSON shapes and raw-value lookups, `Hemisphere.fromLatitude` for non-numbers, `IntervalSet` and the saturated
 instants, sampler frame spacing and caps, non-finite samples, every documented call form of `visibility` and `altitudeCurve`, `PolarScopeReading` copies).

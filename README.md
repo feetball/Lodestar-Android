@@ -16,8 +16,8 @@ same astronomy engine ported line for line from Swift to Kotlin.
   the heading on the gyroscope, safe from the camera body's magnetism.
 - **Any mount** — back camera along the lens (portrait, landscape, upside down) or the phone flat on top.
 - **Objects** — 9,000+ stars and 690+ galaxies, nebulae and clusters (all 110 Messier objects), the planets, the
-  Moon and the Milky Way core; search, group, sort, favourites, custom RA/Dec targets; rise/set, altitude chart,
-  framing and longest exposure for each object.
+  Moon and the Milky Way core; search, group, sort, favourites, custom RA/Dec targets; hour angle and time to
+  the meridian transit, rise/set, altitude chart, framing and longest exposure for each object.
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
   targets, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
 - **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
@@ -32,7 +32,8 @@ same astronomy engine ported line for line from Swift to Kotlin.
   tilt that lays it along the frame.
 - **GoTo mounts** — connect over Wi-Fi to OnStep/LX200, Celestron NexStar and SynScan, ASCOM Alpaca and the
   Sky-Watcher AZ-GTi / Star Adventurer GTi (with home position and star alignment); Go to, Sync, nudge arrows and
-  an always-available Stop, with altitude limits and a built-in simulated mount to try it without hardware.
+  an always-available Stop, with altitude limits, a meridian countdown that warns before the mount has to flip,
+  and a built-in simulated mount to try it without hardware.
 - **Optional online data** — all off until switched on in Settings: ISS and bright-satellite passes (follow one in
   Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast (MET
   Norway, location rounded to about 10 km).

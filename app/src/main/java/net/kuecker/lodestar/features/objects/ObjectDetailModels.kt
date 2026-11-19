@@ -71,6 +71,8 @@ internal data class ObjectDetailCurrent(
     val isSmallBody: Boolean = false,
     /** A comet's or asteroid's distances, elongation, phase, magnitude estimate, warnings and tail; `null` when its orbit cannot be evaluated. */
     val smallBody: SmallBodyDetail? = null,
+    /** The hour angle and the transits around now; `null` for a celestial pole and for a body whose orbit cannot be evaluated. */
+    val meridian: ObjectDetailMeridian? = null,
 ) {
     /** `true` when the object is above the horizon but behind the recorded skyline. */
     val isBehindSkyline: Boolean get() = skylineAltitude != null && horizontal.altitude > 0 && !isUp

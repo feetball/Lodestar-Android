@@ -447,8 +447,8 @@ internal object EventsGuide {
 
     private fun greatRedSpot(): EventGuide = EventGuide(
         what = listOf(
-            "The Great Red Spot is a storm in Jupiter's southern hemisphere, wider than the Earth and at least two " +
-                "centuries old. Jupiter turns once in about 9 hours 56 minutes, so the spot comes round to the middle of " +
+            "The Great Red Spot is a storm in Jupiter's southern hemisphere, wider than the Earth, that astronomers " +
+                "have watched since 1831. Jupiter turns once in about 9 hours 56 minutes, so the spot comes round to the middle of " +
                 "the disc, the central meridian, about every 10 hours; on the evenings when that happens in the dark, " +
                 "you can catch it.",
         ),

@@ -1,6 +1,8 @@
 package net.kuecker.lodestar.model
 
+import net.kuecker.lodestar.kit.ephemeris.GreatRedSpot
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -17,6 +19,23 @@ class AppSettingsTest {
             favoriteObjectIDs = listOf("dso.M31"), recentObjectIDs = listOf("planet.mars", "moon"),
         )
         assertEquals(settings, AppSettings.decode(AppSettings.encode(settings)))
+    }
+
+    @Test
+    fun theGreatRedSpotLongitudeIsKeptAndValidated() {
+        val asOf = Instant.parse("2026-11-19T12:00:00Z")
+        val settings = AppSettings(greatRedSpot = GreatRedSpotSetting(104.0, asOf))
+        assertEquals(settings, AppSettings.decode(AppSettings.encode(settings)))
+        assertEquals(104.0, settings.greatRedSpotOrDefault.longitude)
+        assertEquals(GreatRedSpot.reference, AppSettings().greatRedSpotOrDefault)
+        assertNull(AppSettings().greatRedSpot)
+        // Missing, wrongly typed and out-of-date values fall back to the kit's default.
+        assertNull(AppSettings.decode("""{"greatRedSpot":{"longitude":"far","asOf":"2026-11-19T12:00:00Z"}}""").greatRedSpot)
+        assertNull(AppSettings.decode("""{"greatRedSpot":{"longitude":100,"asOf":"yesterday"}}""").greatRedSpot)
+        assertNull(AppSettings.decode("""{"greatRedSpot":{"longitude":100}}""").greatRedSpot)
+        // Longitudes past a full turn are wrapped by the kit.
+        val wrapped = AppSettings.decode("""{"greatRedSpot":{"longitude":-10,"asOf":"2026-11-19T12:00:00Z"}}""")
+        assertEquals(350.0, wrapped.greatRedSpotOrDefault.longitude)
     }
 
     @Test

@@ -114,9 +114,9 @@ class SatelliteTransitFinderTests {
             val moved = observer(centreline.location)
             // Measured with the kit's own look and SkyFrame, not the finder.
             assertTrue(separation(transit.body, moved, transit.date) < 0.02, "separation ${separation(transit.body, moved, transit.date)}")
-            // And found again from there, as a transit from the site itself.
+            // And found again from there, as a transit from the site itself, with its own centreline right there.
             val again = SatelliteTransitFinder.transits(
-                satellite, transit.body, moved, transit.date.minusSeconds(900), transit.date.plusSeconds(900), 0.0,
+                satellite, transit.body, moved, transit.date.minusSeconds(900), transit.date.plusSeconds(900), 1_000.0,
             )
             val here = again.single()
             assertTrue(here.isFromSite)

@@ -98,7 +98,7 @@ internal fun CameraProfileEditor(target: CameraProfileEditorTarget, onClose: () 
     var nameText by remember(target) { mutableStateOf(initial.name) }
     var failureMessage by remember { mutableStateOf<String?>(null) }
     var isConfirmingDelete by remember { mutableStateOf(false) }
-    val canDelete = existing != null && app.settings.cameraProfiles.size > 1
+    val hasOtherCameras = app.settings.cameraProfiles.size > 1
 
     fun save() {
         val saved = profile.edited(name = nameText)
@@ -204,7 +204,7 @@ internal fun CameraProfileEditor(target: CameraProfileEditorTarget, onClose: () 
                 }
             }
             SettingsSection(title = "Frame") { SettingsFieldOfViewReadout(profile.lensSetup) }
-            if (canDelete && existing != null) {
+            if (hasOtherCameras && existing != null) {
                 SettingsSection(title = "Delete") {
                     if (isConfirmingDelete) {
                         SettingsRow { SettingsCaption("Delete “${existing.name}”? This cannot be undone.") }

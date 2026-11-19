@@ -71,12 +71,14 @@ class SatelliteFollowSource(
  *
  * @property peak The instant of the culmination.
  * @property horizontal The (refracted) direction of the satellite at [peak].
+ * @property pass The pass it was chosen from, for the countdown notification.
  */
 class SatellitePeakSource(
     title: String,
     observer: Observer,
     val peak: Instant,
     val horizontal: HorizontalCoordinate,
+    val pass: SatellitePassItem? = null,
 ) : SatelliteAimSource(title, observer) {
     override fun fix(date: Instant): SatelliteAimFix =
         SatelliteAimFix(horizontal, "$title peak", null, peak.timeIntervalSince(date))
@@ -86,7 +88,9 @@ class SatellitePeakSource(
         fun create(item: SatellitePassItem, observer: Observer): SatellitePeakSource {
             val culmination = item.pass.culmination
             val look = item.satellite.look(culmination.date, observer)
-            return SatellitePeakSource(item.name, observer, culmination.date, look?.apparentHorizontal ?: culmination.horizontal)
+            return SatellitePeakSource(
+                item.name, observer, culmination.date, look?.apparentHorizontal ?: culmination.horizontal, item,
+            )
         }
     }
 }

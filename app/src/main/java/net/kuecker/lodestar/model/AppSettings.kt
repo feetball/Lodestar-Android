@@ -18,6 +18,7 @@ import net.kuecker.lodestar.kit.foundation.Atmosphere
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.phototools.SensorFormat
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.kit.pointing.MountProfile
 import java.time.DateTimeException
 import java.time.ZoneId
@@ -171,6 +172,8 @@ data class AppSettings(
     val focalLength: Double = 24.0,
     val aperture: Double = 2.8,
     val pixelPitch: Double? = null,
+    /** The filter in front of the sensor: it decides how far the Moon warnings are relaxed for emission nebulae. */
+    val imagingFilter: ImagingFilter = ImagingFilter.NONE,
 
     // Night mode
     val nightMode: NightModeSetting = NightModeSetting.AUTOMATIC,
@@ -258,6 +261,7 @@ data class AppSettings(
                 put("focalLength", JsonPrimitive(s.focalLength))
                 put("aperture", JsonPrimitive(s.aperture))
                 s.pixelPitch?.let { put("pixelPitch", JsonPrimitive(it)) }
+                put("imagingFilter", json.encodeToJsonElement(ImagingFilter.serializer(), s.imagingFilter))
                 put("nightMode", json.encodeToJsonElement(NightModeSetting.serializer(), s.nightMode))
                 put("nightIntensity", JsonPrimitive(s.nightIntensity))
                 put("dimScreenAtNight", JsonPrimitive(s.dimScreenAtNight))
@@ -304,6 +308,7 @@ data class AppSettings(
                 focalLength = value("focalLength", Double.serializer(), d.focalLength),
                 aperture = value("aperture", Double.serializer(), d.aperture),
                 pixelPitch = value("pixelPitch", Double.serializer().nullable, d.pixelPitch),
+                imagingFilter = value("imagingFilter", ImagingFilter.serializer(), d.imagingFilter),
                 nightMode = value("nightMode", NightModeSetting.serializer(), d.nightMode),
                 nightIntensity = value("nightIntensity", Double.serializer(), d.nightIntensity),
                 dimScreenAtNight = value("dimScreenAtNight", Boolean.serializer(), d.dimScreenAtNight),

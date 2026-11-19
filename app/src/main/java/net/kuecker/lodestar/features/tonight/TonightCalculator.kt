@@ -1,5 +1,7 @@
 package net.kuecker.lodestar.features.tonight
 
+import net.kuecker.lodestar.features.objects.ObjectMoonAssessment
+import net.kuecker.lodestar.features.objects.ObjectMoonGeometry
 import net.kuecker.lodestar.features.smallbodies.SmallBodyTonightPlanner
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
@@ -15,6 +17,8 @@ import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.horizon.visibility as visibilityOverSkyline
 import net.kuecker.lodestar.kit.planning.DarknessKind
+import net.kuecker.lodestar.kit.planning.ImagingFilter
+import net.kuecker.lodestar.kit.planning.MoonImpact
 import net.kuecker.lodestar.kit.planning.NightPlanner
 import net.kuecker.lodestar.kit.planning.NightSummary
 import net.kuecker.lodestar.kit.planning.TargetVisibility
@@ -60,7 +64,7 @@ internal object TonightCalculator {
             summary = summary,
             timeZone = zone,
             timeline = TonightTimelineModel(summary, zone),
-            targets = targets(summary, input.catalog, skyline, smallBodies?.targets.orEmpty()),
+            targets = targets(summary, input.catalog, skyline, smallBodies?.targets.orEmpty(), input.imagingFilter),
             tonightStart = tonightStart,
             nightsFromTonight = nights,
             skyline = skyline,
@@ -94,20 +98,33 @@ internal object TonightCalculator {
         catalog: Catalog?,
         skyline: HorizonProfile?,
         movingTargets: List<TonightTarget>,
+        filter: ImagingFilter,
     ): TonightTargetsOutcome {
         if (!summary.hasAstronomicalDarkness) return TonightTargetsOutcome.NoDarkness
         if (catalog == null) return TonightTargetsOutcome.CatalogPending
-        return TonightTargetsOutcome.Ranked(movingTargets + rankedTargets(catalog, summary, skyline))
+        return TonightTargetsOutcome.Ranked(movingTargets + rankedTargets(catalog, summary, skyline, filter))
     }
 
-    private class Candidate(val obj: CelestialObject, val visibility: TargetVisibility, val peak: Double, val score: Double)
+    private class Candidate(
+        val obj: CelestialObject,
+        val visibility: TargetVisibility,
+        val peak: Double,
+        val score: Double,
+        val moon: ObjectMoonAssessment,
+    )
 
     /**
      * The listed deep-sky objects that climb to at least [minimumTargetAltitude] in the dark, best first, at most
      * [targetLimit] of them. With a [skyline] an object must also clear it: hidden targets are dropped, and the
-     * hours and the best time count only the stretches above it.
+     * hours and the best time count only the stretches above it. The Moon counts too: a target's score is multiplied by
+     * [MoonImpact.moonFreeWeight] of what the Moon does to it, through [filter], at its best time.
      */
-    private fun rankedTargets(catalog: Catalog, summary: NightSummary, skyline: HorizonProfile?): List<TonightTarget> {
+    private fun rankedTargets(
+        catalog: Catalog,
+        summary: NightSummary,
+        skyline: HorizonProfile?,
+        filter: ImagingFilter,
+    ): List<TonightTarget> {
         val objects = ArrayList<CelestialObject>()
         val places = ArrayList<EquatorialCoordinate>()
         val motions = ArrayList<ProperMotion?>()
@@ -131,8 +148,11 @@ internal object TonightCalculator {
             // Filter hidden targets on the usable stretches, not on the altitude (see API-horizon.md).
             if (skyline != null && visibility.intervalsAboveMinimum.isEmpty()) continue
             val peak = visibility.maxAltitudeDuringDarkness ?: continue
-            if (peak.isNaN() || peak < minimumTargetAltitude || visibility.bestTime == null) continue
-            candidates.add(Candidate(obj, visibility, peak, score(obj, peak)))
+            val bestTime = visibility.bestTime
+            if (peak.isNaN() || peak < minimumTargetAltitude || bestTime == null) continue
+            val moon = ObjectMoonGeometry.of(obj, summary.observer, bestTime).assess(filter, obj.category)
+            val weighted = score(obj, peak) * MoonImpact.moonFreeWeight(moon.level)
+            candidates.add(Candidate(obj, visibility, peak, weighted, moon))
         }
         candidates.sortWith(compareByDescending<Candidate> { it.score }.thenBy { it.obj.id })
         return candidates.take(targetLimit).mapNotNull { candidate ->
@@ -144,6 +164,7 @@ internal object TonightCalculator {
                 peakTime = time,
                 peakAzimuth = frame.horizontal(candidate.obj, false).azimuth,
                 hoursAboveMinimum = candidate.visibility.hoursAboveMinimum,
+                moon = candidate.moon,
             )
         }
     }

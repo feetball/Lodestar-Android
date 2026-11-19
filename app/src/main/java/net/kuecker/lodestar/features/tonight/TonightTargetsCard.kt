@@ -10,8 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,16 +28,21 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import net.kuecker.lodestar.features.objects.ObjectMoonAssessment
+import net.kuecker.lodestar.features.objects.ObjectMoonText
 import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
+import net.kuecker.lodestar.kit.planning.MoonImpact
 import net.kuecker.lodestar.services.CatalogService
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.CardTitle
+import net.kuecker.lodestar.shared.ChipTone
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LodestarButton
 import net.kuecker.lodestar.shared.LodestarButtonKind
 import net.kuecker.lodestar.shared.ObjectIcon
+import net.kuecker.lodestar.shared.StatusChip
 import net.kuecker.lodestar.shared.monospacedDigits
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
@@ -67,8 +76,8 @@ internal fun TonightTargetsCard(
                         TonightTargetRow(target, zone, onOpenObject)
                     }
                     TonightNote(
-                        "Ranked by height in the dark, brightness and size. Only objects that climb above $minimum° " +
-                            "are listed.",
+                        "Ranked by height in the dark, brightness and size, and lower where the Moon spoils the sky. " +
+                            "Only objects that climb above $minimum° are listed.",
                         style = TonightNoteStyle.FOOTNOTE,
                     )
                     if (outcome.targets.any { it.note != null }) {
@@ -143,6 +152,7 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
                 color = palette.tertiaryText,
                 style = MaterialTheme.typography.bodySmall,
             )
+            target.moon?.let { MoonChip(it) }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
@@ -159,6 +169,19 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
             modifier = Modifier.padding(top = 4.dp).size(18.dp),
         )
     }
+}
+
+/** What the Moon does to the target at its best time: "Moon down", "Moon: moderate", "Moon: fine with your filter". */
+@Composable
+private fun MoonChip(moon: ObjectMoonAssessment) {
+    val (icon, tone) = when (moon.level) {
+        MoonImpact.Level.MOON_DOWN -> Icons.Outlined.Bedtime to ChipTone.POSITIVE
+        MoonImpact.Level.MINOR ->
+            Icons.Outlined.DarkMode to if (moon.isRelaxed) ChipTone.POSITIVE else ChipTone.NEUTRAL
+        MoonImpact.Level.MODERATE -> Icons.Filled.DarkMode to ChipTone.WARNING
+        MoonImpact.Level.SEVERE -> Icons.Outlined.Warning to ChipTone.CRITICAL
+    }
+    StatusChip(icon, ObjectMoonText.chip(moon), Modifier.padding(top = 3.dp), tone, maxLines = 2)
 }
 
 /**
@@ -189,5 +212,6 @@ private fun spokenSummary(target: TonightTarget, zone: ZoneId): String {
     parts.add(
         "${TonightFormat.duration(target.hoursAboveMinimum)} above ${TonightCalculator.minimumTargetAltitude.toInt()} degrees",
     )
+    target.moon?.let { parts.add(ObjectMoonText.chip(it)) }
     return parts.joinToString(", ")
 }

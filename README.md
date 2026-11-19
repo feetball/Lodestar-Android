@@ -17,7 +17,8 @@ same astronomy engine ported line for line from Swift to Kotlin.
 - **Any mount** — back camera along the lens (portrait, landscape, upside down) or the phone flat on top.
 - **Objects** — 9,000+ stars and 690+ galaxies, nebulae and clusters (all 110 Messier objects), the planets, the
   Moon and the Milky Way core; search, group, sort, favourites, custom RA/Dec targets; rise/set, altitude chart,
-  framing and longest exposure for each object.
+  framing, longest exposure and filter-aware Moon advice for each object (a light-pollution or narrowband filter set
+  in Settings relaxes the Moon warning for emission nebulae; Tonight's best targets weigh the Moon the same way).
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
   targets, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
 - **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and

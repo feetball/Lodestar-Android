@@ -228,6 +228,8 @@ JSON keys: `id`, `name`, `widthMillimeters`, `heightMillimeters`.
 @Serializable(with = LensSetupSerializer::class) @ConsistentCopyVisibility
 data class LensSetup private constructor(
     val sensor: SensorFormat, val focalLengthMillimeters: Double, val aperture: Double, val pixelPitchMicrometers: Double?,
+    val projection: LensProjection,                                     // camera profiles
+    val imageCircleDiameterMillimeters: Double?,                        // circular fisheyes; null = covers the sensor
 ) {
     val equivalentFocalLengthMillimeters: Double
     val fieldOfView: FrameSize
@@ -236,31 +238,39 @@ data class LensSetup private constructor(
     companion object {
         val focalLengthRange: ClosedFloatingPointRange<Double>          // 4.0..2000.0
         val apertureRange: ClosedFloatingPointRange<Double>             // 0.95..32.0
+        val imageCircleRange: ClosedFloatingPointRange<Double>          // 1.0..200.0 (the sensor dimension range)
         const val defaultFocalLengthMillimeters = 24.0
         const val defaultAperture = 2.8
         private val arcsecondsPerMicrometerPerMillimeter: Double
         operator fun invoke(sensor: SensorFormat, focalLengthMillimeters: Double, aperture: Double,
-                            pixelPitchMicrometers: Double? = null): LensSetup      // Swift public init: limits every value
+                            pixelPitchMicrometers: Double? = null, projection: LensProjection = RECTILINEAR,
+                            imageCircleDiameterMillimeters: Double? = null): LensSetup   // Swift public init: limits every value
         fun validated(sensor: SensorFormat, focalLengthMillimeters: Double, aperture: Double,
-                      pixelPitchMicrometers: Double? = null): LensSetup?
+                      pixelPitchMicrometers: Double? = null, projection: LensProjection = RECTILINEAR,
+                      imageCircleDiameterMillimeters: Double? = null): LensSetup?
     }
 }
 internal object LensSetupSerializer : KSerializer<LensSetup>
 ```
-JSON keys: `sensor`, `focalLengthMillimeters`, `aperture`, `pixelPitchMicrometers` (omitted when null).
+JSON keys: `sensor`, `focalLengthMillimeters`, `aperture`, `pixelPitchMicrometers` (omitted when null), `projection`
+(the raw value, written only for a fisheye) and `imageCircleDiameterMillimeters` (omitted when null). A missing or null
+`projection` decodes as rectilinear; an unknown name or an image circle outside `imageCircleRange` is rejected.
 
 ## phototools/FieldOfView.kt
 
 ```kotlin
 object FieldOfView {
-    fun horizontal(sensor: SensorFormat, focalLength: Double): Double
-    fun vertical(sensor: SensorFormat, focalLength: Double): Double
-    fun diagonal(sensor: SensorFormat, focalLength: Double): Double
-    fun of(sensor: SensorFormat, focalLength: Double): FrameSize
+    fun horizontal(sensor: SensorFormat, focalLength: Double, projection: LensProjection = RECTILINEAR,
+                   imageCircleDiameterMillimeters: Double? = null): Double
+    fun vertical(...): Double                                           // same parameters
+    fun diagonal(...): Double
+    fun of(...): FrameSize
     private fun usable(focalLength: Double): Double
 }
+internal fun framedExtent(extent: Double, imageCircleDiameterMillimeters: Double?): Double   // Swift FieldOfView.framedExtent
 data class FrameSize(val horizontal: Double, val vertical: Double, val diagonal: Double) {
-    internal constructor(sensor: SensorFormat, focalLength: Double)
+    internal constructor(sensor: SensorFormat, focalLength: Double, projection: LensProjection = RECTILINEAR,
+                         imageCircleDiameterMillimeters: Double? = null)
     val longSide: Double
     val shortSide: Double
     val rotated: FrameSize
@@ -271,10 +281,100 @@ data class ObjectFraming internal constructor(val majorAxisFraction: Double, val
     val fillFraction: Double
     val fitsInFrame: Boolean
 }
-private fun angleDegrees(extent: Double, focalLength: Double): Double   // Swift fileprivate static on FieldOfView
+private fun angleDegrees(extent: Double, focalLength: Double, projection: LensProjection): Double   // Swift fileprivate static on FieldOfView
 private fun swiftMax(x: Double, y: Double): Double                      // Swift max/min semantics, see deviations
 private fun swiftMin(x: Double, y: Double): Double
 ```
+
+## phototools/LensProjection.kt
+
+Swift `enum LensProjection: String, CaseIterable, Codable, Hashable, Sendable, Identifiable`; Kotlin `@Serializable enum class`
+(JSON: the Swift raw value).
+
+```kotlin
+enum class LensProjection(val rawValue: String) {
+    RECTILINEAR("rectilinear"),                    // r = f·tan θ
+    FISHEYE_EQUIDISTANT("fisheyeEquidistant"),     // r = f·θ
+    FISHEYE_EQUISOLID("fisheyeEquisolid"),         // r = 2f·sin(θ/2)
+    FISHEYE_STEREOGRAPHIC("fisheyeStereographic"); // r = 2f·tan(θ/2)
+    val id: String; val displayName: String; val isFisheye: Boolean
+    fun angleDegrees(imageRadiusMillimeters: Double, focalLength: Double): Double              // inverse mapping, 0...180
+    fun imageRadiusMillimeters(angleDegrees: Double, focalLength: Double): Double?             // forward; null if not imageable
+    internal fun angleRadians(imageRadiusMillimeters: Double, focalLength: Double): Double     // 0...π
+    companion object { fun fromRawValue(raw: String): LensProjection? }
+}
+```
+```swift
+public enum LensProjection: String, ... { case rectilinear, fisheyeEquidistant, fisheyeEquisolid, fisheyeStereographic
+    public var id: String; public var displayName: String; public var isFisheye: Bool
+    public func angleDegrees(imageRadiusMillimeters: Double, focalLength: Double) -> Double
+    public func imageRadiusMillimeters(angleDegrees: Double, focalLength: Double) -> Double?
+    func angleRadians(imageRadiusMillimeters: Double, focalLength: Double) -> Double }
+```
+Field of view across a dimension `d` is `min(180, 2 · angleDegrees(d / 2, f))`; an equisolid image distance beyond `2f` (or an
+equidistant one beyond `π · f`) gives 180°. The rectilinear numbers are bit-identical to the engine's earlier formula
+`2 · atan(d / 2f) · 180 / π` (a test compares them with `assertEquals`). An image circle limits every extent to its diameter.
+
+## phototools/CameraFrameOutline.kt
+
+```kotlin
+object CameraFrameOutline {
+    const val maximumSamplesPerEdge = 1000
+    fun directions(setup: LensSetup, samplesPerEdge: Int): List<Vector3>   // Swift directions(setup:samplesPerEdge:)
+    fun topMiddle(setup: LensSetup): Vector3                               // Swift topMiddle(setup:)
+    private fun direction(x: Double, y: Double, focalLength: Double, projection: LensProjection): Vector3
+}
+```
+Unit vectors of the picture's border in the camera frame: x to the right of the picture, y towards its top, z along the
+optical axis, towards the scene. A world direction is `right · x + up · y + forward · z` with the right, up and boresight vectors of
+`PointingSolution`. Clockwise as seen by the photographer from the top-left corner, `samplesPerEdge` points per edge (each edge
+starts at its corner and excludes the next), so `4 · samplesPerEdge` points; a circular frame (image circle no larger than the
+sensor's short side) has as many points evenly spaced from 45° anticlockwise of the top; a circle that only trims the corners
+moves the rectangle's points onto the circle. Empty for `samplesPerEdge < 1`; limited to 1000 per edge. A rectilinear outline equals
+the one built from the tangents of the half angles (a test). Cost: `O(4 · samplesPerEdge)` points, each with a few trigonometric
+calls and one `Vector3`; compute it when the lens changes, not per frame.
+
+## phototools/CameraPreset.kt
+
+```kotlin
+@ConsistentCopyVisibility
+data class CameraPreset private constructor(val id: String, val name: String, val sensor: SensorFormat,
+    val focalLengthMillimeters: Double, val aperture: Double, val pixelPitchMicrometers: Double?, val projection: LensProjection) {
+    val setup: LensSetup
+    companion object {
+        val fullFrame24: CameraPreset                        // starter: 24 mm f/2.8 on full frame
+        val seestarS50, seestarS30, seestarS50Pro, seestarS30Pro, dwarf3Tele, dwarf3Wide, dwarf2Tele, vesperaII: CameraPreset
+        val smartTelescopes: List<CameraPreset>; val all: List<CameraPreset>
+        private fun smartTelescope(id: String, name: String, pixelsWide: Int, pixelsHigh: Int, pixelPitchMicrometers: Double,
+                                   focalLengthMillimeters: Double, aperture: Double): CameraPreset
+    }
+}
+```
+Swift: `public struct CameraPreset: Identifiable, Hashable, Sendable` with the same static values. A smart telescope's sensor is
+`SensorFormat.custom(pixels × pitch)`. Each value's source (the vendor's specification page, and for a pixel pitch the sensor
+maker's datasheet or the camera ZWO sells with the same sensor) is in the doc comment of the preset. Left out because nothing
+published names the numbers: the Dwarf II wide camera, the Seestar S30 and S30 Pro wide cameras. Tests compare each
+preset's field of view with the vendor's published one (tolerances: 0.02° to 0.1°, 0.5° for the Dwarf 3 wide camera).
+
+## phototools/CameraPhotoMetadata.kt
+
+```kotlin
+data class CameraPhotoMetadata(val cameraModel: String?, val focalLengthMillimeters: Double?, val focalLength35mmEquivalent: Double?,
+                               val aperture: Double?, val pixelWidth: Int?, val pixelHeight: Int?) {
+    fun suggestion(): CameraPhotoSuggestion?
+    companion object { const val maximumNameLength = 40; val cropFactorRange: 0.5..10.0; const val presetTolerance = 0.10; const val maximumPixels = 100_000
+        private fun sensorFor(cropFactor: Double, width: Int?, height: Int?): SensorFormat?; private fun cleanedName(model: String?): String? }
+}
+data class CameraPhotoSuggestion(val name: String?, val sensor: SensorFormat?, val cropFactor: Double?,
+    val focalLengthMillimeters: Double, val aperture: Double?, val pixelPitchMicrometers: Double?, val megapixels: Double?)
+```
+Swift: `public struct CameraPhotoMetadata: Hashable, Sendable` (`init(cameraModel:focalLengthMillimeters:focalLength35mmEquivalent:aperture:pixelWidth:pixelHeight:)`) and
+`public struct CameraPhotoSuggestion`. What the apps read from a photo's EXIF header, turned into a camera profile: crop factor =
+35 mm equivalent over the real focal length; the sensor is the preset with the nearest crop factor (within 10 %), else a custom
+sensor of that diagonal in the picture's shape (3:2 without pixel sizes); pixel pitch = the sensor's longer side over the picture's
+longer side in pixels. Every value is range-checked and ignored, not corrected, when it does not fit; null without a usable focal length.
+
+---------------------------------------------------------------------------------------------------------------------------
 
 ## phototools/ExposureCalculator.kt
 
@@ -306,6 +406,12 @@ object ExposureCalculator {
 }
 ```
 (`trailLengthPixels`: a call that omits `declination` names `setup`: `trailLengthPixels(exposureSeconds = 10.0, setup = lens)`.)
+
+Fisheye lenses: the exposure rules take the real focal length (and `equivalentFocalLengthMillimeters`, the focal length times the
+crop factor, for the 500, 400 and 300 rules) whatever the projection. Every mapping has the scale `pitch / f` at the centre of the
+frame, so the real focal length is the focal length of the rectilinear lens that gives the same image scale there, which is the
+"equivalent rectilinear focal length" the rules use. Towards the edge of the frame a star moves faster across the sensor, as it
+does for any lens, so the result is the exposure for the centre of the picture. Nothing in `ExposureCalculator` changed.
 
 ---------------------------------------------------------------------------------------------------------------------------
 

@@ -166,27 +166,20 @@ class SatelliteTransitFinderTests {
 
     @Test
     fun testNoTransitsWhenTheBodyIsBelowTheHorizon() {
-        // Boulder, local night: the Sun is below the horizon for the whole window, yet the ISS has passes.
-        val nightStart = Instant.parse("2026-11-20T04:00:00Z")
-        val nightEnd = Instant.parse("2026-11-20T10:00:00Z")
-        val passes = SatellitePassFinder(boulder, DateInterval(nightStart, nightEnd), minimumAltitude = 3.0).passes(satellite)
-        assertTrue(passes.isNotEmpty())
-        var time = nightStart
-        while (time <= nightEnd) {
-            assertTrue(SkyFrame(time, boulder).horizontal(SolarSystemBody.SUN, false).altitude < -10.0)
-            time = time.plusSeconds(600)
+        val passes = SatellitePassFinder(boulder, DateInterval(from, to), minimumAltitude = 3.0).passes(satellite)
+        for (body in listOf(SolarSystemBody.SUN, SolarSystemBody.MOON)) {
+            // Passes with the body well below the horizon at both ends (it moves a quarter of a degree a minute).
+            val withBodyDown = passes.filter { pass ->
+                listOf(pass.rise.date, pass.set.date).all { SkyFrame(it, boulder).horizontal(body, false).altitude < -10.0 }
+            }
+            assertTrue(withBodyDown.size >= 10, "only ${withBodyDown.size} passes with the $body down")
+            for (pass in withBodyDown.take(10)) {
+                val found = SatelliteTransitFinder.transits(
+                    satellite, body, boulder, pass.rise.date.minusSeconds(300), pass.set.date.plusSeconds(300), 200_000.0,
+                )
+                assertEquals(emptyList(), found)
+            }
         }
-        assertEquals(emptyList(), SatelliteTransitFinder.transits(satellite, SolarSystemBody.SUN, boulder, nightStart, nightEnd, 200_000.0))
-        // The Moon is down in the morning window.
-        val moonStart = Instant.parse("2026-11-20T12:00:00Z")
-        val moonEnd = Instant.parse("2026-11-20T17:00:00Z")
-        assertTrue(SatellitePassFinder(boulder, DateInterval(moonStart, moonEnd), minimumAltitude = 3.0).passes(satellite).isNotEmpty())
-        time = moonStart
-        while (time <= moonEnd) {
-            assertTrue(SkyFrame(time, boulder).horizontal(SolarSystemBody.MOON, false).altitude < -5.0)
-            time = time.plusSeconds(600)
-        }
-        assertEquals(emptyList(), SatelliteTransitFinder.transits(satellite, SolarSystemBody.MOON, boulder, moonStart, moonEnd, 200_000.0))
     }
 
     @Test

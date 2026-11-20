@@ -27,7 +27,9 @@ import net.kuecker.lodestar.features.online.OnlineScreenshotEffect
 import net.kuecker.lodestar.features.onboarding.OnboardingScreen
 import net.kuecker.lodestar.features.settings.SettingsScreen
 import net.kuecker.lodestar.features.skychart.SkyChartScreen
+import net.kuecker.lodestar.features.system.SystemSync
 import net.kuecker.lodestar.features.tonight.TonightScreen
+import net.kuecker.lodestar.features.tools.RedTorchScreen
 import net.kuecker.lodestar.features.widget.WidgetSync
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LocalSystemBarsHidden
@@ -45,7 +47,8 @@ fun RootScreen(app: AppModel) {
         MosaicScreenshotEffect()
         OnlineScreenshotEffect()
         // Aim is full screen; at night every screen is (the bars are white). Onboarding keeps the bars, as on iOS.
-        val hideBars = palette.isNight || (app.settings.hasCompletedOnboarding && app.selectedTab == AppTab.AIM)
+        val hideBars = palette.isNight || app.isTorchShown ||
+            (app.settings.hasCompletedOnboarding && app.selectedTab == AppTab.AIM)
         LodestarTheme(palette, redFilter = app.settings.redFilterOverlay) {
             SystemBarsEffect(hidden = hideBars)
             CompositionLocalProvider(LocalSystemBarsHidden provides hideBars) {
@@ -54,11 +57,13 @@ fun RootScreen(app: AppModel) {
                 } else {
                     OnboardingScreen()
                 }
+                if (app.isTorchShown) RedTorchScreen(app)
             }
         }
     }
     LaunchedEffect(app.settings) { app.syncServices() }
     WidgetSync(app)
+    SystemSync(app)
 }
 
 @Composable

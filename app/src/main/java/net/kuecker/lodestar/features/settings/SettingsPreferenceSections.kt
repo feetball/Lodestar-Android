@@ -2,6 +2,7 @@ package net.kuecker.lodestar.features.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.FlashlightOn
 import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.Composable
@@ -164,7 +165,7 @@ internal fun SettingsAtmosphereSection() {
     }
 }
 
-/** Settings ▸ Tools: links to the exposure calculator, the star trails and time-lapse planner, and polar alignment. */
+/** Settings ▸ Tools: links to the exposure calculator, the star trails and time-lapse planner, polar alignment and the red torch. */
 @Composable
 internal fun SettingsToolsSection(onOpen: (SettingsRoute) -> Unit) {
     SettingsSection(title = "Tools") {
@@ -175,5 +176,8 @@ internal fun SettingsToolsSection(onOpen: (SettingsRoute) -> Unit) {
         }
         SettingsDivider()
         SettingsNavigationRow("Polar Alignment", Icons.Outlined.AutoAwesome) { onOpen(SettingsRoute.PolarAlignment) }
+        SettingsDivider()
+        val app = LocalAppModel.current
+        SettingsNavigationRow("Red Torch", Icons.Outlined.FlashlightOn) { app.isTorchShown = true }
     }
 }

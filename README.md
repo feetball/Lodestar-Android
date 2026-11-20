@@ -63,6 +63,10 @@ same astronomy engine ported line for line from Swift to Kotlin.
   rounded to about 10 km) and terrain horizons (elevation tiles from AWS Open Data, only when you ask a site for one).
 - **Home-screen widgets** — Tonight at a glance (dark hours, the Moon, the Milky Way core, the next event) in
   two resizable sizes, worked out on the device; a tap opens Tonight.
+- **Quick settings, shortcuts and the red torch** — a Night mode tile and a Red torch tile; long-press shortcuts for
+  Aim, Red torch and Night mode, and "Aim at" shortcuts for the first favourites; a countdown notification (a system
+  chronometer to the rise, then to the peak) for the satellite pass you follow in Aim; and a full-screen red torch with
+  a brightness bar, white light behind a confirmation and a double tap to close.
 - **Offline and private** — catalogs and ephemerides are on the device; nothing is collected. The optional online
   data downloads from CelesTrak, the Minor Planet Center, MET Norway and AWS Open Data only when you turn it on, and
   a GoTo mount is reached over the local network only.
@@ -80,7 +84,7 @@ android/
     app/            AppModel (state + service orchestration), activity, root screen
     model/ services/ theme/ shared/   settings, sensors/location/camera, night palette, shared views
     features/       aim, objects, skychart, tonight, settings, onboarding, tools, events, mosaic, horizon,
-                    mount, smallbodies, satellites, online, widget
+                    mount, smallbodies, satellites, online, widget, system
   tools/            Icon, feature-graphic and screenshot scripts
   PlayStore/        Store listing text and graphics
   docs/             GitHub Pages: privacy policy and support

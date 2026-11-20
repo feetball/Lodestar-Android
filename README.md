@@ -41,6 +41,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
   the coordinates to copy.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
+  - **Alignment finder** — when does the Milky Way core, the Moon or any object stand over a ridge or in a gap
+    between trees? Pick a point of your recorded skyline (or an azimuth and altitude window), a period, how dark
+    it must be and what the Moon may do, and get the matching nights, with the sky chart at that time and Aim.
 - **Exposure calculator** — the longest exposure before stars trail by the NPF, 500, 400 and 300 rules for your
   camera, lens and target; for a star tracker, the drift and the limit for a polar-alignment error of 0.1° to 5°;
   for an alt-azimuth mount, the field-rotation rate and the limit at the target's place; and a shutter time for the

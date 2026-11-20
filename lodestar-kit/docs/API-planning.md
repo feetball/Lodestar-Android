@@ -2,9 +2,9 @@
 
 Package `net.kuecker.lodestar.kit.planning`. Port of `LodestarKit/Sources/LodestarKit/Planning/*.swift`
 (IntervalSet, AltitudeSample, AltitudeProfile, DarknessSampler, TargetVisibility, NightPlanner, NightPlanner+Summary,
-NightPlanner+Visibility, NightPlanner+Unobstructed, NightSummary, PolarAlignment, MeridianClock, MoonImpact). Depends on the Foundation and Ephemeris areas only (no Catalog; the
+NightPlanner+Visibility, NightPlanner+Unobstructed, NightSummary, PolarAlignment, MeridianClock, MoonImpact, SkyWindowFinder). Depends on the Foundation and Ephemeris areas only (no Catalog; the
 catalog-object overload of `MeridianClock.transit` lives with the Catalog area, see `API-catalog.md`), except
-`MoonImpact`, which takes the Catalog's `ObjectCategory`.
+`MoonImpact`, which takes the Catalog's `ObjectCategory`, and `SkyWindowFinder`, which also reads the Horizon area (skyline, sky tracks) and the Catalog area (`CelestialObject`).
 
 Import with `import net.kuecker.lodestar.kit.planning.*` — **that also brings in `NightPlanner.summary(...)` and every
 `NightPlanner.visibility(...)` overload**, which are extension functions on the `NightPlanner` object (Swift `extension NightPlanner`
@@ -290,6 +290,81 @@ internal class DarknessProfile(val stretches: List<Stretch>) {
 }
 ```
 
+## SkyWindowFinder.kt  (Swift `SkyWindowFinder.swift`) — "when does it stand over that ridge?"
+
+Finds, night by night, the stretches in which a target is inside a patch of sky (an azimuth range and an apparent-altitude range) while the Sun is
+low enough and the Moon rule holds: the Milky Way core over a ridge, the Moon in a gap between trees. Do not name anything "Alignment…" here (the star
+alignment of the Pointing area owns that word).
+
+```kotlin
+data class SkyWindow private constructor(val azimuth: AzimuthRange, val minimumAltitude: Double, val maximumAltitude: Double) {   // Swift struct, init?
+    companion object {
+        const val maximumAzimuthTolerance: Double                 // 180
+        const val defaultSkylineTolerance: Double                 // 3
+        fun create(azimuth: AzimuthRange, minimumAltitude: Double, maximumAltitude: Double): SkyWindow?      // Swift init?(azimuth:minimumAltitude:maximumAltitude:)
+        fun around(azimuth: Double, tolerance: Double, minimumAltitude: Double, maximumAltitude: Double): SkyWindow?   // azimuth ± tolerance
+        fun skylinePoint(azimuth: Double, horizon: HorizonProfile, azimuthTolerance: Double = 3.0,
+                         altitudeAbove: ClosedFloatingPointRange<Double> = 0.0..10.0): SkyWindow?          // just above the skyline altitude at azimuth
+    }
+}
+sealed interface SkyWindowTarget {                                // Swift enum with payloads
+    data class Body(val body: SolarSystemBody)                    // .body(_)
+    data class Fixed(val coordinate: EquatorialCoordinate, val properMotion: ProperMotion? = null)   // .fixed(_:properMotion:)
+    data object MilkyWayCore                                      // .milkyWayCore (Sagittarius A*)
+    data class CatalogObject(val obj: CelestialObject)            // .catalogObject(_)
+}
+enum class SkyWindowDarkness(val rawValue: String, val sunAltitudeLimit: Double?) {   // ASTRONOMICAL −18°, NAUTICAL −12°, CIVIL −6° ("any darkness"), ANY_TIME (null)
+    companion object { fun fromRawValue(raw: String): SkyWindowDarkness? }
+}
+sealed interface SkyWindowMoonRule {                              // Swift enum: .unrestricted, .belowHorizon, .illuminatedAtMost(_)
+    data object Unrestricted
+    data object BelowHorizon                                      // the upper limb is below −0.5667°, as RiseSetCalculator
+    data class IlluminatedAtMost(val fraction: Double)            // the phase only, up or not; fraction in [0, 1]
+}
+data class SkyWindowMoonState(val altitude: Double, val illuminatedFraction: Double, val isUp: Boolean)
+data class SkyWindowMatch(
+    val night: DateInterval, val interval: DateInterval,          // the night (local noon to noon) and the stretch, ends good to 10 s
+    val azimuth: Double, val altitude: Double,                    // of the target at the midpoint; altitude is apparent
+    val moon: SkyWindowMoonState, val isAboveSkyline: Boolean,
+) { val midpoint: Instant }
+sealed class SkyWindowError : Exception {                         // Swift enum SkyWindowError: Error
+    data class InvalidRange(val from: Instant, val to: Instant)   // .invalidRange(from:to:)
+    data class RangeTooLong(val limit: Int)                       // .rangeTooLong(limit:)
+    data object InvalidTarget                                     // .invalidTarget
+    data class InvalidMoonRule(val fraction: Double)              // .invalidMoonRule(fraction:)
+}
+object SkyWindowFinder {
+    const val sampleInterval: Double          // 300 s
+    const val refinementTolerance: Double     // 10 s
+    const val maximumNightCount: Int          // 400
+    const val maximumMatchCount: Int          // 200
+    fun matches(target: SkyWindowTarget, window: SkyWindow, observer: Observer, horizon: HorizonProfile? = null,
+                from: Instant, to: Instant, darkness: SkyWindowDarkness = ASTRONOMICAL,
+                moon: SkyWindowMoonRule = Unrestricted, timeZone: ZoneId): List<SkyWindowMatch>      // throws SkyWindowError
+}
+```
+Swift: `SkyWindowFinder.matches(target:window:observer:horizon:from:to:darkness:moon:timeZone:) throws -> [SkyWindowMatch]`.
+
+How it works
+- The nights are `TwilightCalculator.nightInterval` (local noon to local noon, so 23 or 25 hours across a daylight-saving change) from the night that contains
+  `from` to the last one that starts before `to`; the range is clipped to `[from, to]`. A match never crosses a local noon.
+- Each night is sampled at equal gaps of at most 300 s. A sample matches when (1) the Sun's geometric altitude is below the darkness limit (not evaluated for
+  `ANY_TIME`), (2) the target's azimuth lies in the window's range, (3) its **apparent** altitude (geometric altitude plus refraction of the observer's
+  atmosphere, like the skyline of a `HorizonProfile`) lies in the altitude range, ends included, and (4) the Moon rule holds. The conditions are tested in this
+  order, so the target (and the Moon) are only evaluated where the cheaper ones hold.
+- Runs of matching samples become matches; each edge that is not an end of the night or the range is refined by bisection to 10 s, towards the matching side, so a
+  match lies inside its true stretch (its length is short by up to 2 × 9.4 s). A crossing that lasts less than a sampling gap and falls between two samples is missed.
+- `isAboveSkyline` is `HorizonVisibility(horizon ?: flat).margin(altitude, azimuth, refracted = true) >= 0` for the target's apparent centre at the midpoint.
+- Positions come from `HorizonSkyFrames` and the tracks of the Horizon area: frames per six hours, the Sun, the Moon and the planets interpolated from ephemeris
+  nodes, fixed targets from their apparent place. A comet, an asteroid or a celestial pole is followed with `SkyFrame.horizontal(obj, refraction = false)` per sample.
+- Validation: `from`/`to` must be finite with `to >= from` (equal gives an empty result); a range that touches more than 400 nights throws `RangeTooLong`; a fixed
+  target without a finite position throws `InvalidTarget`; `IlluminatedAtMost` needs a fraction in [0, 1].
+
+Cost (JVM, one core): a night is 288 samples, of which only those with the Sun below the limit evaluate the target — about 55 000 horizontal transforms for a year of
+astronomical darkness at mid-latitudes (105 000 with `ANY_TIME`) — plus about 6 evaluations per edge. A year for a fixed target or a planet takes about 0.1 s; the Moon rule
+adds the Moon's ephemeris nodes (hourly) and takes a similar time again; a comet or an asteroid, whose orbit is propagated for every sample, takes a few seconds.
+The call shares no state and can run on any thread.
+
 ## MoonImpact.kt  (Swift `MoonImpact.swift`)
 
 How much the Moon disturbs a shot of one target, with the imaging filter taken into account. The broadband rule is the one the apps
@@ -366,10 +441,15 @@ is in the type's doc comment; the step counts are a rule of thumb, not a fit to 
 | `AltitudeProfile.sine(atIndex position:)`, `.maximum(from:to:)`, `.offsets(atOrAbove:)` | `sine(position)`, `maximum(startOffset, endOffset)`, `offsets(threshold)` |
 | `DarknessSampler.profile(ofSine:)` / `profile(of:)`, `DarknessProfile.maximum(within:)` / `intervals(atOrAbove:)` | `profile(sine)` / `profile(body)`, `maximum(queries)` / `intervals(threshold)` |
 | `IntervalSet.subtracting(_:from:)`, `.totalDuration(of:)` | `subtracting(removed, base)`, `totalDuration(intervals)` |
-| `Hemisphere.allCases`, `DarknessKind.allCases`, `ScopeView.allCases`, `ImagingFilter.allCases`, `MoonImpact.Level.allCases` | `.entries` |
+| `Hemisphere.allCases`, `DarknessKind.allCases`, `ScopeView.allCases`, `ImagingFilter.allCases`, `MoonImpact.Level.allCases`, `SkyWindowDarkness.allCases` | `.entries` |
 | `MoonImpact.Level.lowered(steps:)`, `.moonDown` … `.severe`; `ImagingFilter.none` … `.narrowband` | `lowered(steps)`, `MOON_DOWN` … `SEVERE`; `NONE` … `NARROWBAND` |
 | `MoonImpact.isEmissionLineTarget(_:)`, `.moonFreeWeight(level:)` | `isEmissionLineTarget(objectKind)`, `moonFreeWeight(level)` |
 | `MeridianClock.hourAngle(of:at:observer:)`, `.transit(forJ2000:properMotion:around:observer:)`, `.transit(for:around:observer:)` (body) | `hourAngle(apparent, date, observer)`, `transit(position, properMotion, date, observer)`, `transit(body, date, observer)` (Kotlin parameter names are the Swift internal names) |
+| `SkyWindow.init?(azimuth:minimumAltitude:maximumAltitude:)` | `SkyWindow.create(azimuth, minimumAltitude, maximumAltitude)` |
+| `SkyWindowDarkness.astronomical/.nautical/.civil/.anyTime`, `SkyWindowMoonRule.unrestricted/.belowHorizon/.illuminatedAtMost(_)` | `ASTRONOMICAL/NAUTICAL/CIVIL/ANY_TIME`, `Unrestricted/BelowHorizon/IlluminatedAtMost(fraction)` (a sealed interface) |
+| `SkyWindowTarget.body/.fixed/.milkyWayCore/.catalogObject` | `Body/Fixed/MilkyWayCore/CatalogObject(obj)` (`object` is a keyword) |
+| `SkyWindowError` cases | `SkyWindowError` subclasses of `Exception` (`InvalidRange`, `RangeTooLong`, `InvalidTarget`, `InvalidMoonRule`) |
+| `SkyWindow.skylinePoint(…, altitudeAbove: ClosedRange<Double>)` | `ClosedFloatingPointRange<Double>`; an empty range (Kotlin allows `5.0..2.0`, Swift traps) returns `null` |
 
 ### Types, access
 - `internal` Swift members stay `internal` (`NightPlanner.curveGapCount`, `NightPlanner.upIntervals`, `MilkyWayCoreVisibility.galacticCentre`,
@@ -410,7 +490,7 @@ is in the type's doc comment; the step counts are a rule of thumb, not a fit to 
 `src/test/kotlin/.../planning/` — 1:1 ports of the Swift suites (same names, inputs, expected values and tolerances):
 `PlanningAltitudeCurveTests` (11), `PlanningAltitudeProfileTests` (12), `PlanningIntervalSetTests` (6), `PlanningMeridianClockTests` (19), `PlanningMilkyWayCoreTests` (14),
 `PlanningNightSummaryTests` (22; also holds `PlanningTestSupport`, the sites and helpers, as in Swift), `PlanningPerformanceTests` (5),
-`PlanningPlanetTests` (8), `PlanningUnobstructedTests` (13: the `horizon` argument, `unobstructed*` and `UnobstructedVisibility`),
+`PlanningPlanetTests` (8), `PlanningSkyWindowFinderTests` (21, new with the Alignment finder), `PlanningUnobstructedTests` (13: the `horizon` argument, `unobstructed*` and `UnobstructedVisibility`),
 `PlanningVisibilityTests` (22), `PolarAlignmentFixtureTests` (3), `PolarAlignmentTests` (19 of 20, see below).
 Fixtures `stars_apparent.json`, `sidereal.json` in `src/test/resources/fixtures/` (Skyfield/DE440s, loaded with snake-case keys).
 `PlanningTestSupport.SeededGenerator` reproduces the Swift tests' SplitMix64 draws, including `Double.random(in:using:)` for `..<` and `...` ranges, so the

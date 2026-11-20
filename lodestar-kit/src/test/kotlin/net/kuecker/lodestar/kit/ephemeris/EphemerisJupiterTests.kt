@@ -92,9 +92,9 @@ class EphemerisJupiterTests {
     fun testGalileanMoonsAgreeWithJplHorizons() {
         // JPL Horizons vector tables (jup365 satellites, DE441 Jupiter, Sun and Earth; queried 2026-11-19) turned into
         // Jupiter's axes (X west along the equator of the IAU 2015 pole, Y north) as seen from the geocentre: the four
-        // moons 2615 s of light-time before 2026-11-19 00:42:15.8 UTC, in Jupiter radii (equatorial 71 492 km).
+        // moons 2615 s of light-time before 2026-11-19 00:42:16 UTC, in Jupiter radii (equatorial 71 492 km).
         val truth = listOf(0.889 to 0.027, -2.349 to -0.111, 4.544 to 0.062, -20.011 to -0.028)
-        val state = GalileanMoons.positions(JulianDate(utc("2026-11-19T00:42:15.8Z")))
+        val state = GalileanMoons.positions(JulianDate(utc("2026-11-19T00:42:16Z")))
         for ((index, moon) in state.moons.withIndex()) {
             assertNear(truth[index].first, moon.x, 0.12, "${moon.moon} X")
             assertNear(truth[index].second, moon.y, 0.15, "${moon.moon} Y")

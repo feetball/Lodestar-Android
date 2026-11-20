@@ -128,6 +128,24 @@ reference positions come from **NASA/JPL** (SBDB and Horizons, public domain; cr
 extracts of both. The bundled `asteroids.txt` (bright asteroids, osculating epoch 2026-06-09) is an extract of the
 MPC orbit file and keeps the MPC header verbatim.
 
+### Night lights — `lightpollution.bin`
+
+The sky-quality estimate (`lodestar-kit/src/main/resources/net/kuecker/lodestar/kit/catalog/lightpollution.bin`, 137 kB) is built by
+`Tools/build_light_pollution.py` (iOS repository) from **NASA GIBS** (Global Imagery Browse Services), layer `VIIRS_Black_Marble`:
+**Black Marble**, the Suomi NPP VIIRS day/night band night-lights composite of **2016-01-01**, TileMatrixSet `500m`,
+zoom level 4 (200 PNG tiles, each pinned by sha256 in `Tools/lightpollution.lock.json` (iOS repository)).
+
+- **Credit:** NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP). The app shows this line in *Settings > Data credits*.
+- **Sources:** GIBS API, <https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api>;
+  Black Marble product suite, <https://blackmarble.gsfc.nasa.gov/>; Román et al., *NASA's Black Marble nighttime lights
+  product suite*, Remote Sensing of Environment 210 (2018).
+- **License:** NASA data and imagery are open (NASA's media usage guidelines; GIBS imagery is free to use with credit, no
+  login). The World Atlas of Artificial Night Sky Brightness (2015) is **not** used: it is CC BY-NC.
+- **Changes made for Lodestar:** the 8-bit display tiles' faint land base texture was removed, the light converted to
+  linear luminance, averaged into 0.1 degree cells, quantized to 16 levels on a log scale and run-length encoded; the
+  app turns the grid into a sky-glow index and an estimated Bortle class. The result is an estimate from 2016
+  satellite imagery, not a sky measurement. NASA does not endorse Lodestar.
+
 ### Weather forecast
 
 The cloud forecast is downloaded at run time from **MET Norway** (the Norwegian Meteorological Institute), Locationforecast 2.0
@@ -265,6 +283,7 @@ requested). Used only by the unit tests; not shipped in the app.
 > the latter after Jose R. Vieira's Milky Way Outline Catalog.
 > Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey (public domain).
 > Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); Pluto and lunar theory after J. Meeus.
+> Night lights: NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP).
 >
 > Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital elements: IAU Minor Planet Center; weather forecast from
 > MET Norway (CC BY 4.0).

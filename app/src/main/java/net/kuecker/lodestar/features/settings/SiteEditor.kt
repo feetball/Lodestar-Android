@@ -67,6 +67,7 @@ import net.kuecker.lodestar.shared.SettingsMenuOption
 import net.kuecker.lodestar.shared.SettingsMenuPicker
 import net.kuecker.lodestar.shared.SettingsNumberField
 import net.kuecker.lodestar.shared.SettingsRow
+import net.kuecker.lodestar.features.skyquality.SkyQualityLine
 import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.theme.LocalPalette
 import java.text.BreakIterator
@@ -246,6 +247,8 @@ internal fun SiteEditor(
                         onValueChange = { draft = draft.copy(elevation = it) },
                         range = GeographicLocation.elevationRange, unit = "m", fractionDigits = 0,
                     )
+                    SettingsDivider()
+                    SettingsRow { SkyQualityLine(position) }
                     SettingsDivider()
                     SettingsNavigationRow("Choose on Map", Icons.Outlined.Map) { showsMap = true }
                     app.location.fix?.let { fix ->

@@ -24,6 +24,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
   emission nebulae; Tonight's best targets weigh the Moon the same way).
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
   targets ranked by the hours they stay clear of your skyline, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
+- **Sky quality** — an offline Bortle estimate from satellite night-light imagery on every site and a Tonight card
+  with the darkest direction and an imaging score for the night (dark hours, Moon, sky brightness and, when the
+  forecast is on, clouds); the sky chart can draw a thin glow ring on the horizon.
 - **Events calendar** — meteor showers (with hourly rates, the radiant's altitude from your site, the best camera
   direction, away from the radiant and the Moon, and how many meteors to expect in your lens's frame), lunar and
   solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
@@ -105,5 +108,5 @@ time zone. Policy: <https://feetball.github.io/Lodestar-Android/privacy.html>.
 
 ## Credits
 
-Star, deep-sky, constellation and Milky Way data, the magnetic model and the software libraries are credited in
-[ATTRIBUTION.md](ATTRIBUTION.md).
+Star, deep-sky, constellation and Milky Way data, the night-lights grid (NASA Worldview / GIBS, Black Marble (VIIRS,
+Suomi NPP)), the magnetic model and the software libraries are credited in [ATTRIBUTION.md](ATTRIBUTION.md).

@@ -149,6 +149,17 @@ internal data class DataCredit(
                     "calendar's radiant tables.",
             ),
             DataCredit(
+                id = "black-marble", name = "NASA Black Marble night lights (VIIRS, Suomi NPP)",
+                usedFor = "Sky quality (Bortle estimate, darkest direction, horizon glow)",
+                author = "NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP)",
+                license = "NASA open data, credit requested", licenseURL = null,
+                sourceURL = "https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api",
+                notice = "The 2016 composite of the VIIRS day/night band, from NASA's Global Imagery Browse Services " +
+                    "(layer VIIRS_Black_Marble). Changes for Lodestar: the land's base texture was removed and the light " +
+                    "averaged into 0.1° cells of 16 levels; the app estimates the sky's brightness from them. It is an " +
+                    "estimate from satellite imagery, not a sky measurement. NASA does not endorse Lodestar.",
+            ),
+            DataCredit(
                 id = "maplibre", name = "MapLibre Native", usedFor = "Drawing the site map",
                 author = "The MapLibre project and contributors",
                 license = "BSD 2-Clause", licenseURL = "https://opensource.org/license/bsd-2-clause",
@@ -226,6 +237,7 @@ private const val CREDIT_LINE =
         "and Milky Way outlines: d3-celestial by Olaf Frohn (BSD-3-Clause), the latter after Jose R. Vieira's " +
         "Milky Way Outline Catalog. Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey " +
         "(public domain). Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); Pluto and lunar theory after J. Meeus. " +
+        "Night lights: NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP). " +
         "Maps: tiles and styles by OpenFreeMap, © OpenMapTiles, data © OpenStreetMap contributors (ODbL), drawn " +
         "with MapLibre Native (BSD-2-Clause). Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital " +
         "elements: IAU Minor Planet Center; weather forecast from MET Norway (CC BY 4.0). Software: AndroidX and " +

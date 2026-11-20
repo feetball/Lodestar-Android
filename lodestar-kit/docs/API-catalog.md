@@ -132,7 +132,7 @@ sealed interface ObjectPosition {
 ```kotlin
 @Serializable(with = AngularSizeSerializer::class) @ConsistentCopyVisibility
 data class AngularSize private constructor(val majorArcminutes: Double, val minorArcminutes: Double?, val positionAngle: Double?) {
-    val description: String                            // "178′ × 70′", "8.4′", "36″"; toString() returns it
+    val description: String                            // "2° 58′ × 1° 10′", "8′ 24″", "36″"; toString() returns it
     companion object {
         const val maximumArcminutes: Double            // 21600
         fun create(majorArcminutes: Double, minorArcminutes: Double? = null, positionAngle: Double? = null): AngularSize?   // Swift init?

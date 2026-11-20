@@ -167,7 +167,8 @@ class CatalogSkyTests {
         val jupiter = assertNotNull(frame().currentAngularSize(obj("planet.jupiter")))
         assertTrue(jupiter.majorArcminutes >= 0.45 && jupiter.majorArcminutes <= 0.9, "${jupiter.majorArcminutes}")
         assertTrue(jupiter.description.endsWith("″"), jupiter.description)
-        assertTrue(assertNotNull(frame().currentAngularSize(obj("moon"))).description.endsWith("′"))
+        val moonText = assertNotNull(frame().currentAngularSize(obj("moon"))).description
+        assertTrue('′' in moonText && '°' !in moonText, "the Moon is about half a degree: $moonText")
     }
 
     @Test
@@ -175,7 +176,7 @@ class CatalogSkyTests {
         val skyFrame = frame()
         val m31 = obj("dso.M31")
         assertEquals(m31.angularSize, skyFrame.currentAngularSize(m31))
-        assertEquals("178′ × 70′", skyFrame.currentAngularSize(m31)?.description)
+        assertEquals("2° 58′ × 1° 10′", skyFrame.currentAngularSize(m31)?.description)
         assertNull(skyFrame.currentAngularSize(obj("star.hip32349")))
         assertNull(skyFrame.currentAngularSize(obj("special.ncp")))
     }

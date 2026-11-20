@@ -36,6 +36,9 @@ internal class SkyOverlayScratch(textMeasurer: TextMeasurer, density: Density) {
     val world = AimWorldPath()
     val polygonClip = AimPolygonClip()
 
+    /** The border of the DSLR picture for the lens in use. */
+    val lensFrame = AimLensFrame()
+
     /** Whether each panel of the running mosaic reaches into the view this frame; grown as plans get larger. */
     private var panelsInView = BooleanArray(INITIAL_PANELS)
 

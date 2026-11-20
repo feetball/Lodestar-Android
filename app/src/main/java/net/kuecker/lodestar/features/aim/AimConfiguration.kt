@@ -10,6 +10,7 @@ import net.kuecker.lodestar.kit.foundation.DateInterval
 import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.phototools.FrameSize
+import net.kuecker.lodestar.kit.phototools.LensSetup
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
 import net.kuecker.lodestar.kit.pointing.DeviceAttitude
 import net.kuecker.lodestar.kit.pointing.GuidanceTracker
@@ -27,6 +28,8 @@ data class AimConfiguration(
     val alignment: AlignmentModel,
     /** The DSLR's picture in landscape orientation, in degrees. */
     val lensFrame: FrameSize,
+    /** The DSLR's camera and lens, whose frame is drawn: a rectangle, or a curve for a fisheye lens. */
+    val lensSetup: LensSetup,
     val showConstellationLines: Boolean,
     val showConstellationNames: Boolean,
     val showDeepSkyObjects: Boolean,
@@ -73,6 +76,7 @@ data class AimConfiguration(
                 mount = mount,
                 alignment = app.alignment,
                 lensFrame = app.lensSetup.fieldOfView,
+                lensSetup = app.lensSetup,
                 showConstellationLines = settings.showConstellationLines,
                 showConstellationNames = settings.showConstellationNames,
                 showDeepSkyObjects = settings.showDeepSkyObjects,

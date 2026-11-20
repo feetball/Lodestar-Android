@@ -181,13 +181,9 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     val mountProfile: MountProfile
         get() = MountProfile.presets.firstOrNull { it.id == settings.mountPresetID } ?: MountProfile.backCameraPortrait
 
-    /** The camera body + lens used for the framing rectangle and exposure tools. */
+    /** The camera body + lens used for the framing rectangle and exposure tools: the active camera profile. */
     val lensSetup: LensSetup
-        get() {
-            val sensor = SensorFormat.presets.firstOrNull { it.id == settings.sensorID }
-                ?: SensorFormat.custom(settings.customSensorWidth, settings.customSensorHeight)
-            return LensSetup(sensor, settings.focalLength, settings.aperture, settings.pixelPitch)
-        }
+        get() = settings.activeCameraProfile.lensSetup
 
     // Lifecycle
 

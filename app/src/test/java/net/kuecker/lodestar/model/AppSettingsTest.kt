@@ -12,6 +12,7 @@ class AppSettingsTest {
     @Test
     fun roundTripKeepsEverySetting() {
         val site = assertNotNull(SavedSite.create("Dark Site", 36.05, -112.14, 2130.0, "America/Phoenix"))
+        // Sanitising turns the single camera into the first camera profile, as decoding stored settings does.
         val settings = AppSettings(
             hasCompletedOnboarding = true, locationSource = LocationSource.Site(site.id), savedSites = listOf(site),
             headingSource = HeadingSource.GYRO_LOCK, focalLength = 14.0, pixelPitch = 3.76,
@@ -19,7 +20,7 @@ class AppSettingsTest {
             polarErrorDegrees = 2.5, exposureISO = 1600,
             nightMode = NightModeSetting.ON, coordinateStyle = CoordinateStyle.DECIMAL,
             favoriteObjectIDs = listOf("dso.M31"), recentObjectIDs = listOf("planet.mars", "moon"),
-        )
+        ).sanitized()
         assertEquals(settings, AppSettings.decode(AppSettings.encode(settings)))
     }
 

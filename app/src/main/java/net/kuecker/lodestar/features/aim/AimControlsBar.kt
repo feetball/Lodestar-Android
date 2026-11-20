@@ -46,8 +46,8 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * The buttons of the screen: target, align, mosaic, time, camera, night mode and zoom, in a row or, in a wide HUD, in a
- * column (`axis` = vertical).
+ * The buttons of the screen: target, align, mosaic, time, camera, night mode and zoom, and with several camera profiles
+ * the frame menu, in a row or, in a wide HUD, in a column (`axis` = vertical).
  */
 @Composable
 internal fun AimControlsBar(
@@ -68,6 +68,8 @@ internal fun AimControlsBar(
     val mount = rememberMountService()
     val showsMount = mount.preferences.hasConnectedBefore || mount.snapshot.state != MountConnectionState.DISCONNECTED ||
         mount.snapshot.lostConnection
+    // Switching between cameras at the tripod needs more than one profile.
+    val showsFrame = app.settings.cameraProfiles.size > 1
 
     // Both layouts hold the same buttons; each one gets the weight (row) or half the width (two columns) it needs.
     val buttons: List<@Composable (Modifier) -> Unit> = listOfNotNull(
@@ -136,15 +138,16 @@ internal fun AimControlsBar(
         },
         { slot -> AimFieldOfViewButton(model, buttonHeight, slot) },
         if (showsMount) { slot -> MountAimButton(buttonHeight, slot) } else null,
+        if (showsFrame) { slot -> AimFrameMenuButton(buttonHeight, slot) } else null,
     )
     if (axis == Orientation.Horizontal) {
-        // Closer together as buttons join: the Time button makes seven, the Mount button eight.
+        // Closer together as buttons join: the Time button makes seven, the Mount or Frame button eight, both nine.
         val spacing = if (buttons.size > 7) 2.dp else if (buttons.size > 6) 4.dp else 8.dp
         Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
             for (button in buttons) button(Modifier.weight(1f))
         }
     } else {
-        // Seven or eight buttons would be taller than a phone clamped sideways: two columns.
+        // Seven to nine buttons would be taller than a phone clamped sideways: two columns.
         Column(modifier.width(WIDE_COLUMN_WIDTH), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (pair in buttons.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

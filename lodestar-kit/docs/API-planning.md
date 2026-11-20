@@ -2,7 +2,8 @@
 
 Package `net.kuecker.lodestar.kit.planning`. Port of `LodestarKit/Sources/LodestarKit/Planning/*.swift`
 (IntervalSet, AltitudeSample, AltitudeProfile, DarknessSampler, TargetVisibility, NightPlanner, NightPlanner+Summary,
-NightPlanner+Visibility, NightSummary, PolarAlignment). Depends on the Foundation and Ephemeris areas only (no Catalog).
+NightPlanner+Visibility, NightSummary, PolarAlignment, MeridianClock). Depends on the Foundation and Ephemeris areas only (no Catalog; the
+catalog-object overload of `MeridianClock.transit` lives with the Catalog area, see `API-catalog.md`).
 
 Import with `import net.kuecker.lodestar.kit.planning.*` — **that also brings in `NightPlanner.summary(...)` and every
 `NightPlanner.visibility(...)` overload**, which are extension functions on the `NightPlanner` object (Swift `extension NightPlanner`
@@ -159,6 +160,37 @@ data class PolarScopeReading(
 ```
 `Hemisphere` and `ScopeView` serialize as `"north"`/`"south"` and `"naked"`/`"inverted"`. `allCases` is `entries`.
 
+## MeridianClock.kt  (Swift `MeridianClock.swift`)
+
+The hour angle of a target and the time to its meridian transit, for equatorial mounts that flip at the meridian. Hour angles are in **hours**,
+signed, west positive (negative: the target has yet to transit), in (−12, 12]; a transit is the instant the hour angle is zero (for a star also the
+instant of greatest altitude; for the Moon, whose declination changes, the two differ by up to some minutes).
+
+```kotlin
+data class MeridianTransits(val next: Instant?, val previous: Instant?)   // Swift struct; null when no transit lies within a day (the Moon: 24 h 50 min apart; poles: never)
+data class MeridianFlipWindow(val secondsUntilLimit: Double) {            // negative once the limit is behind the mount
+    val isPastLimit: Boolean                                              // secondsUntilLimit <= 0
+}
+object MeridianClock {
+    const val searchHalfSpan: Double                                      // 86 400 s: the transit search runs date ± this
+    val limitDegreesRange: ClosedFloatingPointRange<Double>               // 0.0..30.0; Swift ClosedRange<Double> 0...30
+    const val siderealDegreesPerSecond: Double                            // 360.98564736629 / 86 400
+    fun hourAngle(apparent: EquatorialCoordinate, date: Instant, observer: Observer): Double
+    //   Swift hourAngle(of:at:observer:). Apparent place of date (apparentPlace / topocentricEquatorial); NaN for a non-finite coordinate. One SkyFrame.
+    fun transit(position: EquatorialCoordinate, properMotion: ProperMotion? = null, date: Instant, observer: Observer): MeridianTransits
+    //   Swift transit(forJ2000:properMotion:around:observer:). J2000 catalog place. ≈ 300 sky frames, a few ms.
+    fun transit(body: SolarSystemBody, date: Instant, observer: Observer): MeridianTransits
+    //   Swift transit(for:around:observer:). ≈ 300 ephemeris evaluations: ≈ 10 ms for the Moon.
+    fun flipWindow(hourAngle: Double, limitDegrees: Double): MeridianFlipWindow?
+    //   Swift flipWindow(hourAngle:limitDegrees:). hourAngle in hours (wrapped into (−12, 12]); limit clamped to 0…30°; null for a non-finite argument.
+    internal fun transits(date: Instant, hourAngleDegrees: (Instant) -> Double): MeridianTransits   // Swift internal transits(around:hourAngleDegrees:)
+}
+```
+The search is `RiseSetCalculator.upperCulminations` on cos(hour angle): one maximum per transit whatever the target does in declination, found with the
+calculator's 10-minute grid and 0.25 s refinement. `next` is the first transit after `date`, `previous` the last at or before it.
+`flipWindow(hourAngle = 0.0, limitDegrees = 10.0)` is 40 minutes of sidereal time (2 393.4 s of clock time); the countdown is (limit − hour angle) at the
+sidereal rate, so it is negative when the target is further west than the limit.
+
 ## IntervalSet.kt  (Swift `NightPlanner.IntervalSet`, internal)
 
 ```kotlin
@@ -225,6 +257,7 @@ internal class DarknessProfile(val stretches: List<Stretch>) {
 | `DarknessSampler.profile(ofSine:)` / `profile(of:)`, `DarknessProfile.maximum(within:)` / `intervals(atOrAbove:)` | `profile(sine)` / `profile(body)`, `maximum(queries)` / `intervals(threshold)` |
 | `IntervalSet.subtracting(_:from:)`, `.totalDuration(of:)` | `subtracting(removed, base)`, `totalDuration(intervals)` |
 | `Hemisphere.allCases`, `DarknessKind.allCases`, `ScopeView.allCases` | `.entries` |
+| `MeridianClock.hourAngle(of:at:observer:)`, `.transit(forJ2000:properMotion:around:observer:)`, `.transit(for:around:observer:)` (body) | `hourAngle(apparent, date, observer)`, `transit(position, properMotion, date, observer)`, `transit(body, date, observer)` (Kotlin parameter names are the Swift internal names) |
 
 ### Types, access
 - `internal` Swift members stay `internal` (`NightPlanner.curveGapCount`, `NightPlanner.upIntervals`, `MilkyWayCoreVisibility.galacticCentre`,
@@ -263,7 +296,7 @@ internal class DarknessProfile(val stretches: List<Stretch>) {
 ## Tests
 
 `src/test/kotlin/.../planning/` — 1:1 ports of the Swift suites (same names, inputs, expected values and tolerances):
-`PlanningAltitudeCurveTests` (11), `PlanningAltitudeProfileTests` (12), `PlanningIntervalSetTests` (6), `PlanningMilkyWayCoreTests` (14),
+`PlanningAltitudeCurveTests` (11), `PlanningAltitudeProfileTests` (12), `PlanningIntervalSetTests` (6), `PlanningMeridianClockTests` (19), `PlanningMilkyWayCoreTests` (14),
 `PlanningNightSummaryTests` (22; also holds `PlanningTestSupport`, the sites and helpers, as in Swift), `PlanningPerformanceTests` (5),
 `PlanningPlanetTests` (8), `PlanningVisibilityTests` (22), `PolarAlignmentFixtureTests` (3), `PolarAlignmentTests` (19 of 20, see below).
 Fixtures `stars_apparent.json`, `sidereal.json` in `src/test/resources/fixtures/` (Skyfield/DE440s, loaded with snake-case keys).

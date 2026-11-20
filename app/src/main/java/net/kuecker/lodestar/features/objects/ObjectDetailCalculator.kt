@@ -85,10 +85,11 @@ internal object ObjectDetailCalculator {
             distance = smallBody?.let { ObjectDetailDistance.AstronomicalUnits(it.info.earthDistanceAU) }
         }
         val horizontal = frame.horizontal(obj, true)
+        val equatorial = frame.apparentEquatorial(obj)
         return ObjectDetailCurrent(
             date = date,
             horizontal = horizontal,
-            equatorial = frame.apparentEquatorial(obj),
+            equatorial = equatorial,
             magnitude = frame.currentMagnitude(obj),
             angularSize = frame.currentAngularSize(obj),
             distance = distance,
@@ -99,6 +100,7 @@ internal object ObjectDetailCalculator {
             skylineAltitude = skyline?.altitude(horizontal.azimuth),
             isSmallBody = obj.smallBody != null,
             smallBody = smallBody,
+            meridian = ObjectDetailMeridian.of(obj, observer, date, equatorial, isEvaluable = obj.smallBody == null || smallBody != null),
         )
     }
 

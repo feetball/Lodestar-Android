@@ -31,12 +31,17 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.formatting.formatExposure
+import net.kuecker.lodestar.kit.phototools.ExposureCalculator
 import net.kuecker.lodestar.kit.phototools.LensSetup
+import net.kuecker.lodestar.kit.planning.ImagingFilter
+import net.kuecker.lodestar.kit.planning.MoonImpact
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.CardTitle
 import net.kuecker.lodestar.shared.InfoRow
+import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.Palette
 import net.kuecker.lodestar.theme.card
@@ -44,6 +49,7 @@ import java.text.NumberFormat
 import java.time.ZoneId
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * How the object fits the user's lens, how long to expose, and what the Moon will do to the shot. [snapshot] is
@@ -71,8 +77,9 @@ internal fun ObjectDetailPhotographyCard(
         CardTitle("Photography", icon = Icons.Outlined.CameraAlt)
         LensRows(photography, lens)
         photography.framing?.let { FramingRow(it, photography.frame.longSide / photography.frame.shortSide) }
+        photography.bodySize?.let { BodySizeRow(it, lens) }
         ExposureRows(photography)
-        snapshot?.moon?.let { MoonRows(it, zone) }
+        snapshot?.moon?.let { MoonRows(it, MoonImpact.assessmentKind(obj), zone) }
     }
 }
 
@@ -124,6 +131,28 @@ private fun framingDescription(framing: ObjectDetailFraming): String {
     return "Larger than the frame: needs a mosaic of about $panels panels"
 }
 
+/** "46″ across · about 11 px at 200 mm" for a disc of the Sun, the Moon or a planet. */
+@Composable
+private fun BodySizeRow(size: ObjectDetailBodySize, lens: LensSetup) {
+    val palette = LocalPalette.current
+    val pixels = if (size.pixels < 1) "under 1 px" else "about ${size.pixels.roundToInt()} px"
+    val angle = AppFormat.separation(size.diameterDegrees)
+    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            "$angle across \u00B7 $pixels at ${trimmed(lens.focalLengthMillimeters)} mm",
+            color = palette.secondaryText,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (size.assumedPixelPitch) {
+            Text(
+                "Assumes ${trimmed(ExposureCalculator.defaultPixelPitchMicrometers)} \u00B5m pixels: yours are not set.",
+                color = palette.tertiaryText,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
+}
+
 // Exposure
 
 @Composable
@@ -151,12 +180,14 @@ private fun ExposureRows(photography: ObjectDetailPhotography) {
 // Moon
 
 @Composable
-private fun MoonRows(moon: ObjectDetailMoonConditions, zone: ZoneId) {
+private fun MoonRows(moon: ObjectDetailMoonConditions, kind: ObjectCategory, zone: ZoneId) {
     val palette = LocalPalette.current
-    val advice = moonAdvice(moon.impact, palette)
+    val filter = LocalAppModel.current.settings.imagingFilter
+    val assessment = remember(moon, filter, kind) { moon.geometry.assess(filter, kind) }
+    val advice = moonAdvice(assessment, filter, palette)
     InfoRow(
         if (moon.isNow) "Moon now" else "Moon at ${AppFormat.time(moon.date, zone)}",
-        moonSummary(moon),
+        moonSummary(moon, assessment),
     )
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(advice.icon, contentDescription = null, tint = advice.color, modifier = Modifier.size(16.dp))
@@ -164,22 +195,25 @@ private fun MoonRows(moon: ObjectDetailMoonConditions, zone: ZoneId) {
     }
 }
 
-private fun moonSummary(moon: ObjectDetailMoonConditions): String {
-    if (moon.impact == ObjectDetailMoonConditions.Impact.MOON_DOWN) return "Below the horizon"
+private fun moonSummary(moon: ObjectDetailMoonConditions, assessment: ObjectMoonAssessment): String {
+    if (assessment.level == MoonImpact.Level.MOON_DOWN) return "Below the horizon"
     return "${AppFormat.separation(moon.separation)} away · ${AppFormat.percent(moon.illuminatedFraction)} lit"
 }
 
 private class MoonAdvice(val text: String, val icon: ImageVector, val color: Color)
 
-private fun moonAdvice(impact: ObjectDetailMoonConditions.Impact, palette: Palette): MoonAdvice = when (impact) {
-    ObjectDetailMoonConditions.Impact.MOON_DOWN ->
-        MoonAdvice("The Moon is down, so the sky stays dark.", Icons.Outlined.Bedtime, palette.positive)
-    ObjectDetailMoonConditions.Impact.MINOR ->
-        MoonAdvice("The Moon has little effect on this target.", Icons.Outlined.DarkMode, palette.secondaryText)
-    ObjectDetailMoonConditions.Impact.MODERATE ->
-        MoonAdvice("Moonlight will brighten the sky around this target.", Icons.Filled.DarkMode, palette.warning)
-    ObjectDetailMoonConditions.Impact.SEVERE ->
-        MoonAdvice("A bright Moon close by will wash out faint detail.", Icons.Outlined.Warning, palette.critical)
+/** The advice line: its icon and colour follow the assessed level; a level that the filter relaxed is good news. */
+private fun moonAdvice(assessment: ObjectMoonAssessment, filter: ImagingFilter, palette: Palette): MoonAdvice {
+    val text = ObjectMoonText.advice(assessment, filter)
+    return when (assessment.level) {
+        MoonImpact.Level.MOON_DOWN -> MoonAdvice(text, Icons.Outlined.Bedtime, palette.positive)
+        MoonImpact.Level.MINOR -> {
+            val color = if (assessment.isRelaxed) palette.positive else palette.secondaryText
+            MoonAdvice(text, Icons.Outlined.DarkMode, color)
+        }
+        MoonImpact.Level.MODERATE -> MoonAdvice(text, Icons.Filled.DarkMode, palette.warning)
+        MoonImpact.Level.SEVERE -> MoonAdvice(text, Icons.Outlined.Warning, palette.critical)
+    }
 }
 
 /**

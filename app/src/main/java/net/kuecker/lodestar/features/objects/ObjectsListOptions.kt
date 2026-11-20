@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Stars
 import androidx.compose.material.icons.outlined.TextFields
@@ -51,10 +52,16 @@ internal enum class ObjectsSortOrder(val rawValue: String, val title: String, va
     BRIGHTNESS("brightness", "Brightness", Icons.Outlined.AutoAwesome),
     ALTITUDE("altitude", "Altitude Now", Icons.Outlined.VerticalAlignTop),
     RISE_TIME("riseTime", "Rise Time", Icons.Outlined.WbTwilight),
+
+    /** The most hours tonight above the site's skyline (and at least 20° high) in the dark first. */
+    HOURS_TONIGHT("hoursTonight", "Hours Visible Tonight", Icons.Outlined.NightsStay),
     ;
 
     /** `true` when the order needs each object's position in the observer's sky. */
     val needsSkyPositions: Boolean get() = this == ALTITUDE || this == RISE_TIME
+
+    /** `true` when the order needs the hours each object is visible tonight. */
+    val needsTonightHours: Boolean get() = this == HOURS_TONIGHT
 
     companion object {
         fun fromRawValue(raw: String?): ObjectsSortOrder? = entries.firstOrNull { it.rawValue == raw }
@@ -116,7 +123,12 @@ internal data class ObjectsListOptions(
     val catalogue: ObjectsCatalogueFilter = ObjectsCatalogueFilter.ALL,
     /** Only showpieces and prominent objects. */
     val showsOnlyPopular: Boolean = false,
+    /** Only objects that are above the site's skyline, and at least 20° high, for [ObjectsTonight.MINIMUM_HOURS] tonight. */
+    val showsOnlyVisibleTonight: Boolean = false,
 ) {
+    /** `true` when the list needs each object's hours tonight, to order or to filter by. */
+    val needsTonightHours: Boolean get() = sortOrder.needsTonightHours || showsOnlyVisibleTonight
+
     /** The options after choosing [next]: a catalogue sorts by number, going back to all sorts by name again. */
     fun choosingCatalogue(next: ObjectsCatalogueFilter): ObjectsListOptions = copy(
         catalogue = next,
@@ -160,6 +172,7 @@ internal class ObjectsOptionsState(context: Context) {
             putBoolean(HIDE_FAINT_KEY, next.hidesFaintObjects)
             putString(CATALOGUE_KEY, next.catalogue.rawValue)
             putBoolean(POPULAR_KEY, next.showsOnlyPopular)
+            putBoolean(VISIBLE_TONIGHT_KEY, next.showsOnlyVisibleTonight)
         }
     }
 
@@ -176,6 +189,7 @@ internal class ObjectsOptionsState(context: Context) {
             hidesFaintObjects = preferences.getBoolean(HIDE_FAINT_KEY, false),
             catalogue = catalogue,
             showsOnlyPopular = preferences.getBoolean(POPULAR_KEY, false),
+            showsOnlyVisibleTonight = preferences.getBoolean(VISIBLE_TONIGHT_KEY, false),
         )
     }
 
@@ -188,6 +202,7 @@ internal class ObjectsOptionsState(context: Context) {
         const val HIDE_FAINT_KEY = "lodestar.objects.hideFaint"
         const val CATALOGUE_KEY = "lodestar.objects.catalogue"
         const val POPULAR_KEY = "lodestar.objects.popularOnly"
+        const val VISIBLE_TONIGHT_KEY = "lodestar.objects.visibleTonightOnly"
     }
 }
 

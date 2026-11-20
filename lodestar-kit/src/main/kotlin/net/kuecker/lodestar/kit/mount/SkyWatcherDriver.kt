@@ -210,13 +210,14 @@ class SkyWatcherDriver(
     }
 
     /**
-     * Ends the session. Servo tracking (alt-azimuth mounts) and a nudge are stopped, because the mount would otherwise keep turning
-     * at the last rate; a sidereal tracking equatorial mount keeps tracking, and a running slew is left to finish.
+     * Ends the session. Servo tracking (alt-azimuth mounts), a nudge and a stop that is still pending (tracking that ran into a
+     * limit, a nudge whose stop did not get through) are stopped, because the mount would otherwise keep turning at the last rate;
+     * a sidereal tracking equatorial mount keeps tracking, and a running slew is left to finish.
      */
     override fun disconnect() {
         if (!connected) return
         connected = false
-        if (motion == Motion.NUDGING || (motion == Motion.TRACKING && resolvedStrategy == SkyWatcherTrackingStrategy.SERVO)) {
+        if (motion == Motion.NUDGING || pendingStop || (motion == Motion.TRACKING && resolvedStrategy == SkyWatcherTrackingStrategy.SERVO)) {
             // Best effort: the link is probably gone. Each axis gets its own try, so that a failure on one does not leave the other running.
             for (axis in SkyWatcherAxis.entries) {
                 try {
@@ -402,9 +403,8 @@ class SkyWatcherDriver(
         requireConnected()
         stopAxes()
         waitUntilStopped()
-        for (axis in SkyWatcherAxis.entries) {
-            link.command(SkyWatcherCommand.SET_POSITION, axis, SkyWatcherCodec.encodePosition(0), "set position")
-        }
+        // The zero of an axis moves with the first `E` that reaches it (also when its reply is lost), so from here on the alignment
+        // and the motion state no longer match the encoders, whatever becomes of the other axis.
         slew = null
         nudge = null
         anchor = null
@@ -414,6 +414,9 @@ class SkyWatcherDriver(
         pendingStop = false
         lastServo = null
         clearAlignment()
+        for (axis in SkyWatcherAxis.entries) {
+            link.command(SkyWatcherCommand.SET_POSITION, axis, SkyWatcherCodec.encodePosition(0), "set position")
+        }
         val reading = readAxes()
         startupAxisAngles = SkyWatcherAxisAngles(reading.axis1, reading.axis2)
     }
@@ -509,9 +512,18 @@ class SkyWatcherDriver(
         readStatus(SkyWatcherAxis.AXIS2)
     }
 
+    /** Sends the stop to both axes. Each axis gets its command even if the other's failed; the first error is thrown afterwards. */
     @Throws(MountError::class)
     private fun stopAxes() {
-        for (axis in SkyWatcherAxis.entries) link.command(SkyWatcherCommand.STOP_MOTION, axis, "", "stop")
+        var first: MountError? = null
+        for (axis in SkyWatcherAxis.entries) {
+            try {
+                link.command(SkyWatcherCommand.STOP_MOTION, axis, "", "stop")
+            } catch (error: MountError) {
+                if (first == null) first = error
+            }
+        }
+        if (first != null) throw first
     }
 
     /** Stops both axes without braking (the protocol's instant stop), for a move that has run into a limit of the mount. */
@@ -822,14 +834,20 @@ class SkyWatcherDriver(
     @Throws(MountError::class)
     private fun endNudge(atLimit: Boolean = false) {
         nudge = null
-        if (atLimit) {
-            // The nudge ran into a limit of the mount. The axes still turn at the nudge rate, and braking them would carry the
-            // mount on past the limit (0.75 degrees from the fastest nudge): stop them at once, so that the mount rests where the
-            // limit was found, tracking goes on from there, and nothing travels on until the next poll if it cannot.
-            stopAxesAtOnce()
+        // The axes still turn at the nudge speed. They are stopped before the position is read, so that what tracking starts from is
+        // where the mount rests and not a place it passes on its way: a nudge that ends at a limit must not carry the mount beyond
+        // that limit while this runs (near the zenith a fraction of a degree of the axis is several degrees of the sky). A nudge that
+        // ran into a limit is stopped at once: braking would carry the mount on past the limit (0.75 degrees from the fastest nudge),
+        // so that it rests where the limit was found and tracking goes on from there.
+        try {
+            if (atLimit) stopAxesAtOnce() else stopAxes()
             waitUntilStopped()
+        } catch (error: MountError) {
+            // The stop did not get through: the next poll sends it again, whatever else the driver believes about the motion.
+            motion = Motion.STOPPED
+            pendingStop = true
+            throw error
         }
-        refreshStatuses()
         val reading = readAxes()
         anchor = pointing(reading)
         if (trackingEnabled) {
@@ -838,8 +856,6 @@ class SkyWatcherDriver(
             applyTracking(reading)
         } else {
             motion = Motion.STOPPED
-            stopAxes()
-            waitUntilStopped()
         }
     }
 

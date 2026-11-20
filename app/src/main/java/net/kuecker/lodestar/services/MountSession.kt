@@ -153,6 +153,8 @@ data class MountSkyWatcherInfo(
     val maximumResidualDegrees: Double?,
     /** How far the mount's home position was off, from the first sync; null before it. */
     val homeErrorDegrees: Double?,
+    /** Equatorial mounts: how far past the meridian the driver lets the right ascension axis turn, degrees. */
+    val meridianLimitDegrees: Double? = null,
 ) {
     /** True once there is a star to point from: Go to needs it. */
     val isAligned: Boolean get() = stars.isNotEmpty()
@@ -352,6 +354,7 @@ class MountSession(
             predictedErrorDegrees = fit?.predictedErrorDegrees,
             maximumResidualDegrees = fit?.maximumResidualDegrees,
             homeErrorDegrees = if (points.isEmpty()) null else homeError,
+            meridianLimitDegrees = if (mode == SkyWatcherMountMode.EQUATORIAL) driver.configuration.limits.meridianOverlapDegrees else null,
         )
     }
 

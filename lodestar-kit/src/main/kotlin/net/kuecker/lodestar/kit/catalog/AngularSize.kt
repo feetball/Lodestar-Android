@@ -39,18 +39,21 @@ data class AngularSize private constructor(
     val positionAngle: Double?,
 ) {
     /**
-     * The size for display, for example "178′ × 70′", "8.4′" or "36″".
+     * The size for display in degrees, arcminutes and arcseconds, for example "2° 58′ × 1° 10′",
+     * "8′ 24″" or "36″".
      *
-     * Sizes are rounded to whole arcminutes from 10′ up and to a tenth below that. Sizes below one
-     * arcminute (that do not round up to 60″) are given in arcseconds. Both axes use the unit of the
-     * major axis, and a minor axis that prints like the major one is left out.
+     * Each axis is written in its two largest units: degrees and whole arcminutes from 1° up,
+     * arcminutes and whole arcseconds from 1′ up, and arcseconds below that (to a tenth under 10″).
+     * A trailing unit that is zero is left out ("2°", "25′"), and a smaller unit that follows a
+     * larger one has two digits ("1° 05′", "8′ 04″"), like the declination on the Now card. Rounding
+     * happens once, at the smallest unit shown, so 59′ 59.6″ is "1°". The axes choose their units
+     * separately, and a minor axis that prints like the major one is left out.
      */
     val description: String
         get() {
-            val inArcseconds = (majorArcminutes * 60).roundedHalfAwayFromZero() < 60
-            val major = format(majorArcminutes, inArcseconds)
+            val major = format(majorArcminutes)
             val minorArcminutes = minorArcminutes ?: return major
-            val minor = format(minorArcminutes, inArcseconds)
+            val minor = format(minorArcminutes)
             return if (minor == major) major else "$major × $minor"
         }
 
@@ -93,22 +96,22 @@ data class AngularSize private constructor(
             return AngularSize(majorArcminutes, minor, angle)
         }
 
-        private fun format(arcminutes: Double, inArcseconds: Boolean): String {
-            if (inArcseconds) {
-                val seconds = arcminutes * 60
-                val text = if (seconds < 10) {
-                    CatalogFormat.trimmedOneDecimal(seconds)
-                } else {
-                    seconds.roundedHalfAwayFromZero().toLong().toString()
-                }
-                return text + "″"
+        private fun format(arcminutes: Double): String {
+            if (arcminutes >= 60) {
+                val total = arcminutes.roundedHalfAwayFromZero().toLong()
+                return units(total / 60, "°", total % 60, "′")
             }
-            val text = if (arcminutes < 10) {
-                CatalogFormat.trimmedOneDecimal(arcminutes)
-            } else {
-                arcminutes.roundedHalfAwayFromZero().toLong().toString()
-            }
-            return text + "′"
+            val arcseconds = arcminutes * 60
+            if (arcseconds < 10) return CatalogFormat.trimmedOneDecimal(arcseconds) + "″"
+            val total = arcseconds.roundedHalfAwayFromZero().toLong()
+            if (total >= 3600) return "1°"
+            return if (total >= 60) units(total / 60, "′", total % 60, "″") else "$total″"
+        }
+
+        /** A larger unit and the smaller one that follows it ("2° 58′"), or only the larger when the smaller is zero. */
+        private fun units(larger: Long, largerMark: String, smaller: Long, smallerMark: String): String {
+            if (smaller == 0L) return "$larger$largerMark"
+            return "$larger$largerMark ${if (smaller < 10) "0" else ""}$smaller$smallerMark"
         }
     }
 }

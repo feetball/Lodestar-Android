@@ -4,11 +4,14 @@ import net.kuecker.lodestar.kit.foundation.*
 import kotlin.math.abs
 
 /**
- * Apparent positions and physical ephemerides of the Sun, the Moon and the planets.
+ * Apparent positions and physical ephemerides of the Sun, the Moon, the planets and Pluto.
  *
  * Sources, all with light-time applied:
  * - **Sun and planets**: truncated VSOP87B series for the Earth and each planet
  *   (`PlanetaryTheory`; a few arcseconds against JPL's DE440s).
+ * - **Pluto**: the 43-term series of Meeus, chapter 37 (`PlutoTheory`), valid 1885–2099: at most 1.4″ against
+ *   DE440s over 1950–2049, growing to about 3″ by 2099. Outside that span the error grows quickly (27″ in 1880,
+ *   about 6′ in 2110, over 20′ by 2140), so Pluto's place in the far past or future is only roughly right.
  * - **Moon**: the truncated ELP-2000/82 series of Meeus, chapter 47 (`LunarTheory`; about 10″).
  *
  * Times are [JulianDate]s; TT drives the theories, so a [JulianDate] built from an [java.time.Instant]
@@ -38,20 +41,29 @@ object Ephemeris {
                 )
             }
             SolarSystemBody.MOON -> moonState(earth, eclipticFrame)
-            SolarSystemBody.MERCURY ->
-                planetState(SolarSystemBody.MERCURY, PlanetaryTheory.Planet.MERCURY, earth, eclipticFrame)
-            SolarSystemBody.VENUS ->
-                planetState(SolarSystemBody.VENUS, PlanetaryTheory.Planet.VENUS, earth, eclipticFrame)
-            SolarSystemBody.MARS ->
-                planetState(SolarSystemBody.MARS, PlanetaryTheory.Planet.MARS, earth, eclipticFrame)
-            SolarSystemBody.JUPITER ->
-                planetState(SolarSystemBody.JUPITER, PlanetaryTheory.Planet.JUPITER, earth, eclipticFrame)
-            SolarSystemBody.SATURN ->
-                planetState(SolarSystemBody.SATURN, PlanetaryTheory.Planet.SATURN, earth, eclipticFrame)
-            SolarSystemBody.URANUS ->
-                planetState(SolarSystemBody.URANUS, PlanetaryTheory.Planet.URANUS, earth, eclipticFrame)
-            SolarSystemBody.NEPTUNE ->
-                planetState(SolarSystemBody.NEPTUNE, PlanetaryTheory.Planet.NEPTUNE, earth, eclipticFrame)
+            SolarSystemBody.MERCURY -> planetState(
+                SolarSystemBody.MERCURY, planetGeometry(PlanetaryTheory.Planet.MERCURY, earth), earth, eclipticFrame,
+            )
+            SolarSystemBody.VENUS -> planetState(
+                SolarSystemBody.VENUS, planetGeometry(PlanetaryTheory.Planet.VENUS, earth), earth, eclipticFrame,
+            )
+            SolarSystemBody.MARS -> planetState(
+                SolarSystemBody.MARS, planetGeometry(PlanetaryTheory.Planet.MARS, earth), earth, eclipticFrame,
+            )
+            SolarSystemBody.JUPITER -> planetState(
+                SolarSystemBody.JUPITER, planetGeometry(PlanetaryTheory.Planet.JUPITER, earth), earth, eclipticFrame,
+            )
+            SolarSystemBody.SATURN -> planetState(
+                SolarSystemBody.SATURN, planetGeometry(PlanetaryTheory.Planet.SATURN, earth), earth, eclipticFrame,
+            )
+            SolarSystemBody.URANUS -> planetState(
+                SolarSystemBody.URANUS, planetGeometry(PlanetaryTheory.Planet.URANUS, earth), earth, eclipticFrame,
+            )
+            SolarSystemBody.NEPTUNE -> planetState(
+                SolarSystemBody.NEPTUNE, planetGeometry(PlanetaryTheory.Planet.NEPTUNE, earth), earth, eclipticFrame,
+            )
+            SolarSystemBody.PLUTO ->
+                planetState(SolarSystemBody.PLUTO, plutoGeometry(earth), earth, eclipticFrame)
         }
     }
 
@@ -75,6 +87,7 @@ object Ephemeris {
                 planetGeometry(PlanetaryTheory.Planet.URANUS, EarthState(julianDate)).apparent
             SolarSystemBody.NEPTUNE ->
                 planetGeometry(PlanetaryTheory.Planet.NEPTUNE, EarthState(julianDate)).apparent
+            SolarSystemBody.PLUTO -> plutoGeometry(EarthState(julianDate)).apparent
         }
 
     /**
@@ -124,12 +137,22 @@ object Ephemeris {
         return Geometry(geometric, geometric, earth.position + geometric)
     }
 
-    private fun planetGeometry(planet: PlanetaryTheory.Planet, earth: EarthState): Geometry {
+    private fun planetGeometry(planet: PlanetaryTheory.Planet, earth: EarthState): Geometry =
+        lightTimeGeometry(earth) { PlanetaryTheory.heliocentricJ2000(planet, it) }
+
+    private fun plutoGeometry(earth: EarthState): Geometry =
+        lightTimeGeometry(earth) { PlutoTheory.heliocentricJ2000(it) }
+
+    /**
+     * The geometry of a planet whose heliocentric position (J2000 equatorial, AU) at a Julian day of TT is given by
+     * [heliocentric]: the light-time iteration shared by the VSOP87 planets and Pluto.
+     */
+    private inline fun lightTimeGeometry(earth: EarthState, heliocentric: (Double) -> Vector3): Geometry {
         // Light-time: the planet is seen where it was `lightTime` ago, the Earth where it is now.
         var lightTime = 0.0
         var position = Vector3.zero
         for (iteration in 0 until 4) {
-            position = PlanetaryTheory.heliocentricJ2000(planet, earth.julianDate.tt - lightTime)
+            position = heliocentric(earth.julianDate.tt - lightTime)
             val updated = (position - earth.position).length * lightTimePerAU
             val converged = abs(updated - lightTime) < 2e-6
             lightTime = updated
@@ -162,11 +185,10 @@ object Ephemeris {
 
     private fun planetState(
         body: SolarSystemBody,
-        theory: PlanetaryTheory.Planet,
+        planet: Geometry,
         earth: EarthState,
         eclipticFrame: EclipticOfDate,
     ): BodyState {
-        val planet = planetGeometry(theory, earth)
         val sun = sunGeometry(earth)
         val phaseAngle = planet.heliocentric.angle(planet.geometric)
         return BodyState(

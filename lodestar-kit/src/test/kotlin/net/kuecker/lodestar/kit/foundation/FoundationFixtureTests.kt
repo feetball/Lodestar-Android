@@ -195,7 +195,7 @@ class FoundationFixtureTests {
         // observer position and parallax, sidereal time) from the ephemeris error; the Moon's
         // parallax is about 1°.
         val cases = json.decodeFromString<BodyFile>(fixture("bodies_apparent.json")).cases
-        assertEquals(450, cases.size)
+        assertEquals(500, cases.size)
         for (case in cases) {
             val label = "${case.body} ${case.utc}"
             val jd = JulianDate(ut = case.ut1Jd, deltaT = (case.ttJd - case.ut1Jd) * JulianDate.secondsPerDay)

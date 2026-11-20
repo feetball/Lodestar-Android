@@ -35,6 +35,8 @@ class OnlineScheduleTest {
         assertEquals(listOf(OnlineResource.STARLINK), OnlineFeed.STARLINK.resources)
         assertEquals(listOf(OnlineResource.COMETS), OnlineFeed.COMETS.resources)
         assertEquals(listOf(OnlineResource.FORECAST), OnlineFeed.CLOUDS.resources)
+        // Terrain tiles are downloaded when a site asks and deleted after use: nothing to refresh.
+        assertEquals(emptyList(), OnlineFeed.TERRAIN.resources)
         assertTrue(OnlineResource.STARLINK.requiresUnmetered)
         assertFalse(OnlineResource.STATIONS.requiresUnmetered)
     }

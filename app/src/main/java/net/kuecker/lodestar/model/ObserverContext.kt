@@ -19,8 +19,26 @@ data class ObserverContext(
     val horizontalAccuracy: Double? = null,
     /** When the device location was measured (device location only). */
     val timestamp: Instant? = null,
-    /** The site's recorded skyline, or null for an open horizon (always null for the device location). */
+    /**
+     * The skyline that applies at the site: its recorded skyline, the terrain horizon computed from elevation data, or
+     * the recorded one with the terrain filling the stretches that were not swept; null for an open horizon (always
+     * null for the device location).
+     */
     val horizon: HorizonProfile? = null,
+    /** Where [horizon] comes from; null when there is none. */
+    val horizonSource: HorizonSource? = null,
 ) {
     val location: GeographicLocation get() = observer.location
+}
+
+/** Where the skyline of an [ObserverContext] comes from. [label] is how the screens name it. */
+enum class HorizonSource(val label: String) {
+    /** The skyline the user recorded by sweeping the phone. */
+    RECORDED("Recorded skyline"),
+
+    /** The skyline computed from elevation data. */
+    TERRAIN("Terrain horizon"),
+
+    /** The recorded skyline where the sweep reached, the terrain horizon in the stretches it left open. */
+    RECORDED_AND_TERRAIN("Recorded + terrain"),
 }

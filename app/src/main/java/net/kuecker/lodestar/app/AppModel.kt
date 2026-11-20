@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import net.kuecker.lodestar.features.horizon.SiteHorizon
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
 import net.kuecker.lodestar.kit.ephemeris.horizontal
@@ -92,6 +93,13 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     /** Star-alignment corrections for the current mount and heading source. */
     var alignment by mutableStateOf(AlignmentModel.identity)
 
+    /**
+     * When the current alignment was made: the time of its newest point, or null without an alignment. It follows
+     * the alignment, so a reset clears it, and removing a point never makes an old alignment look fresh.
+     */
+    val alignedAt: Instant?
+        get() = alignment.points.maxOfOrNull { it.timestamp }
+
     private var keepsMotionRunningState by mutableStateOf(false)
 
     /** Keeps the motion sensors running outside the Aim and Sky tabs (e.g. Sensor Diagnostics). */
@@ -158,10 +166,12 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
                 }
                 is LocationSource.Site -> {
                     val site = settings.savedSites.firstOrNull { it.id == source.id } ?: return null
+                    // The recorded skyline and the terrain horizon, as they apply together (see SiteHorizon).
+                    val skyline = SiteHorizon.resolve(site, localPreferences)
                     ObserverContext(
                         observer = Observer(site.location, atmosphere),
                         timeZone = site.timeZone ?: ZoneId.systemDefault(), name = site.name, source = source,
-                        horizon = site.horizon,
+                        horizon = skyline.profile, horizonSource = skyline.source,
                     )
                 }
             }

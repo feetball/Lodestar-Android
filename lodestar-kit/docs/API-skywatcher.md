@@ -284,7 +284,7 @@ public final class SkyWatcherDriver: MountDriver {
     public var pierSide: SkyWatcherPierSide?;  pointingModel: SkyWatcherPointingModel?;  datagramsSent: Int;  retries: Int
     public var kind: MountProtocol { .skywatcher };  public var epoch: MountEpoch { .apparentOfDate }
     // MountDriver: connect, disconnect, readPosition, readSlewing, readTracking, readAligned, slew(to:), sync(to:), abort, setTracking, startNudge, stopNudge, setSiteAndTime
-    public func declareHomePosition() throws                              // "this is home": E to 0 on both axes, forgets alignment and tracking (mount brought home without a power cycle)
+    public func declareHomePosition() throws                              // "this is home": stops the axes, forgets alignment and tracking, then E to 0 on both axes (mount brought home without a power cycle)
     public func clearAlignment();  removeAlignmentPoint(_ index: Int) throws;  restoreAlignment(_ points: [SkyWatcherAlignmentPoint]) throws }
 public struct SkyWatcherAxisAngles: Hashable { axis1Degrees, axis2Degrees: Double }
 ```
@@ -319,8 +319,13 @@ Behaviour (all tested against the simulator):
   8× for `.center`); the driver moves the tracked anchor and runs the same closed loop (every 0.5 s while the nudge lasts, so keep polling), alt-azimuth mounts get the matching combination of
   azimuth and altitude rates. A nudge ends at `stopNudge`, or by itself 2 s after its duration if nobody stops it; tracking resumes at the place where it ended. Reaching a limit during a
   nudge ends it. `startNudge` needs 4 to 8 datagrams.
-- **`abort`** sends `K` to both axes (decelerating), drops the plan; tracking resumes (from where the mount stopped) at the next poll if it was on.
-- **`disconnect`** stops servo tracking (the mount would keep turning at the last rate); a sidereal tracking equatorial mount keeps tracking; a running slew is left to finish; the next `connect` stops everything.
+- **`abort`** sends `K` to both axes (decelerating; each axis gets its `K` even if the other's failed, and the first error is reported), drops the plan;
+  tracking resumes (from where the mount stopped) at the next poll if it was on.
+- **`disconnect`** stops servo tracking, a nudge and a stop that is still pending (tracking that ran into a limit, a nudge whose stop did not get through),
+  because the mount would keep turning at the last rate; a sidereal tracking equatorial mount keeps tracking; a running slew is left to finish; the next
+  `connect` stops everything.
+- **`declareHomePosition`** stops the axes and forgets the alignment and the tracking before it sends `E`: the zero of an axis moves with the first `E`
+  that reaches it, so a failure on the other axis can no longer leave GoTo allowed on a model that does not match the encoders.
 - **`setSiteAndTime(location:date:)`** sends nothing (the mount has no clock or site): it replaces the driver's location (the phone's clock is the sky's time). A change of more than 0.25° in latitude
   or longitude, or crossing the equator, forgets the alignment (the points describe the sky of the old place).
 - **Link.** One datagram per command, one per reply (UDP port 11880). An exchange discards stale input, sends, and waits `exchangeTimeoutSeconds` (0.6 s) for the reply; a missing, truncated,
@@ -386,14 +391,15 @@ speed mode when it stops; `E` (set position) while stopped; encoder counts relat
 
 ## Tests (mirrored: same names, inputs, expected values and tolerances in Swift and Kotlin)
 
-101 Sky-Watcher tests per language (existing mount tests unchanged and green: Kotlin whole kit and Swift whole package pass; zero compiler warnings):
+110 Sky-Watcher tests per language, with the same names in both:
 
 | File | Tests | What it checks |
 |---|---|---|
 | `SkyWatcherCodecTests` | 18 | the document's own examples (`563412`, `0x800012` → `120080`, `341280` → 0x1234), every command's bytes, replies (junk in front, two replies, malformed ones), all error codes 0 to 8 and their mapping, status bits (128 combinations), version replies and the mount code table, the step-period formulas (low and high speed, limits, 24-bit overflow), discovery probe and broadcast addresses, clamping of configuration and limits |
 | `SkyWatcherModelTests` | 20 | home positions, hour angle / declination and azimuth / altitude against the foundation's transforms, the counterweight rule and both pier sides, the southern mirror, each error term, polar axis error signs, 600 random round trips of forward and inverse with random errors, sky conversions (400 round trips), alignment fits: 1 star exact, 2 stars, 3 stars, southern hemisphere, wrong star, predicted error shrinking, input validation |
 | `SkyWatcherSimulatorTests` | 15 | the simulated controller itself: inquiries, initialization and sleep, malformed commands, set position, speed mode, high-speed mode, braking, goto (fast, slow, absolute, both axes), fault injection, random loss and damage (seeded), the generator's reference values, true geometry, inverted axes |
-| `SkyWatcherMountTests` | 48 | everything end to end through `MountController`: connect (capabilities, model → mode, a moving mount, failures), home position, `declareHomePosition`, alignment on 1, 2, 3 stars with synthetic mis-pointing (1 star: pure home error < 0.05°; 3 stars: GoTo < 0.1° over 9 targets in both modes, both hemispheres, inverted axes), replaced and rejected stars, alignment management, site changes, GoTo at finite speed, limits and refusals (altitude, overhead, cable wrap, tripod clearance with two-leg slews), short way round, abort, correction of the moving sky, pier side and meridian (counterweight down along the whole slew, current side kept near the meridian, tracking stops at the limit, flip by goto), tracking (alt-azimuth 20 min < 0.03° drift, equatorial incl. polar error and the servo that removes it, cable wrap and overhead limits, update rate limit), nudges (all four directions and three rates against the sidereal multiples, high-speed mode, limits, deadline, abort), poll cost, lost / garbled / truncated replies, `!`-codes, lost start replies, short GOTO hazard, 8 % request loss + 8 % reply loss + 8 % damage over a whole session, slow and chopped links, reconnecting, determinism |
+| `MountSafetySkyWatcherTests` | 7 | the stop logic of the driver: a stop that fails on axis 1 (refused or silent) still reaches axis 2 and the first error is thrown, a disconnect sends a pending stop (tracking that ran into a limit, a nudge whose stop did not get through), declaring home forgets the alignment once an `E` may have reached an axis and keeps it when the axes cannot be stopped |
+| `SkyWatcherMountTests` | 50 | everything end to end through `MountController`: connect (capabilities, model → mode, a moving mount, failures), home position, `declareHomePosition`, alignment on 1, 2, 3 stars with synthetic mis-pointing (1 star: pure home error < 0.05°; 3 stars: GoTo < 0.1° over 9 targets in both modes, both hemispheres, inverted axes), replaced and rejected stars, alignment management, site changes, GoTo at finite speed, limits and refusals (altitude, overhead, cable wrap, tripod clearance with two-leg slews), short way round, abort, correction of the moving sky, pier side and meridian (counterweight down along the whole slew, current side kept near the meridian, tracking stops at the limit, flip by goto), tracking (alt-azimuth 20 min < 0.03° drift, equatorial incl. polar error and the servo that removes it, cable wrap and overhead limits, update rate limit), nudges (all four directions and three rates against the sidereal multiples, high-speed mode, limits, deadline, abort), poll cost, lost / garbled / truncated replies, `!`-codes, lost start replies, short GOTO hazard, 8 % request loss + 8 % reply loss + 8 % damage over a whole session, slow and chopped links, reconnecting, determinism |
 
 ---------------------------------------------------------------------------------------------------------
 

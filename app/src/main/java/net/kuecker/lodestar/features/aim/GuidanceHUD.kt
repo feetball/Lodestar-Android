@@ -121,7 +121,7 @@ private fun TallLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // The same 8 dp apart as in the column around it, so wrapping the chips moves nothing.
             Column(Modifier.onSizeChanged { chipsHeight = it.height }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AimStatusChips(model)
+                AimStatusChips(model, onSheet)
             }
             Spacer(Modifier.weight(1f))
             // The readout is the top of the stack of panels; the arrow keeps its distance readout clear of it. A
@@ -146,7 +146,7 @@ private fun WideLayout(model: AimViewModel, onSheet: (AimSheet) -> Unit, isActiv
             Modifier.weight(1f, fill = false).widthIn(max = WIDE_READOUT_WIDTH).fillMaxHeight().padding(end = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AimStatusChips(model)
+            AimStatusChips(model, onSheet)
             Spacer(Modifier.weight(1f))
             AimReadout(
                 model, onSheet, isActive,

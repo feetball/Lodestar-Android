@@ -17,6 +17,7 @@ import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.phototools.LensSetup
 import net.kuecker.lodestar.kit.phototools.SensorFormat
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.shared.InfoRow
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LodestarButton
@@ -46,7 +47,8 @@ private val megapixelsRange = 1.0..500.0
 
 /**
  * Settings ▸ Camera & Lens: the sensor, lens and pixel size of the camera on the tripod, used for the framing
- * rectangle on the Aim screen and by the exposure tools, with a live field-of-view readout.
+ * rectangle on the Aim screen and by the exposure tools, with a live field-of-view readout, and the filter in front
+ * of the sensor, which relaxes the Moon warnings for emission nebulae.
  */
 @Composable
 internal fun SettingsCameraSection() {
@@ -57,7 +59,8 @@ internal fun SettingsCameraSection() {
     SettingsSection(
         title = "Camera & Lens",
         footer = "Describe the camera on the tripod, not the phone. The framing rectangle on the Aim screen and " +
-            "the exposure tools use these values.",
+            "the exposure tools use these values. Narrowband filters make emission nebulae usable under moonlight; " +
+            "Lodestar relaxes its Moon warnings for them.",
     ) {
         SettingsMenuPicker(
             title = "Sensor",
@@ -104,6 +107,14 @@ internal fun SettingsCameraSection() {
         )
         SettingsDivider()
         SettingsFieldOfViewReadout(app.lensSetup)
+        SettingsDivider()
+        SettingsMenuPicker(
+            title = "Filter",
+            selection = settings.imagingFilter,
+            options = ImagingFilter.entries.map { SettingsMenuOption(it.displayName, it) },
+            caption = settings.imagingFilter.summary,
+            onSelect = { filter -> store.update { it.copy(imagingFilter = filter) } },
+        )
         SettingsDivider()
         SettingsToggleRow(
             title = "Camera preview",

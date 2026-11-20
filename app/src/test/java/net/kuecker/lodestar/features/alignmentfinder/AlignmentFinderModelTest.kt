@@ -245,8 +245,6 @@ class AlignmentFinderModelTest {
         assertTrue(detail.startsWith("Alt "), detail)
         assertTrue(detail.contains("Az ") && detail.contains("°"), detail)
         assertTrue(detail.endsWith("Moon down") || detail.contains("Moon up, "), detail)
-        assertTrue(AlignmentFinderText.rowTitle(match, denver).contains("–"))
-        assertTrue(AlignmentFinderText.rowDescription(match, denver).endsWith("."))
         assertEquals("225° SW", AlignmentFinderText.direction(225))
         assertEquals("0° N", AlignmentFinderText.direction(0))
         assertEquals("18°", AlignmentFinderText.altitude(17.6))

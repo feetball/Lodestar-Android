@@ -49,7 +49,7 @@ than 30′), nebulae ≥ 60′, Sharpless regions ≥ 60′ of brightness class 
 3 = everything the old selection rule picked (so nothing listed before is unlisted), other named objects, nebulae ≥ 10′,
 Sharpless ≥ 30′, Barnard ≥ 1°, Lynds clouds ≥ 3° or opacity 6 and ≥ 20′, clusters ≥ 30′; 4 = the rest.
 **Dark nebulae have no magnitude** (`magnitude == null`): they are rated by name, size and (Lynds) opacity only.
-Stars follow `Prominence.forStar`; the Sun, Moon, planets, Milky Way core, poles and custom targets are showpieces.
+Stars follow `Prominence.forStar`; the Sun, Moon, the seven other planets, Milky Way core, poles and custom targets are showpieces; Pluto is `NOTABLE`.
 A deep-sky record without `p` counts as `NOTABLE`.
 
 Bundled data: 253 showpieces, 234 prominent, 506 notable, 1,446 obscure deep-sky objects (two notable NGC/IC records are

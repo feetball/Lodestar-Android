@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ArrowCircleUp
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VerticalAlignBottom
 import androidx.compose.material3.Icon
@@ -70,10 +71,41 @@ internal fun AimReadout(
         return
     }
     val frame = rememberAimFrame(model, 100, isActive)
+    val isPreviewing = model.isPreviewing
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AimTargetCard(target, frame?.target?.horizontal, belowHorizonNote(model, target, frame))
+        AimTargetCard(
+            target, frame?.target?.horizontal,
+            belowHorizonNote = if (isPreviewing) null else belowHorizonNote(model, target, frame),
+            previewNote = if (isPreviewing) previewNote(model, target, frame) else null,
+        )
         frame?.guidance?.let { AimMoveRow(AimGuidanceSummary(it)) }
     }
+}
+
+/**
+ * Where the target stands at the previewed moment, in the future tense: "Will be at altitude 34° at 02:15", "Will be
+ * below the horizon at 02:15 · rises 05:41", "Will be behind the recorded skyline at 02:15". `null` while the sky is
+ * still being rebuilt for a moment that was just chosen, and without a position.
+ */
+private fun previewNote(model: AimViewModel, target: CelestialObject, frame: AimFrame?): String? {
+    val placed = frame?.target ?: return null
+    val moment = model.previewMoment() ?: return null
+    if (!model.isSkyBuiltForPreview) return null
+    val time = moment.day?.let { "$it ${moment.time}" } ?: moment.time
+    val altitude = placed.horizontal.altitude
+    if (altitude >= 0) {
+        return if (model.skyContent?.isBehindSkyline(placed.direction) == true) {
+            AimPreview.skylineNote(time, moment.isFuture)
+        } else {
+            AimPreview.placeNote(altitude, time, moment.isFuture)
+        }
+    }
+    val info = model.riseInfo?.takeIf { it.targetID == target.id }
+    val zone = model.previewZone()
+    return AimPreview.belowHorizonNote(
+        time, info?.nextRise?.let { AppFormat.time(it, zone) }, doesNotRise = info != null && info.nextRise == null,
+        isFuture = moment.isFuture,
+    )
 }
 
 /**
@@ -93,9 +125,17 @@ private fun belowHorizonNote(model: AimViewModel, target: CelestialObject, frame
     return "Below the horizon · rises ${AppFormat.time(rise, timeZone)} (${AppFormat.relative(rise, model.app.clock.now)})"
 }
 
-/** The target's name, kind and position, with a warning while it is below the horizon. */
+/**
+ * The target's name, kind and position, with a warning while it is below the horizon, or while the sky is previewed
+ * where it will stand then ([previewNote]).
+ */
 @Composable
-private fun AimTargetCard(obj: CelestialObject, horizontal: HorizontalCoordinate?, belowHorizonNote: String?) {
+private fun AimTargetCard(
+    obj: CelestialObject,
+    horizontal: HorizontalCoordinate?,
+    belowHorizonNote: String?,
+    previewNote: String? = null,
+) {
     val palette = LocalPalette.current
     val smallBody = rememberSmallBodyLive(obj)
     val subtitle = smallBody?.subtitle(obj)
@@ -134,6 +174,7 @@ private fun AimTargetCard(obj: CelestialObject, horizontal: HorizontalCoordinate
         if (belowHorizonNote != null) {
             CardNote(belowHorizonNote, Icons.Outlined.VerticalAlignBottom, palette.warning)
         }
+        if (previewNote != null) CardNote(previewNote, Icons.Outlined.Schedule, palette.warning)
         SmallBodyAimNotes(smallBody)
         if (obj.category == ObjectCategory.SUN) {
             CardNote("Never point at the Sun without a certified solar filter", Icons.Filled.Warning, palette.critical)

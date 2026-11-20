@@ -18,6 +18,7 @@ import net.kuecker.lodestar.kit.foundation.Atmosphere
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.phototools.SensorFormat
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.kit.pointing.MountProfile
 import java.time.DateTimeException
 import java.time.ZoneId
@@ -49,6 +50,12 @@ data class SavedSite private constructor(
     val timeZoneIdentifier: String?,
     /** The recorded skyline (trees, mountains), or null for an open horizon. */
     val horizon: HorizonProfile? = null,
+    /**
+     * The skyline of the terrain computed from elevation data (hills, mountains), or null when none was computed. Unlike
+     * [horizon] a flat one is kept: it says that the terrain was looked at and is flat. It is used where no skyline was
+     * recorded, and for the stretches a partial sweep left open.
+     */
+    val terrainHorizon: HorizonProfile? = null,
 ) {
     val location: GeographicLocation get() = GeographicLocation(latitude, longitude, elevation)
 
@@ -62,7 +69,8 @@ data class SavedSite private constructor(
         elevation: Double = this.elevation,
         timeZoneIdentifier: String? = this.timeZoneIdentifier,
         horizon: HorizonProfile? = this.horizon,
-    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id, horizon)
+        terrainHorizon: HorizonProfile? = this.terrainHorizon,
+    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id, horizon, terrainHorizon)
 
     companion object {
         const val MAXIMUM_NAME_LENGTH = 60
@@ -76,6 +84,7 @@ data class SavedSite private constructor(
             timeZoneIdentifier: String? = null,
             id: String = UUID.randomUUID().toString(),
             horizon: HorizonProfile? = null,
+            terrainHorizon: HorizonProfile? = null,
         ): SavedSite? {
             val location = GeographicLocation.validated(latitude, longitude, elevation) ?: return null
             if (runCatching { UUID.fromString(id) }.isFailure) return null
@@ -88,6 +97,7 @@ data class SavedSite private constructor(
                 elevation = location.elevation,
                 timeZoneIdentifier = timeZoneIdentifier?.takeIf { zoneOrNull(it) != null },
                 horizon = horizon?.takeUnless { it.isFlat },
+                terrainHorizon = terrainHorizon,
             )
         }
 
@@ -106,6 +116,7 @@ data class SavedSite private constructor(
             put("elevation", JsonPrimitive(site.elevation))
             site.timeZoneIdentifier?.let { put("timeZoneIdentifier", JsonPrimitive(it)) }
             site.horizon?.let { put("horizon", Json.encodeToJsonElement(HorizonProfile.serializer(), it)) }
+            site.terrainHorizon?.let { put("terrainHorizon", Json.encodeToJsonElement(HorizonProfile.serializer(), it)) }
         }
 
         /** Decodes and re-validates a stored site; `null` for invalid entries (dropped by the caller). */
@@ -120,6 +131,9 @@ data class SavedSite private constructor(
                 timeZoneIdentifier = o["timeZoneIdentifier"]?.jsonPrimitive?.content,
                 // A damaged skyline is dropped rather than losing the site.
                 horizon = o["horizon"]?.let { runCatching { Json.decodeFromJsonElement(HorizonProfile.serializer(), it) }.getOrNull() },
+                terrainHorizon = o["terrainHorizon"]?.let {
+                    runCatching { Json.decodeFromJsonElement(HorizonProfile.serializer(), it) }.getOrNull()
+                },
             )
         }.getOrNull()
     }
@@ -164,13 +178,24 @@ data class AppSettings(
     /** Attitude smoothing time constant in seconds. */
     val smoothingTimeConstant: Double = 0.12,
 
-    // Camera and lens (for the framing rectangle and exposure tools)
+    // Camera and lens (for the framing rectangle and exposure tools). The camera profiles are the source; the single
+    // camera keys below them follow the active profile (see `sanitized`), so code that reads them keeps working.
+    val cameraProfiles: List<CameraProfile> = emptyList(),
+    val activeCameraProfileID: String? = null,
     val sensorID: String = SensorFormat.fullFrame.id,
     val customSensorWidth: Double = 36.0,
     val customSensorHeight: Double = 24.0,
     val focalLength: Double = 24.0,
     val aperture: Double = 2.8,
     val pixelPitch: Double? = null,
+    /** The filter in front of the sensor: it decides how far the Moon warnings are relaxed for emission nebulae. */
+    val imagingFilter: ImagingFilter = ImagingFilter.NONE,
+
+    // Exposure calculator
+    /** The angle between a tracker's axis and the pole that the Tracked section works with, in degrees. */
+    val polarErrorDegrees: Double = 1.0,
+    /** The ISO speed of the Moon section. */
+    val exposureISO: Int = 100,
 
     // Night mode
     val nightMode: NightModeSetting = NightModeSetting.AUTOMATIC,
@@ -192,6 +217,8 @@ data class AppSettings(
     val showConstellationNames: Boolean = true,
     val showDeepSkyObjects: Boolean = true,
     val showMilkyWay: Boolean = true,
+    /** A thin ring on the sky chart's horizon that is brighter toward the artificial light. */
+    val showHorizonGlow: Boolean = true,
     /** Deep-sky objects drawn in the sky views, up to this `Prominence` level (1 showpieces … 4 everything). */
     val deepSkyProminence: Int = 2,
     val starMagnitudeLimit: Double = 5.0,
@@ -207,18 +234,65 @@ data class AppSettings(
 ) {
     val atmosphere: Atmosphere get() = Atmosphere(pressureMillibars, temperatureCelsius)
 
-    /** Clamps numeric preferences into their supported ranges (protects against corrupted storage). */
+    /**
+     * The camera and lens in use: the stored profile with [activeCameraProfileID], else the first one, else a profile
+     * made from the single camera keys (before the profiles exist).
+     */
+    val activeCameraProfile: CameraProfile
+        get() = cameraProfiles.firstOrNull { it.id == activeCameraProfileID }
+            ?: cameraProfiles.firstOrNull()
+            ?: singleCameraProfile()
+
+    /** The camera of the single camera keys as a profile, with the identifier of the migrated profile. */
+    private fun singleCameraProfile(): CameraProfile = CameraProfile.create(
+        CameraProfile.DEFAULT_NAME, sensorID, customSensorWidth, customSensorHeight, focalLength, aperture, pixelPitch,
+        id = CameraProfile.MIGRATED_ID,
+    )
+
+    /**
+     * Takes a change that [previous] settings went through to its single camera keys alone (code that predates the
+     * profiles writes them) into the active profile. A change to the profiles themselves wins, and so does any
+     * change to the profiles made together with one to the keys; [sanitized] then lets the keys follow the profile.
+     */
+    fun reconcilingCamera(previous: AppSettings): AppSettings {
+        val keysChanged = sensorID != previous.sensorID || customSensorWidth != previous.customSensorWidth ||
+            customSensorHeight != previous.customSensorHeight || focalLength != previous.focalLength ||
+            aperture != previous.aperture || pixelPitch != previous.pixelPitch
+        val profilesChanged = cameraProfiles != previous.cameraProfiles ||
+            activeCameraProfileID != previous.activeCameraProfileID
+        if (!keysChanged || profilesChanged || cameraProfiles.isEmpty()) return this
+        val active = activeCameraProfile
+        val updated = active.edited(
+            sensorID = sensorID, customSensorWidth = customSensorWidth, customSensorHeight = customSensorHeight,
+            focalLength = focalLength, aperture = aperture, pixelPitch = pixelPitch,
+        )
+        return copy(cameraProfiles = cameraProfiles.map { if (it.id == active.id) updated else it })
+    }
+
+    /**
+     * Clamps numeric preferences into their supported ranges (protects against corrupted storage), makes sure there
+     * is a camera profile and an active one (the first start with profiles turns the single camera into "My camera"),
+     * and sets the single camera keys to the active profile.
+     */
     fun sanitized(): AppSettings {
         fun clamp(v: Double, range: ClosedFloatingPointRange<Double>, fallback: Double) =
             if (v.isFinite()) v.coerceIn(range) else fallback
         val source = locationSource
+        val profiles = cameraProfiles.distinctBy { it.id }.take(MAXIMUM_CAMERA_PROFILES)
+            .ifEmpty { listOf(singleCameraProfile()) }
+        val active = profiles.firstOrNull { it.id == activeCameraProfileID } ?: profiles.first()
         return copy(
+            cameraProfiles = profiles,
+            activeCameraProfileID = active.id,
+            sensorID = active.sensorID,
+            customSensorWidth = active.customSensorWidth,
+            customSensorHeight = active.customSensorHeight,
+            focalLength = active.focalLength,
+            aperture = active.aperture,
+            pixelPitch = active.pixelPitch,
             smoothingTimeConstant = clamp(smoothingTimeConstant, 0.0..1.0, 0.12),
-            customSensorWidth = clamp(customSensorWidth, 1.0..100.0, 36.0),
-            customSensorHeight = clamp(customSensorHeight, 1.0..100.0, 24.0),
-            focalLength = clamp(focalLength, 4.0..2000.0, 24.0),
-            aperture = clamp(aperture, 0.95..32.0, 2.8),
-            pixelPitch = pixelPitch?.takeIf { it.isFinite() && it in 0.5..20.0 },
+            polarErrorDegrees = clamp(polarErrorDegrees, POLAR_ERROR_RANGE, 1.0),
+            exposureISO = exposureISO.coerceIn(EXPOSURE_ISO_RANGE),
             nightIntensity = clamp(nightIntensity, 0.25..1.0, 0.7),
             nightBrightness = clamp(nightBrightness, 0.01..1.0, 0.2),
             starMagnitudeLimit = clamp(starMagnitudeLimit, 1.0..6.5, 5.0),
@@ -238,8 +312,15 @@ data class AppSettings(
 
     companion object {
         const val MAXIMUM_SAVED_SITES = 100
+        const val MAXIMUM_CAMERA_PROFILES = 50
         const val MAXIMUM_RECENTS = 20
         const val MAXIMUM_FAVORITES = 200
+
+        /** The polar-alignment errors the exposure calculator offers, in degrees. */
+        val POLAR_ERROR_RANGE: ClosedFloatingPointRange<Double> = 0.1..5.0
+
+        /** The ISO speeds the exposure calculator offers. */
+        val EXPOSURE_ISO_RANGE: IntRange = 100..12800
 
         private val json = Json { ignoreUnknownKeys = true }
 
@@ -252,12 +333,17 @@ data class AppSettings(
                 put("mountPresetID", JsonPrimitive(s.mountPresetID))
                 put("headingSource", json.encodeToJsonElement(HeadingSource.serializer(), s.headingSource))
                 put("smoothingTimeConstant", JsonPrimitive(s.smoothingTimeConstant))
+                put("cameraProfiles", JsonArray(s.cameraProfiles.map(CameraProfile::toJson)))
+                s.activeCameraProfileID?.let { put("activeCameraProfileID", JsonPrimitive(it)) }
                 put("sensorID", JsonPrimitive(s.sensorID))
                 put("customSensorWidth", JsonPrimitive(s.customSensorWidth))
                 put("customSensorHeight", JsonPrimitive(s.customSensorHeight))
                 put("focalLength", JsonPrimitive(s.focalLength))
                 put("aperture", JsonPrimitive(s.aperture))
                 s.pixelPitch?.let { put("pixelPitch", JsonPrimitive(it)) }
+                put("imagingFilter", json.encodeToJsonElement(ImagingFilter.serializer(), s.imagingFilter))
+                put("polarErrorDegrees", JsonPrimitive(s.polarErrorDegrees))
+                put("exposureISO", JsonPrimitive(s.exposureISO))
                 put("nightMode", json.encodeToJsonElement(NightModeSetting.serializer(), s.nightMode))
                 put("nightIntensity", JsonPrimitive(s.nightIntensity))
                 put("dimScreenAtNight", JsonPrimitive(s.dimScreenAtNight))
@@ -272,6 +358,7 @@ data class AppSettings(
                 put("showConstellationNames", JsonPrimitive(s.showConstellationNames))
                 put("showDeepSkyObjects", JsonPrimitive(s.showDeepSkyObjects))
                 put("showMilkyWay", JsonPrimitive(s.showMilkyWay))
+                put("showHorizonGlow", JsonPrimitive(s.showHorizonGlow))
                 put("deepSkyProminence", JsonPrimitive(s.deepSkyProminence))
                 put("starMagnitudeLimit", JsonPrimitive(s.starMagnitudeLimit))
                 put("coordinateStyle", json.encodeToJsonElement(CoordinateStyle.serializer(), s.coordinateStyle))
@@ -291,6 +378,7 @@ data class AppSettings(
                 o[key]?.let { runCatching { json.decodeFromJsonElement(serializer, it) }.getOrNull() } ?: fallback
             val strings = ListSerializer(String.serializer())
             val sites = (o["savedSites"] as? JsonArray)?.mapNotNull(SavedSite::fromJson) ?: emptyList()
+            val profiles = (o["cameraProfiles"] as? JsonArray)?.mapNotNull(CameraProfile::fromJson) ?: emptyList()
             return AppSettings(
                 hasCompletedOnboarding = value("hasCompletedOnboarding", Boolean.serializer(), d.hasCompletedOnboarding),
                 locationSource = value("locationSource", LocationSource.serializer(), d.locationSource),
@@ -298,12 +386,17 @@ data class AppSettings(
                 mountPresetID = value("mountPresetID", String.serializer(), d.mountPresetID),
                 headingSource = value("headingSource", HeadingSource.serializer(), d.headingSource),
                 smoothingTimeConstant = value("smoothingTimeConstant", Double.serializer(), d.smoothingTimeConstant),
+                cameraProfiles = profiles,
+                activeCameraProfileID = value("activeCameraProfileID", String.serializer().nullable, d.activeCameraProfileID),
                 sensorID = value("sensorID", String.serializer(), d.sensorID),
                 customSensorWidth = value("customSensorWidth", Double.serializer(), d.customSensorWidth),
                 customSensorHeight = value("customSensorHeight", Double.serializer(), d.customSensorHeight),
                 focalLength = value("focalLength", Double.serializer(), d.focalLength),
                 aperture = value("aperture", Double.serializer(), d.aperture),
                 pixelPitch = value("pixelPitch", Double.serializer().nullable, d.pixelPitch),
+                imagingFilter = value("imagingFilter", ImagingFilter.serializer(), d.imagingFilter),
+                polarErrorDegrees = value("polarErrorDegrees", Double.serializer(), d.polarErrorDegrees),
+                exposureISO = value("exposureISO", Int.serializer(), d.exposureISO),
                 nightMode = value("nightMode", NightModeSetting.serializer(), d.nightMode),
                 nightIntensity = value("nightIntensity", Double.serializer(), d.nightIntensity),
                 dimScreenAtNight = value("dimScreenAtNight", Boolean.serializer(), d.dimScreenAtNight),
@@ -318,6 +411,7 @@ data class AppSettings(
                 showConstellationNames = value("showConstellationNames", Boolean.serializer(), d.showConstellationNames),
                 showDeepSkyObjects = value("showDeepSkyObjects", Boolean.serializer(), d.showDeepSkyObjects),
                 showMilkyWay = value("showMilkyWay", Boolean.serializer(), d.showMilkyWay),
+                showHorizonGlow = value("showHorizonGlow", Boolean.serializer(), d.showHorizonGlow),
                 deepSkyProminence = value("deepSkyProminence", Int.serializer(), d.deepSkyProminence),
                 starMagnitudeLimit = value("starMagnitudeLimit", Double.serializer(), d.starMagnitudeLimit),
                 coordinateStyle = value("coordinateStyle", CoordinateStyle.serializer(), d.coordinateStyle),

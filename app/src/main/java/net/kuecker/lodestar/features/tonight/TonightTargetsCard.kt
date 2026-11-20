@@ -10,8 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,16 +28,22 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import net.kuecker.lodestar.features.objects.ObjectMoonAssessment
+import net.kuecker.lodestar.features.objects.ObjectMoonText
+import net.kuecker.lodestar.features.objects.ObjectsFormat
 import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
+import net.kuecker.lodestar.kit.planning.MoonImpact
 import net.kuecker.lodestar.services.CatalogService
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.CardTitle
+import net.kuecker.lodestar.shared.ChipTone
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LodestarButton
 import net.kuecker.lodestar.shared.LodestarButtonKind
 import net.kuecker.lodestar.shared.ObjectIcon
+import net.kuecker.lodestar.shared.StatusChip
 import net.kuecker.lodestar.shared.monospacedDigits
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
@@ -67,8 +77,8 @@ internal fun TonightTargetsCard(
                         TonightTargetRow(target, zone, onOpenObject)
                     }
                     TonightNote(
-                        "Ranked by height in the dark, brightness and size. Only objects that climb above $minimum° " +
-                            "are listed.",
+                        "Ranked by height in the dark, brightness and size, and lower where the Moon spoils the sky. " +
+                            "Only objects that climb above $minimum° are listed.",
                         style = TonightNoteStyle.FOOTNOTE,
                     )
                     if (outcome.targets.any { it.note != null }) {
@@ -77,7 +87,7 @@ internal fun TonightTargetsCard(
                     if (isSkylineApplied) {
                         TonightSkylineNote(
                             "Targets hidden behind your recorded skyline are left out. The hours and the best time " +
-                                "count only the time above it.",
+                                "count only the time above it, and targets that stay clear of it longer rank higher.",
                         )
                     }
                 }
@@ -143,6 +153,7 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
                 color = palette.tertiaryText,
                 style = MaterialTheme.typography.bodySmall,
             )
+            target.moon?.let { MoonChip(it) }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
@@ -161,6 +172,19 @@ private fun TonightTargetRow(target: TonightTarget, zone: ZoneId, onOpenObject: 
     }
 }
 
+/** What the Moon does to the target at its best time: "Moon down", "Moon: moderate", "Moon: fine with your filter". */
+@Composable
+private fun MoonChip(moon: ObjectMoonAssessment) {
+    val (icon, tone) = when (moon.level) {
+        MoonImpact.Level.MOON_DOWN -> Icons.Outlined.Bedtime to ChipTone.POSITIVE
+        MoonImpact.Level.MINOR ->
+            Icons.Outlined.DarkMode to if (moon.isRelaxed) ChipTone.POSITIVE else ChipTone.NEUTRAL
+        MoonImpact.Level.MODERATE -> Icons.Filled.DarkMode to ChipTone.WARNING
+        MoonImpact.Level.SEVERE -> Icons.Outlined.Warning to ChipTone.CRITICAL
+    }
+    StatusChip(icon, ObjectMoonText.chip(moon), Modifier.padding(top = 3.dp), tone, maxLines = 2)
+}
+
 /**
  * The name, with the first catalog designation when it differs: "Andromeda Galaxy · M 31". The designation is never
  * split between its catalogue and number, and the dot stays with the name, so no line starts with it.
@@ -170,12 +194,13 @@ private fun title(obj: CelestialObject): String {
     return TonightFormat.designation(obj)?.let { "$name${AppFormat.NO_BREAK_SPACE}· ${AppFormat.unbreakable(it)}" } ?: name
 }
 
-/** "Best 23:40 facing SE · 7h 12m above 20°". */
+/** "Best 23:40 facing SE · 7h 12m above 20°"; with a skyline "Best 23:40 facing SE · 3.5 h clear of your skyline". */
 private fun timing(target: TonightTarget, zone: ZoneId): String {
     val minimum = TonightCalculator.minimumTargetAltitude.toInt()
-    return "Best ${AppFormat.time(target.peakTime, zone)} " +
-        TonightFormat.facing(target.peakAzimuth, target.peakAltitude) +
-        " · ${TonightFormat.duration(target.hoursAboveMinimum)} above $minimum°"
+    val best = "Best ${AppFormat.time(target.peakTime, zone)} " + TonightFormat.facing(target.peakAzimuth, target.peakAltitude)
+    val clear = target.unobstructedHours
+    if (clear != null) return "$best · ${ObjectsFormat.hours(clear)} clear of your skyline"
+    return "$best · ${TonightFormat.duration(target.hoursAboveMinimum)} above $minimum°"
 }
 
 private fun spokenSummary(target: TonightTarget, zone: ZoneId): String {
@@ -186,8 +211,14 @@ private fun spokenSummary(target: TonightTarget, zone: ZoneId): String {
         "highest ${AngleFormatter.formatDegrees(target.peakAltitude, 0)} at ${AppFormat.time(target.peakTime, zone)}" +
             ", " + TonightFormat.spokenFacing(target.peakAzimuth, target.peakAltitude),
     )
+    val clear = target.unobstructedHours
     parts.add(
-        "${TonightFormat.duration(target.hoursAboveMinimum)} above ${TonightCalculator.minimumTargetAltitude.toInt()} degrees",
+        if (clear != null) {
+            "${ObjectsFormat.hours(clear, spoken = true)} clear of your skyline"
+        } else {
+            "${TonightFormat.duration(target.hoursAboveMinimum)} above ${TonightCalculator.minimumTargetAltitude.toInt()} degrees"
+        },
     )
+    target.moon?.let { parts.add(ObjectMoonText.chip(it)) }
     return parts.joinToString(", ")
 }

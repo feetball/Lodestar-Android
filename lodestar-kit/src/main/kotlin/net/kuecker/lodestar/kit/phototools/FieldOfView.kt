@@ -1,45 +1,87 @@
 package net.kuecker.lodestar.kit.phototools
 
-import kotlin.math.PI
-import kotlin.math.atan
+import kotlin.math.min
 
 /**
- * Field-of-view calculations for a rectilinear lens on a given sensor.
+ * Field-of-view calculations for a lens on a given sensor.
  *
- * The angle subtended by a sensor dimension `d` at focal length `f` is `2 · atan(d / 2f)`.
- * Fisheye and other non-rectilinear projections are not modelled. The horizontal and vertical
- * angles refer to the sensor's width and height, that is, a camera held in landscape orientation;
- * use [FrameSize.rotated] for portrait.
+ * The angle across a sensor dimension `d` is `2 · θ(d / 2)`, where `θ(r)` is the inverse of the lens's
+ * [LensProjection]: for a rectilinear lens of focal length `f` that is `2 · atan(d / 2f)`, and a fisheye
+ * mapping is inverted the same way. No angle exceeds 180°. The horizontal and vertical angles refer to the
+ * sensor's width and height, that is, a camera held in landscape orientation; use [FrameSize.rotated] for
+ * portrait.
+ *
+ * A circular fisheye whose image circle is smaller than the sensor only fills that circle: every extent is
+ * limited to the circle's diameter (`imageCircleDiameterMillimeters`), so a circle that fits inside the
+ * frame gives the same angle in all three directions.
  *
  * The functions accept any positive focal length. A focal length that is not a positive finite
  * number is replaced by [LensSetup.defaultFocalLengthMillimeters], so the result is always a
- * valid angle.
+ * valid angle. An image circle that is not a positive finite number is ignored.
  */
 object FieldOfView {
 
     /** The horizontal field of view, in degrees, across the sensor width. */
-    fun horizontal(sensor: SensorFormat, focalLength: Double): Double =
-        angleDegrees(sensor.widthMillimeters, usable(focalLength))
+    fun horizontal(
+        sensor: SensorFormat,
+        focalLength: Double,
+        projection: LensProjection = LensProjection.RECTILINEAR,
+        imageCircleDiameterMillimeters: Double? = null,
+    ): Double = angleDegrees(
+        framedExtent(sensor.widthMillimeters, imageCircleDiameterMillimeters), usable(focalLength), projection,
+    )
 
     /** The vertical field of view, in degrees, across the sensor height. */
-    fun vertical(sensor: SensorFormat, focalLength: Double): Double =
-        angleDegrees(sensor.heightMillimeters, usable(focalLength))
+    fun vertical(
+        sensor: SensorFormat,
+        focalLength: Double,
+        projection: LensProjection = LensProjection.RECTILINEAR,
+        imageCircleDiameterMillimeters: Double? = null,
+    ): Double = angleDegrees(
+        framedExtent(sensor.heightMillimeters, imageCircleDiameterMillimeters), usable(focalLength), projection,
+    )
 
     /** The diagonal field of view, in degrees, corner to corner. */
-    fun diagonal(sensor: SensorFormat, focalLength: Double): Double =
-        angleDegrees(sensor.diagonalMillimeters, usable(focalLength))
+    fun diagonal(
+        sensor: SensorFormat,
+        focalLength: Double,
+        projection: LensProjection = LensProjection.RECTILINEAR,
+        imageCircleDiameterMillimeters: Double? = null,
+    ): Double = angleDegrees(
+        framedExtent(sensor.diagonalMillimeters, imageCircleDiameterMillimeters), usable(focalLength), projection,
+    )
 
     /** The horizontal, vertical and diagonal fields of view at once. */
-    fun of(sensor: SensorFormat, focalLength: Double): FrameSize =
-        FrameSize(sensor, usable(focalLength))
+    fun of(
+        sensor: SensorFormat,
+        focalLength: Double,
+        projection: LensProjection = LensProjection.RECTILINEAR,
+        imageCircleDiameterMillimeters: Double? = null,
+    ): FrameSize = FrameSize(sensor, usable(focalLength), projection, imageCircleDiameterMillimeters)
 
     private fun usable(focalLength: Double): Double =
         if (focalLength.isFinite() && focalLength > 0.0) focalLength else LensSetup.defaultFocalLengthMillimeters
 }
 
-/** `2 · atan(extent / 2f)` in degrees. The caller guarantees a positive, finite focal length. */
-private fun angleDegrees(extent: Double, focalLength: Double): Double =
-    2.0 * atan(extent / (2.0 * focalLength)) * 180.0 / PI
+/**
+ * The part of a sensor extent that the lens images: [extent] limited to the image circle's diameter, when there is
+ * a usable one (a positive finite number).
+ */
+internal fun framedExtent(extent: Double, imageCircleDiameterMillimeters: Double?): Double {
+    if (imageCircleDiameterMillimeters == null || !imageCircleDiameterMillimeters.isFinite() ||
+        !(imageCircleDiameterMillimeters > 0.0)
+    ) {
+        return extent
+    }
+    return min(extent, imageCircleDiameterMillimeters)
+}
+
+/**
+ * The angle across [extent] in degrees, at most 180: `2 · θ(extent / 2)` for the projection's inverse mapping `θ`.
+ * The caller guarantees a positive, finite focal length.
+ */
+private fun angleDegrees(extent: Double, focalLength: Double, projection: LensProjection): Double =
+    min(180.0, 2.0 * projection.angleDegrees(extent / 2.0, focalLength))
 
 // Swift's `min` and `max` pick the first argument when a comparison with the second is false, so
 // they differ from `kotlin.math.min` and `max` for NaN and for signed zeros. `FrameSize` can hold
@@ -68,10 +110,15 @@ data class FrameSize(
      * Computes the frame size of a sensor behind a lens. The caller guarantees that
      * [focalLength] is a positive, finite number of millimetres.
      */
-    internal constructor(sensor: SensorFormat, focalLength: Double) : this(
-        horizontal = angleDegrees(sensor.widthMillimeters, focalLength),
-        vertical = angleDegrees(sensor.heightMillimeters, focalLength),
-        diagonal = angleDegrees(sensor.diagonalMillimeters, focalLength),
+    internal constructor(
+        sensor: SensorFormat,
+        focalLength: Double,
+        projection: LensProjection = LensProjection.RECTILINEAR,
+        imageCircleDiameterMillimeters: Double? = null,
+    ) : this(
+        horizontal = angleDegrees(framedExtent(sensor.widthMillimeters, imageCircleDiameterMillimeters), focalLength, projection),
+        vertical = angleDegrees(framedExtent(sensor.heightMillimeters, imageCircleDiameterMillimeters), focalLength, projection),
+        diagonal = angleDegrees(framedExtent(sensor.diagonalMillimeters, imageCircleDiameterMillimeters), focalLength, projection),
     )
 
     /** The longer side of the frame, in degrees. */

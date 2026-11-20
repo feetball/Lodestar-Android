@@ -101,7 +101,11 @@ class OnlineDownloader(
     private val totalTimeoutMillis: Long = 120_000,
     internal val allowLoopbackHttp: Boolean = false,
 ) {
-    fun fetch(request: OnlineRequest): OnlineResult {
+    /**
+     * Downloads [request]. [isCancelled] is polled while the data arrives; once it is true the download stops with
+     * [OnlineFailure.NETWORK] (the caller knows why).
+     */
+    fun fetch(request: OnlineRequest, isCancelled: () -> Boolean = { false }): OnlineResult {
         var url = parse(request.url) ?: return OnlineResult.Failed(OnlineFailure.INSECURE)
         val deadline = System.nanoTime() + totalTimeoutMillis * 1_000_000L
         for (hop in 0..MAXIMUM_REDIRECTS) {
@@ -136,7 +140,7 @@ class OnlineDownloader(
                     status == HttpURLConnection.HTTP_FORBIDDEN -> return OnlineResult.Failed(OnlineFailure.FORBIDDEN, status)
                     status == TOO_MANY_REQUESTS -> return OnlineResult.Failed(OnlineFailure.RATE_LIMITED, status)
                     status !in 200..299 -> return OnlineResult.Failed(OnlineFailure.HTTP_ERROR, status)
-                    else -> return read(connection, request, deadline)
+                    else -> return read(connection, request, deadline, isCancelled)
                 }
             } catch (_: SocketTimeoutException) {
                 return OnlineResult.Failed(OnlineFailure.TIMEOUT)
@@ -151,7 +155,12 @@ class OnlineDownloader(
         return OnlineResult.Failed(OnlineFailure.HTTP_ERROR)
     }
 
-    private fun read(connection: HttpURLConnection, request: OnlineRequest, deadline: Long): OnlineResult {
+    private fun read(
+        connection: HttpURLConnection,
+        request: OnlineRequest,
+        deadline: Long,
+        isCancelled: () -> Boolean,
+    ): OnlineResult {
         val declared = connection.contentLengthLong
         if (declared > request.maximumBytes) return OnlineResult.Failed(OnlineFailure.TOO_LARGE)
         val buffer = ByteArray(BUFFER_SIZE)
@@ -163,6 +172,7 @@ class OnlineDownloader(
                 if (bytes.size() + count > request.maximumBytes) return OnlineResult.Failed(OnlineFailure.TOO_LARGE)
                 bytes.write(buffer, 0, count)
                 if (System.nanoTime() > deadline) return OnlineResult.Failed(OnlineFailure.TIMEOUT)
+                if (isCancelled()) return OnlineResult.Failed(OnlineFailure.NETWORK)
             }
         }
         if (bytes.size() == 0) return OnlineResult.Failed(OnlineFailure.EMPTY)

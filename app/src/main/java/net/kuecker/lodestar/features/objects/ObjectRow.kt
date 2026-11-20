@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.ObjectIcon
 import net.kuecker.lodestar.shared.monospacedDigits
@@ -35,8 +36,9 @@ import java.time.ZoneId
 
 /**
  * One object in the Objects list: icon, names, a one-line description and, on the right, where the object is in
- * the sky now or when it rises ([position] is `null` while positions are not known). With very large text the
- * position moves under the names. Screen readers get one summary of everything the row shows.
+ * the sky now or when it rises ([position] is `null` while positions are not known). With [tonight], when the list is
+ * ordered or filtered by hours, the description ends with "3.4 h tonight". With very large text the position moves
+ * under the names. Screen readers get one summary of everything the row shows.
  */
 @Composable
 internal fun ObjectRow(
@@ -46,10 +48,11 @@ internal fun ObjectRow(
     isFavorite: Boolean = false,
     zone: ZoneId = ZoneId.systemDefault(),
     showsProminence: Boolean = false,
+    tonight: UnobstructedVisibility? = null,
 ) {
     val isLargeText = LocalDensity.current.fontScale >= LARGE_TEXT_SCALE
-    val summary = remember(obj, position, isFavorite, zone, showsProminence) {
-        val spoken = ObjectsFormat.spokenSummary(obj, position, isFavorite, zone)
+    val summary = remember(obj, position, isFavorite, zone, showsProminence, tonight) {
+        val spoken = ObjectsFormat.spokenSummary(obj, position, isFavorite, zone, tonight)
         if (showsProminence) "$spoken, ${obj.prominence.displayName}" else spoken
     }
     // The width of the row caps the position, so the names keep the rest even beside a long "Clears skyline tomorrow".
@@ -63,11 +66,11 @@ internal fun ObjectRow(
             ObjectIcon(obj.category)
             if (isLargeText) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Names(obj, position, isFavorite, showsProminence, subtitleLines = 2)
+                    Names(obj, position, isFavorite, showsProminence, tonight, subtitleLines = 2)
                     SkyPosition(position, zone, isAlignedToEnd = false)
                 }
             } else {
-                Names(obj, position, isFavorite, showsProminence, subtitleLines = 2, modifier = Modifier.weight(1f))
+                Names(obj, position, isFavorite, showsProminence, tonight, subtitleLines = 2, modifier = Modifier.weight(1f))
                 SkyPosition(
                     position,
                     zone,
@@ -90,6 +93,7 @@ private fun Names(
     position: ObjectSkyPosition?,
     isFavorite: Boolean,
     showsProminence: Boolean,
+    tonight: UnobstructedVisibility?,
     subtitleLines: Int,
     modifier: Modifier = Modifier,
 ) {
@@ -124,7 +128,8 @@ private fun Names(
         }
         Text(
             ObjectsFormat.rowSubtitle(obj, position?.magnitude, position) +
-                if (showsProminence) "${AppFormat.NO_BREAK_SPACE}· ${AppFormat.unbreakable(obj.prominence.displayName)}" else "",
+                (if (showsProminence) "${AppFormat.NO_BREAK_SPACE}· ${AppFormat.unbreakable(obj.prominence.displayName)}" else "") +
+                (if (tonight != null) "${AppFormat.NO_BREAK_SPACE}· ${AppFormat.unbreakable(ObjectsFormat.tonightText(tonight))}" else ""),
             color = palette.secondaryText,
             style = MaterialTheme.typography.bodySmall,
             // The kind and magnitude of a comet or an asteroid take one line, the elongation and warnings the next.

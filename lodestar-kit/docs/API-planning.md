@@ -2,7 +2,8 @@
 
 Package `net.kuecker.lodestar.kit.planning`. Port of `LodestarKit/Sources/LodestarKit/Planning/*.swift`
 (IntervalSet, AltitudeSample, AltitudeProfile, DarknessSampler, TargetVisibility, NightPlanner, NightPlanner+Summary,
-NightPlanner+Visibility, NightSummary, PolarAlignment). Depends on the Foundation and Ephemeris areas only (no Catalog).
+NightPlanner+Visibility, NightPlanner+Unobstructed, NightSummary, PolarAlignment, MeridianClock). Depends on the Foundation and Ephemeris areas only (no Catalog; the
+catalog-object overload of `MeridianClock.transit` lives with the Catalog area, see `API-catalog.md`).
 
 Import with `import net.kuecker.lodestar.kit.planning.*` — **that also brings in `NightPlanner.summary(...)` and every
 `NightPlanner.visibility(...)` overload**, which are extension functions on the `NightPlanner` object (Swift `extension NightPlanner`
@@ -36,9 +37,17 @@ data class TargetVisibility(
     val minimumAltitude: Double,                         // the altitude intervalsAboveMinimum / hoursAboveMinimum refer to
     val maxAltitudeDuringDarkness: Double?,              // null when there is no darkness
     val bestTime: Instant?,                              // instant of maxAltitudeDuringDarkness
-    val intervalsAboveMinimum: List<DateInterval>,       // in time order
-) { val hoursAboveMinimum: Double }
+    val intervalsAboveMinimum: List<DateInterval>,       // in time order; with a skyline also above the skyline
+) {
+    val hoursAboveMinimum: Double
+    val unobstructedIntervals: List<DateInterval>        // = intervalsAboveMinimum: above the skyline (flat without one) and the minimum
+    val unobstructedHours: Double                        // = hoursAboveMinimum
+    val isBehindSkyline: Boolean                         // intervals empty but the dark peak reaches minimumAltitude (hidden by the skyline)
+}
 ```
+(Swift: the same three computed properties.) `unobstructed*` are the same numbers as `intervalsAboveMinimum` / `hoursAboveMinimum`
+in every call, named for the question "how long is it clear of my skyline tonight?"; with `horizon = null` the skyline is the
+flat horizon.
 `DarknessKind` serializes as `"astronomical"` / `"moonFree"` (the Swift raw values). `allCases` is `DarknessKind.entries`.
 
 ## NightSummary.kt  (Swift `NightSummary.swift`)
@@ -47,7 +56,7 @@ data class TargetVisibility(
 data class NightSummary(
     val observer: Observer, val night: DateInterval, val twilight: NightTwilight, val referenceDate: Instant,
     val moon: MoonSummary, val astronomicalDarknessIntervals: List<DateInterval>, val darknessIntervals: List<DateInterval>,
-    val milkyWayCore: MilkyWayCoreVisibility, val planets: List<PlanetVisibility>,      // planets: Mercury … Neptune
+    val milkyWayCore: MilkyWayCoreVisibility, val planets: List<PlanetVisibility>,      // planets: Mercury … Neptune, then Pluto
 ) {
     val hasAstronomicalDarkness: Boolean
     val astronomicalDarkHours: Double
@@ -105,31 +114,78 @@ internal fun NightPlanner.upIntervals(crossings: List<AltitudeCrossing>, circums
 
 ## NightPlannerVisibility.kt  (Swift `NightPlanner+Visibility.swift`)
 
-All extension functions on `NightPlanner`; `darkness` defaults to `DarknessKind.ASTRONOMICAL`, `minimumAltitude` to `NightPlanner.defaultMinimumAltitude`.
+All extension functions on `NightPlanner`; `darkness` defaults to `DarknessKind.ASTRONOMICAL`, `minimumAltitude` to `NightPlanner.defaultMinimumAltitude`
+(20°, the minimum the Tonight screen uses). Every overload ends with `horizon: HorizonProfile? = null` (Swift `horizon: HorizonProfile? = nil`):
+`null` is the flat horizon and the calls behave as they always did; a profile runs the skyline-aware planner of the Horizon area
+(`API-horizon.md`: rise and set are clearing and sinking behind the skyline, `intervalsAboveMinimum` are the dark stretches above the
+skyline and the minimum altitude). The cost of a call with a skyline is shown in `API-horizon.md` section 4.
 
 ```kotlin
 // one target at a time (position function) — Swift visibility(of: closure, during:/observer:during:…)
 fun NightPlanner.visibility(position: (SkyFrame) -> HorizontalCoordinate, summary: NightSummary,
-                            darkness: DarknessKind = ASTRONOMICAL, minimumAltitude: Double = 20.0): TargetVisibility
+                            darkness: DarknessKind = ASTRONOMICAL, minimumAltitude: Double = 20.0,
+                            horizon: HorizonProfile? = null): TargetVisibility
 fun NightPlanner.visibility(position: (SkyFrame) -> HorizontalCoordinate, observer: Observer, interval: DateInterval,
-                            minimumAltitude: Double = 20.0): TargetVisibility
+                            minimumAltitude: Double = 20.0, horizon: HorizonProfile? = null): TargetVisibility
 // the Sun, the Moon or a planet — Swift visibility(of: body, during:/observer:during:…)
 fun NightPlanner.visibility(body: SolarSystemBody, summary: NightSummary,
-                            darkness: DarknessKind = ASTRONOMICAL, minimumAltitude: Double = 20.0): TargetVisibility
+                            darkness: DarknessKind = ASTRONOMICAL, minimumAltitude: Double = 20.0,
+                            horizon: HorizonProfile? = null): TargetVisibility
 fun NightPlanner.visibility(body: SolarSystemBody, observer: Observer, interval: DateInterval,
-                            minimumAltitude: Double = 20.0): TargetVisibility
+                            minimumAltitude: Double = 20.0, horizon: HorizonProfile? = null): TargetVisibility
 // many fixed J2000 targets, one TargetVisibility per target in order — Swift visibility(ofFixed:properMotions:during:…)
 fun NightPlanner.visibility(targets: List<EquatorialCoordinate>, properMotions: List<ProperMotion?> = emptyList(),
                             summary: NightSummary, darkness: DarknessKind = ASTRONOMICAL,
-                            minimumAltitude: Double = 20.0): List<TargetVisibility>
+                            minimumAltitude: Double = 20.0, horizon: HorizonProfile? = null): List<TargetVisibility>
 fun NightPlanner.visibility(targets: List<EquatorialCoordinate>, properMotions: List<ProperMotion?> = emptyList(),
-                            observer: Observer, interval: DateInterval, minimumAltitude: Double = 20.0): List<TargetVisibility>
+                            observer: Observer, interval: DateInterval, minimumAltitude: Double = 20.0,
+                            horizon: HorizonProfile? = null): List<TargetVisibility>
 ```
 The six overloads differ by the type of the first parameter and by `summary` against `observer, interval`. Because `properMotions` is
 defaulted in the middle, pass the remaining arguments by name when it is omitted:
 `NightPlanner.visibility(targets, summary = summary)`, `NightPlanner.visibility(targets, observer = observer, interval = window)`;
 with motions all positional arguments work: `NightPlanner.visibility(targets, motions, summary)`. A `null` or missing entry of
 `properMotions` means no proper motion; extra entries are ignored.
+
+## NightPlannerUnobstructed.kt  (Swift `NightPlanner+Unobstructed.swift`)
+
+The hours a whole catalog spends clear of the skyline, without the rise, transit and set that `visibility` also finds.
+
+```kotlin
+data class UnobstructedVisibility(val intervals: List<DateInterval>, val isBehindSkyline: Boolean) {
+    val hours: Double
+}
+fun NightPlanner.unobstructedVisibility(targets: List<EquatorialCoordinate>, properMotions: List<ProperMotion?> = emptyList(),
+                                        summary: NightSummary, darkness: DarknessKind = ASTRONOMICAL,
+                                        minimumAltitude: Double = 20.0, horizon: HorizonProfile? = null): List<UnobstructedVisibility>
+fun NightPlanner.unobstructedVisibility(targets: List<EquatorialCoordinate>, properMotions: List<ProperMotion?> = emptyList(),
+                                        observer: Observer, interval: DateInterval, minimumAltitude: Double = 20.0,
+                                        horizon: HorizonProfile? = null): List<UnobstructedVisibility>
+```
+```swift
+public struct UnobstructedVisibility: Sendable, Hashable {
+    public let intervals: [DateInterval]; public let isBehindSkyline: Bool; public var hours: Double
+}
+extension NightPlanner {
+    public static func unobstructedVisibility(ofFixed targets: [EquatorialCoordinate], properMotions: [ProperMotion?] = [],
+                                              during summary: NightSummary, darkness: DarknessKind = .astronomical,
+                                              minimumAltitude: Double = defaultMinimumAltitude,
+                                              horizon: HorizonProfile? = nil) -> [UnobstructedVisibility]
+    public static func unobstructedVisibility(ofFixed targets: [EquatorialCoordinate], properMotions: [ProperMotion?] = [],
+                                              observer: Observer, during interval: DateInterval,
+                                              minimumAltitude: Double = defaultMinimumAltitude,
+                                              horizon: HorizonProfile? = nil) -> [UnobstructedVisibility]
+}
+```
+Per target, `intervals` are the dark stretches above the skyline (the flat horizon with `horizon = null`) and at least
+`minimumAltitude` high: the `unobstructedIntervals` of `visibility(...)` to within a second. `isBehindSkyline` is `true` when
+that list is empty but the target is at least `minimumAltitude` high at some time in the dark over a flat horizon. Targets are
+J2000 places with optional proper motion, as in `visibility`; a target that is not finite is never clear. The sky frames are
+built once for all targets. **Cost** (desktop JVM, warmed up; the Swift release build is of the same order): 1,000 targets
+0.05–0.1 s with a skyline, 11,000 targets about 0.8 s with a skyline and 0.04 s without, against 3 s and 0.9 s for `visibility`;
+a phone needs several times that, so call it off the main thread, once per observer, skyline and night.
+
+---------------------------------------------------------------------------------------------------------
 
 ## PolarAlignment.kt  (Swift `PolarAlignment.swift`)
 
@@ -158,6 +214,37 @@ data class PolarScopeReading(
 ) { val clockPosition: Double }                                          // angle / 30, [0, 12)
 ```
 `Hemisphere` and `ScopeView` serialize as `"north"`/`"south"` and `"naked"`/`"inverted"`. `allCases` is `entries`.
+
+## MeridianClock.kt  (Swift `MeridianClock.swift`)
+
+The hour angle of a target and the time to its meridian transit, for equatorial mounts that flip at the meridian. Hour angles are in **hours**,
+signed, west positive (negative: the target has yet to transit), in (−12, 12]; a transit is the instant the hour angle is zero (for a star also the
+instant of greatest altitude; for the Moon, whose declination changes, the two differ by up to some minutes).
+
+```kotlin
+data class MeridianTransits(val next: Instant?, val previous: Instant?)   // Swift struct; null when no transit lies within a day (the Moon: 24 h 50 min apart; poles: never)
+data class MeridianFlipWindow(val secondsUntilLimit: Double) {            // negative once the limit is behind the mount
+    val isPastLimit: Boolean                                              // secondsUntilLimit <= 0
+}
+object MeridianClock {
+    const val searchHalfSpan: Double                                      // 86 400 s: the transit search runs date ± this
+    val limitDegreesRange: ClosedFloatingPointRange<Double>               // 0.0..30.0; Swift ClosedRange<Double> 0...30
+    const val siderealDegreesPerSecond: Double                            // 360.98564736629 / 86 400
+    fun hourAngle(apparent: EquatorialCoordinate, date: Instant, observer: Observer): Double
+    //   Swift hourAngle(of:at:observer:). Apparent place of date (apparentPlace / topocentricEquatorial); NaN for a non-finite coordinate. One SkyFrame.
+    fun transit(position: EquatorialCoordinate, properMotion: ProperMotion? = null, date: Instant, observer: Observer): MeridianTransits
+    //   Swift transit(forJ2000:properMotion:around:observer:). J2000 catalog place. ≈ 300 sky frames, a few ms.
+    fun transit(body: SolarSystemBody, date: Instant, observer: Observer): MeridianTransits
+    //   Swift transit(for:around:observer:). ≈ 300 ephemeris evaluations: ≈ 10 ms for the Moon.
+    fun flipWindow(hourAngle: Double, limitDegrees: Double): MeridianFlipWindow?
+    //   Swift flipWindow(hourAngle:limitDegrees:). hourAngle in hours (wrapped into (−12, 12]); limit clamped to 0…30°; null for a non-finite argument.
+    internal fun transits(date: Instant, hourAngleDegrees: (Instant) -> Double): MeridianTransits   // Swift internal transits(around:hourAngleDegrees:)
+}
+```
+The search is `RiseSetCalculator.upperCulminations` on cos(hour angle): one maximum per transit whatever the target does in declination, found with the
+calculator's 10-minute grid and 0.25 s refinement. `next` is the first transit after `date`, `previous` the last at or before it.
+`flipWindow(hourAngle = 0.0, limitDegrees = 10.0)` is 40 minutes of sidereal time (2 393.4 s of clock time); the countdown is (limit − hour angle) at the
+sidereal rate, so it is negative when the target is further west than the limit.
 
 ## IntervalSet.kt  (Swift `NightPlanner.IntervalSet`, internal)
 
@@ -225,6 +312,7 @@ internal class DarknessProfile(val stretches: List<Stretch>) {
 | `DarknessSampler.profile(ofSine:)` / `profile(of:)`, `DarknessProfile.maximum(within:)` / `intervals(atOrAbove:)` | `profile(sine)` / `profile(body)`, `maximum(queries)` / `intervals(threshold)` |
 | `IntervalSet.subtracting(_:from:)`, `.totalDuration(of:)` | `subtracting(removed, base)`, `totalDuration(intervals)` |
 | `Hemisphere.allCases`, `DarknessKind.allCases`, `ScopeView.allCases` | `.entries` |
+| `MeridianClock.hourAngle(of:at:observer:)`, `.transit(forJ2000:properMotion:around:observer:)`, `.transit(for:around:observer:)` (body) | `hourAngle(apparent, date, observer)`, `transit(position, properMotion, date, observer)`, `transit(body, date, observer)` (Kotlin parameter names are the Swift internal names) |
 
 ### Types, access
 - `internal` Swift members stay `internal` (`NightPlanner.curveGapCount`, `NightPlanner.upIntervals`, `MilkyWayCoreVisibility.galacticCentre`,
@@ -263,9 +351,10 @@ internal class DarknessProfile(val stretches: List<Stretch>) {
 ## Tests
 
 `src/test/kotlin/.../planning/` — 1:1 ports of the Swift suites (same names, inputs, expected values and tolerances):
-`PlanningAltitudeCurveTests` (11), `PlanningAltitudeProfileTests` (12), `PlanningIntervalSetTests` (6), `PlanningMilkyWayCoreTests` (14),
+`PlanningAltitudeCurveTests` (11), `PlanningAltitudeProfileTests` (12), `PlanningIntervalSetTests` (6), `PlanningMeridianClockTests` (19), `PlanningMilkyWayCoreTests` (14),
 `PlanningNightSummaryTests` (22; also holds `PlanningTestSupport`, the sites and helpers, as in Swift), `PlanningPerformanceTests` (5),
-`PlanningPlanetTests` (8), `PlanningVisibilityTests` (22), `PolarAlignmentFixtureTests` (3), `PolarAlignmentTests` (19 of 20, see below).
+`PlanningPlanetTests` (8), `PlanningUnobstructedTests` (13: the `horizon` argument, `unobstructed*` and `UnobstructedVisibility`),
+`PlanningVisibilityTests` (22), `PolarAlignmentFixtureTests` (3), `PolarAlignmentTests` (19 of 20, see below).
 Fixtures `stars_apparent.json`, `sidereal.json` in `src/test/resources/fixtures/` (Skyfield/DE440s, loaded with snake-case keys).
 `PlanningTestSupport.SeededGenerator` reproduces the Swift tests' SplitMix64 draws, including `Double.random(in:using:)` for `..<` and `...` ranges, so the
 random targets and instants are the Swift ones.

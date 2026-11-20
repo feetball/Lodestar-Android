@@ -146,7 +146,7 @@ class CatalogLoadingTests {
         assertEquals(88, catalog.constellations.size)
         assertEquals(5, catalog.milkyWay.levels.size)
         val merged = catalog.loadReport.deepSkyObjects.merged
-        assertEquals(9 + 3 + (deepSky.size - merged) + stars.size, catalog.objects.size)
+        assertEquals(10 + 3 + (deepSky.size - merged) + stars.size, catalog.objects.size)
         assertEquals(catalog.objects.filter { it.isListed }.size, catalog.listedObjects.size)
         assertEquals(catalog.objects.filter { it.isListed }.map { it.id }, catalog.listedObjects.map { it.id })
     }
@@ -158,19 +158,19 @@ class CatalogLoadingTests {
         assertEquals(
             listOf(
                 "sun", "moon", "planet.mercury", "planet.venus", "planet.mars",
-                "planet.jupiter", "planet.saturn", "planet.uranus", "planet.neptune",
+                "planet.jupiter", "planet.saturn", "planet.uranus", "planet.neptune", "planet.pluto",
             ),
-            objects.take(9).map { it.id },
+            objects.take(10).map { it.id },
         )
         assertEquals(
             listOf("special.galacticCenter", "special.ncp", "special.scp"),
-            objects.subList(9, 12).map { it.id },
+            objects.subList(10, 13).map { it.id },
         )
         val firstStar = objects.indexOfFirst { it.id.startsWith("star.") }
         assertTrue(firstStar >= 0)
-        assertTrue(objects.subList(12, firstStar).all { it.id.startsWith("dso.") })
+        assertTrue(objects.subList(13, firstStar).all { it.id.startsWith("dso.") })
         assertTrue(objects.subList(firstStar, objects.size).all { it.id.startsWith("star.") })
-        assertEquals("dso.M1", objects[12].id, "deep-sky objects keep the file order: Messier first")
+        assertEquals("dso.M1", objects[13].id, "deep-sky objects keep the file order: Messier first")
         val magnitudes = objects.subList(firstStar, objects.size).mapNotNull { it.magnitude }
         assertEquals(objects.size - firstStar, magnitudes.size)
         assertEquals(magnitudes, magnitudes.sorted())
@@ -248,7 +248,7 @@ class CatalogLoadingTests {
             obj.angularSize?.let { assertTrue(it.majorArcminutes > 0 && it.majorArcminutes.isFinite(), obj.id) }
             assertFalse(obj.name.isEmpty())
         }
-        assertEquals(catalog.objects.size - 9 - 2, fixed)
+        assertEquals(catalog.objects.size - 10 - 2, fixed)
     }
 
     @Test
@@ -459,7 +459,7 @@ class CatalogLoadingTests {
         val listedStars = catalog.listedObjects.filter { it.id.startsWith("star.") }
         assertEquals(stars.count { it.n != null || it.m <= 3.5 }, listedStars.size)
         assertEquals(
-            9 + 3 + catalog.deepSkyObjects.count { it.isListed } + listedStars.size,
+            10 + 3 + catalog.deepSkyObjects.count { it.isListed } + listedStars.size,
             catalog.listedObjects.size,
         )
     }
@@ -527,6 +527,7 @@ class CatalogLoadingTests {
             Expected("planet.saturn", "Saturn", ObjectCategory.PLANET, SolarSystemBody.SATURN),
             Expected("planet.uranus", "Uranus", ObjectCategory.PLANET, SolarSystemBody.URANUS),
             Expected("planet.neptune", "Neptune", ObjectCategory.PLANET, SolarSystemBody.NEPTUNE),
+            Expected("planet.pluto", "Pluto", ObjectCategory.PLANET, SolarSystemBody.PLUTO),
         )
         for (item in expected) {
             val obj = assertNotNull(catalog.objectWithID(item.id), item.id)
@@ -543,6 +544,22 @@ class CatalogLoadingTests {
         }
         assertTrue(assertNotNull(catalog.objectWithID("sun")).notes?.contains("solar filter") ?: false)
         assertNull(catalog.objectWithID("planet.jupiter")?.notes)
+        val pluto = assertNotNull(catalog.objectWithID("planet.pluto"))
+        assertEquals(listOf("134340 Pluto"), pluto.alternateNames)
+        assertEquals(Prominence.NOTABLE, pluto.prominence, "listed with the planets, but no showpiece")
+        assertEquals(14.4, pluto.rankingMagnitude)
+        assertEquals(
+            "A dwarf planet beyond Neptune, about magnitude 14 at its best: far too faint for the eye or a short " +
+                "exposure. It takes a telescope or a long lens on a tracker and stacked frames, and gives itself away " +
+                "by moving against the stars from night to night.",
+            pluto.notes,
+        )
+        for (id in listOf(
+            "sun", "moon", "planet.mercury", "planet.venus", "planet.mars", "planet.jupiter", "planet.saturn",
+            "planet.uranus", "planet.neptune",
+        )) {
+            assertEquals(Prominence.SHOWPIECE, catalog.objectWithID(id)?.prominence, id)
+        }
     }
 
     @Test
@@ -759,7 +776,7 @@ class CatalogLoadingTests {
         }
         assertEquals(catalog.listedObjects.map { it.id }.toSet(), seen.toSet())
         assertEquals(catalog.listedObjects.size, seen.size)
-        assertEquals(9, catalog.objects(ObjectGroup.SOLAR_SYSTEM).size)
+        assertEquals(10, catalog.objects(ObjectGroup.SOLAR_SYSTEM).size)
         assertTrue(catalog.objects(ObjectGroup.GALAXIES).any { it.id == "dso.M31" })
         assertTrue(catalog.objects(ObjectGroup.NEBULAE).any { it.id == "dso.M42" })
         assertTrue(catalog.objects(ObjectGroup.CLUSTERS).any { it.id == "dso.M45" })

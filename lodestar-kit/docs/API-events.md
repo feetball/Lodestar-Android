@@ -309,7 +309,7 @@ public struct Conjunction: Sendable, Hashable { first, second, separation, solar
 public struct TopocentricApproach: Sendable, Hashable { time: Date; separation: Double; isOccultation: Bool }
 ```
 Pairs: the Moon with Mercury…Neptune and with Regulus, Spica, Antares, Aldebaran and the Pleiades; every pair of planets from Mercury
-to Neptune. The planets are sampled daily (geometric heliocentric series, Earth shared) and the Moon every six hours; a local minimum of
+to Neptune. Pluto (magnitude 14) is in no event search. The planets are sampled daily (geometric heliocentric series, Earth shared) and the Moon every six hours; a local minimum of
 the separation is kept when the parabola through the squares of three samples comes within 0.5° of the threshold, and refined by
 golden section on the exact apparent geocentric positions (1e-5 d ≈ 1 s). The Moon's topocentric note is the least separation
 as seen from the observer within ±3 h of the geocentric minimum (parallax shifts the Moon by up to 1°): a Moon–Venus conjunction of

@@ -13,6 +13,7 @@ class AppSettingsTest {
         val settings = AppSettings(
             hasCompletedOnboarding = true, locationSource = LocationSource.Site(site.id), savedSites = listOf(site),
             headingSource = HeadingSource.GYRO_LOCK, focalLength = 14.0, pixelPitch = 3.76,
+            polarErrorDegrees = 2.5, exposureISO = 1600,
             nightMode = NightModeSetting.ON, coordinateStyle = CoordinateStyle.DECIMAL,
             favoriteObjectIDs = listOf("dso.M31"), recentObjectIDs = listOf("planet.mars", "moon"),
         )
@@ -40,6 +41,22 @@ class AppSettingsTest {
         assertEquals(0.25, decoded.nightIntensity)
         assertNull(decoded.pixelPitch)
         assertEquals(LocationSource.Device, decoded.locationSource)
+    }
+
+    @Test
+    fun exposureHelperSettingsHaveDefaultsAndRanges() {
+        val defaults = AppSettings.decode("{}")
+        assertEquals(1.0, defaults.polarErrorDegrees)
+        assertEquals(100, defaults.exposureISO)
+        val low = AppSettings.decode("""{"polarErrorDegrees":0.0,"exposureISO":25}""")
+        assertEquals(0.1, low.polarErrorDegrees)
+        assertEquals(100, low.exposureISO)
+        val high = AppSettings.decode("""{"polarErrorDegrees":45,"exposureISO":409600}""")
+        assertEquals(5.0, high.polarErrorDegrees)
+        assertEquals(12800, high.exposureISO)
+        val damaged = AppSettings.decode("""{"polarErrorDegrees":"one","exposureISO":1.5}""")
+        assertEquals(1.0, damaged.polarErrorDegrees)
+        assertEquals(100, damaged.exposureISO)
     }
 
     @Test

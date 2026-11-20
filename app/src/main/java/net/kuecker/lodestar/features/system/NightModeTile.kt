@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.system
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.graphics.drawable.Icon
 import android.os.Build
@@ -53,7 +54,9 @@ class RedTorchTile : TileService() {
             val pending = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             startActivityAndCollapse(pending)
         } else {
+            // Only below Android 14, where the Intent form is the only one there is.
             @Suppress("DEPRECATION")
+            @SuppressLint("StartActivityAndCollapseDeprecated")
             startActivityAndCollapse(intent)
         }
     }

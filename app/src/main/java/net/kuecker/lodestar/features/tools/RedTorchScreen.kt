@@ -22,6 +22,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -141,7 +142,7 @@ private fun Controls(brightness: Double, onBrightness: (Double) -> Unit, onClose
  */
 @Composable
 private fun BrightnessBar(value: Double, onValue: (Double) -> Unit) {
-    var width by remember { mutableStateOf(1f) }
+    var width by remember { mutableFloatStateOf(1f) }
     val fraction = ((value - MINIMUM) / (1.0 - MINIMUM)).toFloat().coerceIn(0f, 1f)
     fun set(x: Float) = onValue(MINIMUM + (x / width).coerceIn(0f, 1f) * (1.0 - MINIMUM))
     Box(

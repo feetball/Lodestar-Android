@@ -13,46 +13,65 @@ same astronomy engine ported line for line from Swift to Kotlin.
   shortest way, "Pan right 23.4° / Tilt up 12.1°" read-outs for pan-tilt heads, an on-target state with haptics,
   optional audio ticks, a level gauge, and the outline of *your* camera's frame. Keep a **camera profile** for each
   body and lens, start from a smart-telescope preset (Seestar, Dwarf, Vespera) or read a profile from a photo's
-  EXIF data, and switch with one tap; a **fisheye** lens gets a curved or circular frame.
-- **Star alignment** and **Gyro Lock** — centre a bright star once to correct the compass and the bracket; keep
-  the heading on the gyroscope, safe from the camera body's magnetism.
+  EXIF data, and switch with one tap; a **fisheye** lens gets a curved or circular frame. A time bar previews the sky
+  at a later (or earlier) time, up to 48 hours either way, so you can frame the Milky Way core or a planet for 2 am
+  at 9 pm and lock the head; the phone's pointing stays live.
+- **Star alignment** and **Gyro Lock** — centre a bright star once to correct the compass and the bracket (syncing
+  waits until the phone is held still, stars too close to each other are flagged, and an alignment that is hours old
+  gets a warning chip); keep the heading on the gyroscope, safe from the camera body's magnetism.
 - **Any mount** — back camera along the lens (portrait, landscape, upside down) or the phone flat on top.
 - **Objects** — 9,000+ stars and 690+ galaxies, nebulae and clusters (all 110 Messier objects), the planets, the
-  Moon and the Milky Way core; search, group, sort, favourites, custom RA/Dec targets; rise/set, altitude chart,
-  framing and longest exposure for each object.
+  Moon and the Milky Way core; search, group, sort (also by the hours an object is visible tonight above your
+  recorded skyline) and filter (visible for at least an hour tonight), favourites, custom RA/Dec targets; hour
+  angle and time to the meridian transit, rise/set, altitude chart, framing, longest exposure and filter-aware Moon
+  advice for each object (a light-pollution or narrowband filter set in Settings relaxes the Moon warning for
+  emission nebulae; Tonight's best targets weigh the Moon the same way).
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
-  targets, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
-- **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
+  targets ranked by the hours they stay clear of your skyline, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
+- **Sky quality** — an offline Bortle estimate from satellite night-light imagery on every site and a Tonight card
+  with the darkest direction and an imaging score for the night (dark hours, Moon, sky brightness and, when the
+  forecast is on, clouds); the sky chart can draw a thin glow ring on the horizon.
+- **Events calendar** — meteor showers (with hourly rates, the radiant's altitude from your site, the best camera
+  direction, away from the radiant and the Moon, and how many meteors to expect in your lens's frame), lunar and
   solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
   and where to look and a button to aim at it.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
+- **Exposure calculator** — the longest exposure before stars trail by the NPF, 500, 400 and 300 rules for your
+  camera, lens and target; for a star tracker, the drift and the limit for a polar-alignment error of 0.1° to 5°;
+  for an alt-azimuth mount, the field-rotation rate and the limit at the target's place; and a shutter time for the
+  Moon by the Looney 11 rule, adjusted for phase and height, with the Moon's size in pixels. The pages of the Sun,
+  Moon and planets show their size in pixels too.
 - **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set
-  times, Tonight and the charts then use the site's own skyline.
+  times, Tonight and the charts then use the site's own skyline. Optionally, a **terrain horizon** worked out from
+  elevation data (AWS Open Data, downloaded for a saved site only when you ask) stands in where you have not
+  recorded a skyline and fills the stretches a partial sweep left open.
 - **Comets and asteroids** — 216 bright asteroids built in and, optionally, the daily comet file: brightness
   estimates, elongation warnings, a Bright Comets list, and the direction of a comet's ion tail with the camera
   tilt that lays it along the frame.
 - **GoTo mounts** — connect over Wi-Fi to OnStep/LX200, Celestron NexStar and SynScan, ASCOM Alpaca and the
   Sky-Watcher AZ-GTi / Star Adventurer GTi (with home position and star alignment); Go to, Sync, nudge arrows and
-  an always-available Stop, with altitude limits and a built-in simulated mount to try it without hardware.
+  an always-available Stop, with altitude limits, a meridian countdown that warns before the mount has to flip,
+  and a built-in simulated mount to try it without hardware.
 - **Optional online data** — all off until switched on in Settings: ISS and bright-satellite passes (follow one in
-  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast (MET
-  Norway, location rounded to about 10 km).
+  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, tonight's cloud forecast with dew,
+  wind, fog and temperature (MET Norway, location rounded to about 10 km) and terrain horizons (elevation tiles from
+  AWS Open Data, only when you ask a site for one).
 - **Home-screen widgets** — Tonight at a glance (dark hours, the Moon, the Milky Way core, the next event) in
   two resizable sizes, worked out on the device; a tap opens Tonight.
 - **Offline and private** — catalogs and ephemerides are on the device; nothing is collected. The optional online
-  data downloads from CelesTrak, the Minor Planet Center and MET Norway only when you turn it on, and a GoTo mount
-  is reached over the local network only.
+  data downloads from CelesTrak, the Minor Planet Center, MET Norway and AWS Open Data only when you turn it on, and
+  a GoTo mount is reached over the local network only.
 
 ## Project layout
 
 ```
 android/
   lodestar-kit/     Pure Kotlin/JVM astronomy engine (port of the Swift LodestarKit): coordinates, precession,
-                    nutation, aberration, refraction, VSOP87B planets, ELP/Meeus Moon, rise/set, twilight, Moon
-                    phases, catalog + search, aiming math, alignment solver, WMM2025, exposure tools, planning,
-                    events, skyline, mosaics, satellites (SGP4), comets and asteroids, GoTo mount protocols.
-                    1,752 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
+                    nutation, aberration, refraction, VSOP87B planets, Meeus Pluto, ELP/Meeus Moon, rise/set,
+                    twilight, Moon phases, catalog + search, aiming math, alignment solver, WMM2025, exposure
+                    tools, planning, events, skyline, mosaics, satellites (SGP4), comets and asteroids, GoTo mount
+                    protocols. 1,779 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
   app/              Android app (Jetpack Compose, Material 3, CameraX, MapLibre, Glance widgets).
     app/            AppModel (state + service orchestration), activity, root screen
     model/ services/ theme/ shared/   settings, sensors/location/camera, night palette, shared views
@@ -84,16 +103,22 @@ pointing; the *Emulator* workflow runs it on GitHub Actions and uploads the imag
 Attitude comes from Android's rotation vector (magnetic north, corrected to true north with the bundled NOAA
 WMM2025 model) or, with Gyro Lock, from the game rotation vector, whose heading is transferred from the compass
 while the phone stands still. Positions are apparent, topocentric and refracted; against JPL ephemerides the Sun
-is good to about 0.3″, the planets to a few arcseconds and the Moon to under 10″ — far below the accuracy of any
-phone compass, which star alignment corrects.
+is good to about 0.3″, the planets to a few arcseconds (Pluto to 1.4″ in 1950–2049; its series is valid only
+for 1885–2099) and the Moon to under 10″ — far below the accuracy of any phone compass, which star
+alignment corrects.
 
 ## Privacy
 
 No accounts, analytics, ads or tracking. Location, camera and sensors are used on the device only. Network use:
 map tiles from OpenFreeMap when the site map is open, and the phone's geocoding service to find a saved site's
-time zone. Policy: <https://feetball.github.io/Lodestar-Android/privacy.html>.
+time zone. The optional downloads in Settings > Online Data are off until switched on: CelesTrak, the Minor Planet
+Center, MET Norway and the AWS Open Data tile server see the IP address; MET Norway also sees the location rounded to
+about 10 km, and the tile server which 1° elevation tiles you ask for (where a site is to within about 100 km), only when
+you ask a site for its terrain horizon. Policy: <https://feetball.github.io/Lodestar-Android/privacy.html>.
 
 ## Credits
 
-Star, deep-sky, constellation and Milky Way data, the magnetic model and the software libraries are credited in
+Star, deep-sky, constellation and Milky Way data, the night-lights grid (NASA Worldview / GIBS, Black Marble (VIIRS,
+Suomi NPP)), the magnetic model, the optional terrain elevation data (AWS Open Data Terrain Tiles: SRTM and GMTED2010
+courtesy of the U.S. Geological Survey, and national surveys) and the software libraries are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).

@@ -40,7 +40,7 @@ that network.
 
 ## Optional online data (off by default)
 
-Settings › Online Data has four switches. **All of them are off** until you turn them on, and Lodestar works fully
+Settings › Online Data has five switches. **All of them are off** until you turn them on, and Lodestar works fully
 without them. Each switch makes ordinary HTTPS requests to one provider to download data to your phone:
 
 | Switch | What is downloaded | Provider | What the provider receives |
@@ -49,23 +49,28 @@ without them. Each switch makes ordinary HTTPS requests to one provider to downl
 | Starlink streak warnings | Orbit data of the Starlink satellites (about 4.7 MB, once a day, only on an unmetered network such as Wi-Fi) | [CelesTrak](https://celestrak.org) | Your IP address |
 | Comets | The comet orbit file (about 164 KB, at most once a day) | [Minor Planet Center](https://minorplanetcenter.net) | Your IP address |
 | Cloud forecast | The hourly cloud-cover forecast (about 64 KB, no more often than the provider allows) | [MET Norway](https://api.met.no) | Your IP address and your location **rounded to 0.1° (about 10 km)** |
+| Terrain horizons | Only when you ask a site for its terrain horizon: up to four 1° elevation tiles (about 11 MB each), deleted as soon as the skyline is computed | [AWS Open Data Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Amazon S3, s3.amazonaws.com) | Your IP address and **which 1° tiles you request**, which is where the site is to within about 100 km |
 
 Every request also carries the app's name and version (for example `Lodestar/1.0`) and the address of the support
 page, as the providers require. Nothing else about you or your phone is sent: no account, advertising identifier,
 device identifier or exact location. Lodestar does not keep a server of its own and never sees these requests.
 
 - The downloads happen when you open the app, when you switch a feed on and when you press **Update now**; nothing
-  runs in the background.
+  runs in the background. Terrain horizons download only when you ask for one in a site's editor, after a question that says
+  how much will be downloaded.
 - The downloaded data is stored only on your phone, outside Android's backup. The switches themselves are not backed
   up either.
-- Turning a switch off deletes the data it downloaded.
+- Turning a switch off deletes the data it downloaded. The elevation tiles are deleted as soon as the skyline is computed;
+  the skyline itself (360 numbers) stays with the site until you remove it.
 - A failed or unreadable download never replaces the data you already have.
 
 The providers keep their own server logs under their own policies: see the websites of
 [CelesTrak](https://celestrak.org) and the [Minor Planet Center](https://minorplanetcenter.net), and
-[MET Norway's privacy statement](https://www.met.no/en/About-us/privacy). Orbital data: CelesTrak, T. S. Kelso.
+[MET Norway's privacy statement](https://www.met.no/en/About-us/privacy) and the
+[AWS Privacy Notice](https://aws.amazon.com/privacy/) for the tile server. Orbital data: CelesTrak, T. S. Kelso.
 Orbital elements: IAU Minor Planet Center. Weather forecast from MET Norway (data licensed under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)). Terrain elevation data from the AWS Open Data Terrain Tiles
+(SRTM and GMTED2010 courtesy of the U.S. Geological Survey, and the other sources credited in the app under Data Credits).
 
 ## Children
 

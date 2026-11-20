@@ -171,24 +171,37 @@ class CatalogModelTests {
         fun text(major: Double, minor: Double? = null): String =
             assertNotNull(AngularSize.create(major, minor)).description
 
-        assertEquals("178′ × 70′", text(178.0, 69.7))
-        assertEquals("150′", text(150.0, 150.0))
-        assertEquals("646′ × 550′", text(646.0, 550.0))
+        // From 1° up: degrees and whole arcminutes.
+        assertEquals("2° 58′ × 1° 10′", text(178.0, 69.7))
+        assertEquals("1° 25′ × 1°", text(85.0, 60.0))
+        assertEquals("2° 30′", text(150.0, 150.0))
+        assertEquals("10° 46′ × 9° 10′", text(646.0, 550.0))
+        assertEquals("1°", text(60.0))
+        assertEquals("1° 05′", text(65.0))
+        assertEquals("2°", text(120.0))
+        assertEquals("2°", text(119.6), "119.6′ rounds up to a whole 2°")
+        assertEquals("2° 05′", text(125.4))
+        assertEquals("360°", text(21600.0))
+        // From 1′ up: arcminutes and whole arcseconds.
         assertEquals("12′", text(12.0))
-        assertEquals("12′", text(12.4))
-        assertEquals("8.4′ × 4′", text(8.4, 4.0))
-        assertEquals("10′", text(9.96))
-        assertEquals("1.2′ × 0.5′", text(1.2, 0.5))
+        assertEquals("12′ 24″", text(12.4))
+        assertEquals("8′ 24″ × 4′", text(8.4, 4.0))
+        assertEquals("8′ 04″", text(8.07))
+        assertEquals("9′ 58″", text(9.96))
+        assertEquals("1′ 12″ × 30″", text(1.2, 0.5))
         assertEquals("1′", text(1.0))
+        assertEquals("30′ 30″", text(30.5))
+        assertEquals("59′ 59″", text(59.99))
+        assertEquals("1°", text(59.9999), "59′ 59.99″ rounds up to the next degree")
+        // Below 1′: arcseconds.
         assertEquals("36″", text(0.6))
         assertEquals("30″ × 15″", text(0.5, 0.25))
         assertEquals("6″", text(0.1))
         assertEquals("0.6″", text(0.01))
         assertEquals("59″", text(0.99))
         assertEquals("1′", text(0.9917), "59.5″ would round to 60″, which is written as one arcminute")
-        assertEquals("1′ × 0.5′", text(0.9999, 0.5))
-        assertEquals("21600′", text(21600.0))
-        assertEquals("31′", assertNotNull(AngularSize.create(30.5)).toString())
+        assertEquals("1′ × 30″", text(0.9999, 0.5))
+        assertEquals("30′ 30″", assertNotNull(AngularSize.create(30.5)).toString())
     }
 
     @Test
@@ -365,7 +378,7 @@ class CatalogModelTests {
         val order = listOf(
             SolarSystemBody.SUN, SolarSystemBody.MOON, SolarSystemBody.VENUS, SolarSystemBody.JUPITER,
             SolarSystemBody.MARS, SolarSystemBody.MERCURY, SolarSystemBody.SATURN, SolarSystemBody.URANUS,
-            SolarSystemBody.NEPTUNE,
+            SolarSystemBody.NEPTUNE, SolarSystemBody.PLUTO,
         )
         val ranking = order.map {
             CelestialObject(
@@ -374,14 +387,15 @@ class CatalogModelTests {
             ).rankingMagnitude
         }
         assertEquals(ranking.sorted(), ranking)
-        assertEquals(9, ranking.toSet().size)
+        assertEquals(10, ranking.toSet().size)
         val nebula = CelestialObject(
             id = "x", name = "x", category = ObjectCategory.NEBULA,
             position = ObjectPosition.Fixed(EquatorialCoordinate(rightAscension = 0.0, declination = 0.0), null),
             isListed = true,
         )
         assertEquals(Double.POSITIVE_INFINITY, nebula.rankingMagnitude)
-        assertTrue((ranking.lastOrNull() ?: 0.0) < 10)
+        assertTrue((ranking.dropLast(1).lastOrNull() ?: 0.0) < 10)
+        assertEquals(14.4, ranking.last(), "Pluto is the faintest of them")
     }
 
     // MARK: Sharing between tasks

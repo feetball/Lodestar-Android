@@ -172,7 +172,7 @@ class CatalogSmallBodySearchTests {
     fun testSolarSystemListsIncludeTheListedSmallBodies() {
         val group = catalog.objects(ObjectGroup.SOLAR_SYSTEM)
         val listedSmall = catalog.smallBodies.filter { it.isListed }
-        assertEquals(9 + listedSmall.size, group.size)
+        assertEquals(10 + listedSmall.size, group.size)
         assertTrue(group.containsAll(bundled.objects(ObjectGroup.SOLAR_SYSTEM)))
         assertTrue(group.containsAll(listedSmall))
         assertFalse(group.any { it.id == "asteroid.2024 YR4" }, "an obscure asteroid is not listed")

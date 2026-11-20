@@ -64,6 +64,7 @@ import net.kuecker.lodestar.shared.SettingsRow
 import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.shared.SettingsSliderRow
 import net.kuecker.lodestar.theme.LocalPalette
+import java.time.Instant
 import kotlin.math.roundToInt
 
 /**
@@ -74,6 +75,8 @@ import kotlin.math.roundToInt
  * @param target The object guidance leads to now, for "Fit target" and as the centre of a custom size.
  * @param cameraDirection Where the camera points, read once when the sheet opens (the centre of a custom size without a
  * target).
+ * @param date The instant the plan is made for, asked for whenever the plan is worked out: the Aim screen passes the
+ * moment it previews. `null` is the app clock.
  */
 @Composable
 fun MosaicPlanSheet(
@@ -81,8 +84,9 @@ fun MosaicPlanSheet(
     target: CelestialObject?,
     cameraDirection: () -> HorizontalCoordinate?,
     onDismiss: () -> Unit,
+    date: (() -> Instant)? = null,
 ) {
-    LodestarSheet(onDismiss) { MosaicPlanContent(session, target, cameraDirection, LocalSheetDismiss.current) }
+    LodestarSheet(onDismiss) { MosaicPlanContent(session, target, cameraDirection, date, LocalSheetDismiss.current) }
 }
 
 @Composable
@@ -90,6 +94,7 @@ private fun MosaicPlanContent(
     session: MosaicSession,
     target: CelestialObject?,
     cameraDirection: () -> HorizontalCoordinate?,
+    date: (() -> Instant)?,
     onDismiss: () -> Unit,
 ) {
     val app = LocalAppModel.current
@@ -97,7 +102,8 @@ private fun MosaicPlanContent(
     val observer = app.observerContext?.observer
     val lens = app.lensSetup
     val camera = remember { cameraDirection() }
-    val opened = remember { Snapshot.withoutReadObservation { app.clock.now } }
+    val planDate: () -> Instant = date ?: { app.clock.now }
+    val opened = remember { Snapshot.withoutReadObservation { planDate() } }
 
     val targetProblem = remember(target) { MosaicPlanning.targetProblem(target) }
     var archProblem by remember { mutableStateOf<String?>(null) }
@@ -117,7 +123,7 @@ private fun MosaicPlanContent(
         outcome = if (observer == null) {
             MosaicPlanOutcome.Problem("Choose a location first.")
         } else {
-            val inputs = MosaicPlanningInputs(setup, target, lens, observer, camera, app.clock.now)
+            val inputs = MosaicPlanningInputs(setup, target, lens, observer, camera, planDate())
             withContext(Dispatchers.Default) { MosaicPlanning.plan(inputs) }
         }
     }

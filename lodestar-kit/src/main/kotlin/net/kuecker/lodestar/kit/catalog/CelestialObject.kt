@@ -70,7 +70,8 @@ sealed interface ObjectPosition {
  * @property prominence How conspicuous the object is, see [Prominence]. Deep-sky objects have the value of the
  * data file (a record without one counts as [Prominence.NOTABLE]), stars follow their magnitude
  * ([Prominence.forStar]), comets and asteroids follow their [estimatedPeakMagnitude] ([Prominence.forSmallBody]), and
- * the Sun, the Moon, the planets, the special directions and custom targets are showpieces.
+ * the Sun, the Moon, the seven other planets, the special directions and custom targets are showpieces (Pluto is
+ * [Prominence.NOTABLE]: at magnitude 14 it needs a telescope).
  * @property catalogNumbers The object's numbers in the catalogues of [DeepSkyCatalogue], in the order of
  * [designations] (Messier, NGC, IC, then the others). Empty for stars, solar-system bodies and deep-sky objects
  * that are only in other catalogues (ESO, PGC, UGC...).
@@ -166,6 +167,7 @@ data class CelestialObject internal constructor(
             SolarSystemBody.SATURN -> -0.2
             SolarSystemBody.URANUS -> 5.7
             SolarSystemBody.NEPTUNE -> 7.8
+            SolarSystemBody.PLUTO -> 14.4
         }
 
         // MARK: Comets and asteroids

@@ -5,8 +5,9 @@ Packages: `net.kuecker.lodestar.kit.formatting` (`Formatting/*.swift`) and
 Sources: `src/main/kotlin/net/kuecker/lodestar/kit/{formatting,phototools}/`.
 Tests: `src/test/kotlin/net/kuecker/lodestar/kit/{formatting,phototools}/`.
 
-Dependencies: only `net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero()` (Swift `.rounded()`), plus
-`kotlinx-serialization-json`. Neither area uses `AstroMath`, vectors, dates or any other Foundation type, and neither uses
+Dependencies: `net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero()` (Swift `.rounded()`), plus
+`kotlinx-serialization-json`; `phototools/TrackedExposure.kt` also uses `AstroMath` (degree trigonometry, `arcsecondsPerRadian`,
+`clamp`). Neither area uses vectors, dates or any other Foundation type, and neither uses
 `String(format:)`, `NumberFormatter` or any other Foundation formatter (all output is built from integers), so nothing from
 `foundation/` was inlined. The two areas depend on each other in one direction: `phototools` uses `formatting`
 (`AngleFormatter.formatSignedDegrees`, `NumberText`).
@@ -413,6 +414,74 @@ frame, so the real focal length is the focal length of the rectilinear lens that
 "equivalent rectilinear focal length" the rules use. Towards the edge of the frame a star moves faster across the sensor, as it
 does for any lens, so the result is the exposure for the centre of the picture. Nothing in `ExposureCalculator` changed.
 
+## phototools/TrackedExposure.kt
+
+Tracked-exposure helpers: alt-azimuth field rotation, polar-alignment drift, apparent size in pixels, and the Moon by
+Looney 11. Pure functions, a few trigonometric calls each (no cost to speak of). Kotlin on the left, Swift
+(`PhotoTools/TrackedExposure.swift`) in the comments; the Swift argument labels are the Kotlin parameter names.
+
+```kotlin
+object TrackedExposure {                                                  // public enum TrackedExposure: Sendable
+    const val defaultTolerancePixels = 1.5                                // trailing allowed by default, in pixels
+    val tolerancePixelsRange: ClosedFloatingPointRange<Double>            // 0.1...20, ClosedRange<Double>
+    const val defaultPolarErrorDegrees = 1.0                              // used for a polar error that is not a number
+    val polarErrorRange: ClosedFloatingPointRange<Double>                 // 0.01...90 degrees
+    const val maximumFieldRotationAltitude = 89.9                         // the guard near the zenith
+    const val negligibleRateArcsecondsPerSecond = 1e-6                    // a smaller rotation rate counts as none
+
+    // 15.041 * cos(latitude) * cos(azimuth) / cos(altitude), magnitude, arcsec of rotation per second of time.
+    // Latitude limited to +-90, altitude to +-89.9; 0 when an argument is not finite.
+    fun fieldRotationRate(latitude: Double, azimuth: Double, altitude: Double): Double
+
+    // tolerance * 206264.806 / (r * rate), r = half the sensor diagonal in pixels (default pixel pitch when unknown).
+    // null below negligibleRateArcsecondsPerSecond (due east or west, at the poles) or for arguments that are not finite.
+    fun maxExposureForFieldRotation(
+        setup: LensSetup, tolerancePixels: Double = defaultTolerancePixels,
+        latitude: Double, azimuth: Double, altitude: Double,
+    ): Double?                                                            // Swift: -> Double?
+
+    // 15.041 * sin(error), the worst case; error = abs(polarErrorDegrees) limited to polarErrorRange.
+    fun driftRate(polarErrorDegrees: Double): Double
+
+    // tolerance * image scale / driftRate (default pixel pitch when unknown).
+    fun maxExposureForPolarError(setup: LensSetup, tolerancePixels: Double = defaultTolerancePixels, polarErrorDegrees: Double): Double
+
+    // angular diameter * 3600 / image scale; null for a diameter that is not positive and finite, and for an unknown
+    // pixel pitch when assumingDefaultPixelPitch is false.
+    fun pixelSize(angularDiameterDegrees: Double, setup: LensSetup, assumingDefaultPixelPitch: Boolean = true): Double?
+}
+@ConsistentCopyVisibility
+data class MoonExposureSuggestion internal constructor(                   // public struct, internal memberwise init
+    val seconds: Double, val exposureValue: Double,                       // exposureValue: EV at ISO 100 after phase and extinction
+    val airmass: Double, val note: String,
+)
+object MoonExposure {                                                     // public enum MoonExposure: Sendable
+    const val defaultISO = 100.0
+    val isoRange: ClosedFloatingPointRange<Double>                        // 50...102400
+    const val extinctionStopsPerAirmass = 0.3
+    const val maximumAirmass = 5.0
+    fun suggest(illuminatedFraction: Double, altitude: Double, aperture: Double, iso: Double): MoonExposureSuggestion
+}
+```
+
+Formulas and sources
+- Field rotation: the rate of change of the parallactic angle, `15.041 * cos(latitude) * cos(azimuth) / cos(altitude)`. The tests
+  differentiate the parallactic angle of Meeus (*Astronomical Algorithms*, chapter 14, equation 14.1) numerically for five
+  latitude, declination and hour angle triples and compare. The corner of the frame is `r` pixels from the centre
+  (`r` = half the sensor diagonal in millimetres * 1000 / pixel pitch in micrometres), so its trailing is
+  `r * rate * t / 206264.806`; the limit does not depend on the focal length.
+- Polar-alignment drift: `15.041 * sin(error)` is the largest displacement of any star when the sky turns about the pole
+  and the tracker back about an axis `error` away (the chord is `2 * sin(error / 2)`, within `error^2 / 8`). Worst case; the
+  declination refinement is not offered (it needs the direction of the error). A test rotates about 16,000 points with two
+  rotation matrices and compares the largest displacement.
+- Moon: Looney 11 is f/11 at 1/ISO for a full Moon (NASA's Lunar Photography Guide, via Wikipedia, "Looney 11 rule"),
+  EV at ISO 100 = `log2(11^2 * 100)` = 13.56. The phase adjustment is a rule of thumb, a stop more at a half-lit Moon (f/8,
+  12.64) and two at a crescent (f/5.6, 11.61), piecewise linear in the illuminated fraction through 0.2, 0.5 and 1.0 and held
+  outside 0.2...1.0. Extinction: 0.3 EV per airmass above 1 (0.23 magnitudes per airmass, a site about 1 km up: asterism.org,
+  "Atmospheric Extinction and Refraction"), airmass `1 / sin(altitude)` capped at 5. Shutter time `N^2 * 100 / (ISO * 2^EV)`.
+- Arguments are limited to their ranges rather than rejected; a value that is not a number takes the documented fallback
+  (a full Moon, no extinction, 1 degree of polar error, the default aperture, ISO 100 or the default tolerance).
+
 ---------------------------------------------------------------------------------------------------------------------------
 
 ## Renames & deviations from Swift
@@ -436,6 +505,8 @@ Naming (per KOTLIN_PORT.md section 3)
 - File-private Swift members that the same file's other types use become file-private top-level functions or properties
   (`angleDegrees`, `ExposureRule.equivalentFocalLengthNumerator`, `maximumDurationSeconds`, `decimalSeconds`).
 - Extension functions on `AngleFormatter` need an import outside the package (see top).
+- `TrackedExposure.maxExposureForFieldRotation` and `maxExposureForPolarError` take `tolerancePixels` with a default between
+  other parameters in both languages; the Kotlin call names the parameters that follow it (as Swift always does).
 - `Sendable`, `Identifiable` (the `id` property is kept) and `Hashable` conformances have no counterpart; data classes provide
   structural equality and hashing.
 

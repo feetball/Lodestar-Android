@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.model.AppSettings
 import net.kuecker.lodestar.model.CameraProfile
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -39,6 +40,8 @@ import net.kuecker.lodestar.shared.LocalSheetDismiss
 import net.kuecker.lodestar.shared.LodestarSheet
 import net.kuecker.lodestar.shared.SettingsCaption
 import net.kuecker.lodestar.shared.SettingsDivider
+import net.kuecker.lodestar.shared.SettingsMenuOption
+import net.kuecker.lodestar.shared.SettingsMenuPicker
 import net.kuecker.lodestar.shared.SettingsRow
 import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.shared.SettingsToggleRow
@@ -48,7 +51,8 @@ import net.kuecker.lodestar.theme.LocalPalette
  * Settings ▸ Camera & Lens: the cameras and lenses the photographer uses, one of them active. The active profile gives the
  * framing rectangle on the Aim screen and the sky chart and the numbers of the exposure tools. Tap a profile to use it,
  * the pencil to edit it, press and hold for more; "Add Preset…" starts from a smart telescope or a plain camera and
- * "From a Photo…" reads the camera and lens from the EXIF data of a picture.
+ * "From a Photo…" reads the camera and lens from the EXIF data of a picture. Below the profiles sits the filter in
+ * front of the sensor, which relaxes the Moon warnings for emission nebulae.
  */
 @Composable
 internal fun SettingsCameraSection() {
@@ -65,7 +69,8 @@ internal fun SettingsCameraSection() {
         title = "Camera & Lens",
         footer = "Describe the camera on the tripod, not the phone. The active profile gives the framing rectangle on " +
             "the Aim screen and the sky chart, and the numbers of the exposure tools. A fisheye lens draws a curved " +
-            "frame. Exposure rules use the real focal length, as for any lens.",
+            "frame. Exposure rules use the real focal length, as for any lens. Narrowband filters make emission " +
+            "nebulae usable under moonlight; Lodestar relaxes its Moon warnings for them.",
     ) {
         for ((index, profile) in settings.cameraProfiles.withIndex()) {
             if (index > 0) SettingsDivider()
@@ -104,6 +109,14 @@ internal fun SettingsCameraSection() {
         }
         SettingsDivider()
         SettingsFieldOfViewReadout(app.lensSetup)
+        SettingsDivider()
+        SettingsMenuPicker(
+            title = "Filter",
+            selection = settings.imagingFilter,
+            options = ImagingFilter.entries.map { SettingsMenuOption(it.displayName, it) },
+            caption = settings.imagingFilter.summary,
+            onSelect = { filter -> store.update { it.copy(imagingFilter = filter) } },
+        )
         SettingsDivider()
         SettingsToggleRow(
             title = "Camera preview",

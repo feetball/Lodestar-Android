@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.horizon.HorizonCoverageMemory
 import net.kuecker.lodestar.features.horizon.HorizonFormat
 import net.kuecker.lodestar.features.horizon.HorizonRecordingScreen
+import net.kuecker.lodestar.features.horizon.SiteHorizon
+import net.kuecker.lodestar.features.horizon.TerrainText
 import net.kuecker.lodestar.model.SavedSite
 import net.kuecker.lodestar.shared.HideSystemBarsInWindow
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -54,12 +56,32 @@ internal fun SiteHorizonDialogs(site: SavedSite, action: SiteHorizonAction, onFi
     }
 }
 
-/** "Open horizon" or "Recorded · 86% covered · highest 14° in the east" for [site], as stored now. */
+/**
+ * The state of the skyline the user recorded at [site], as stored now: "Open horizon" or "Recorded · 86% covered · highest
+ * 14° in the east"; "No recorded skyline" when there is none but a terrain horizon was computed.
+ */
 @Composable
 internal fun rememberSiteHorizonStatus(site: SavedSite): String {
     val context = LocalContext.current
-    return remember(site.id, site.horizon) {
-        HorizonFormat.status(site.horizon, HorizonCoverageMemory.recall(context, site))
+    return remember(site.id, site.horizon, site.terrainHorizon) {
+        if (site.horizon == null && site.terrainHorizon != null) {
+            TerrainText.NO_RECORDED_SKYLINE
+        } else {
+            HorizonFormat.status(site.horizon, HorizonCoverageMemory.recall(context, site))
+        }
+    }
+}
+
+/**
+ * What applies at [site], as stored now, in one line: the recorded skyline, the terrain horizon, or both (see
+ * [HorizonFormat.summary]).
+ */
+@Composable
+internal fun rememberSiteSummary(site: SavedSite): String {
+    val context = LocalContext.current
+    return remember(site.id, site.horizon, site.terrainHorizon) {
+        val resolved = SiteHorizon.resolve(site, HorizonCoverageMemory.preferences(context))
+        HorizonFormat.summary(resolved, HorizonCoverageMemory.recall(context, site))
     }
 }
 

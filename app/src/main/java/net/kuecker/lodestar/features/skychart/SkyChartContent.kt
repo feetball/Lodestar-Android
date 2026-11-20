@@ -3,6 +3,7 @@ package net.kuecker.lodestar.features.skychart
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import net.kuecker.lodestar.features.skyquality.HorizonGlowRing
 
 /** Which layers of the chart are drawn. */
 internal data class SkyChartLayerOptions(
@@ -13,6 +14,8 @@ internal data class SkyChartLayerOptions(
     val starNames: Boolean = true,
     val altitudeGrid: Boolean = true,
     val cameraView: Boolean = true,
+    /** The ring of light-pollution glow just inside the horizon, or `null` for none. */
+    val horizonGlow: HorizonGlowRing? = null,
 )
 
 /** Builders for the simple shapes the chart draws, added to a [Path] that the caller owns and reuses. */

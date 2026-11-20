@@ -18,6 +18,7 @@ import net.kuecker.lodestar.kit.foundation.Atmosphere
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.phototools.SensorFormat
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.kit.pointing.MountProfile
 import java.time.DateTimeException
 import java.time.ZoneId
@@ -49,6 +50,12 @@ data class SavedSite private constructor(
     val timeZoneIdentifier: String?,
     /** The recorded skyline (trees, mountains), or null for an open horizon. */
     val horizon: HorizonProfile? = null,
+    /**
+     * The skyline of the terrain computed from elevation data (hills, mountains), or null when none was computed. Unlike
+     * [horizon] a flat one is kept: it says that the terrain was looked at and is flat. It is used where no skyline was
+     * recorded, and for the stretches a partial sweep left open.
+     */
+    val terrainHorizon: HorizonProfile? = null,
 ) {
     val location: GeographicLocation get() = GeographicLocation(latitude, longitude, elevation)
 
@@ -62,7 +69,8 @@ data class SavedSite private constructor(
         elevation: Double = this.elevation,
         timeZoneIdentifier: String? = this.timeZoneIdentifier,
         horizon: HorizonProfile? = this.horizon,
-    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id, horizon)
+        terrainHorizon: HorizonProfile? = this.terrainHorizon,
+    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id, horizon, terrainHorizon)
 
     companion object {
         const val MAXIMUM_NAME_LENGTH = 60
@@ -76,6 +84,7 @@ data class SavedSite private constructor(
             timeZoneIdentifier: String? = null,
             id: String = UUID.randomUUID().toString(),
             horizon: HorizonProfile? = null,
+            terrainHorizon: HorizonProfile? = null,
         ): SavedSite? {
             val location = GeographicLocation.validated(latitude, longitude, elevation) ?: return null
             if (runCatching { UUID.fromString(id) }.isFailure) return null
@@ -88,6 +97,7 @@ data class SavedSite private constructor(
                 elevation = location.elevation,
                 timeZoneIdentifier = timeZoneIdentifier?.takeIf { zoneOrNull(it) != null },
                 horizon = horizon?.takeUnless { it.isFlat },
+                terrainHorizon = terrainHorizon,
             )
         }
 
@@ -106,6 +116,7 @@ data class SavedSite private constructor(
             put("elevation", JsonPrimitive(site.elevation))
             site.timeZoneIdentifier?.let { put("timeZoneIdentifier", JsonPrimitive(it)) }
             site.horizon?.let { put("horizon", Json.encodeToJsonElement(HorizonProfile.serializer(), it)) }
+            site.terrainHorizon?.let { put("terrainHorizon", Json.encodeToJsonElement(HorizonProfile.serializer(), it)) }
         }
 
         /** Decodes and re-validates a stored site; `null` for invalid entries (dropped by the caller). */
@@ -120,6 +131,9 @@ data class SavedSite private constructor(
                 timeZoneIdentifier = o["timeZoneIdentifier"]?.jsonPrimitive?.content,
                 // A damaged skyline is dropped rather than losing the site.
                 horizon = o["horizon"]?.let { runCatching { Json.decodeFromJsonElement(HorizonProfile.serializer(), it) }.getOrNull() },
+                terrainHorizon = o["terrainHorizon"]?.let {
+                    runCatching { Json.decodeFromJsonElement(HorizonProfile.serializer(), it) }.getOrNull()
+                },
             )
         }.getOrNull()
     }
@@ -174,6 +188,14 @@ data class AppSettings(
     val focalLength: Double = 24.0,
     val aperture: Double = 2.8,
     val pixelPitch: Double? = null,
+    /** The filter in front of the sensor: it decides how far the Moon warnings are relaxed for emission nebulae. */
+    val imagingFilter: ImagingFilter = ImagingFilter.NONE,
+
+    // Exposure calculator
+    /** The angle between a tracker's axis and the pole that the Tracked section works with, in degrees. */
+    val polarErrorDegrees: Double = 1.0,
+    /** The ISO speed of the Moon section. */
+    val exposureISO: Int = 100,
 
     // Night mode
     val nightMode: NightModeSetting = NightModeSetting.AUTOMATIC,
@@ -195,6 +217,8 @@ data class AppSettings(
     val showConstellationNames: Boolean = true,
     val showDeepSkyObjects: Boolean = true,
     val showMilkyWay: Boolean = true,
+    /** A thin ring on the sky chart's horizon that is brighter toward the artificial light. */
+    val showHorizonGlow: Boolean = true,
     /** Deep-sky objects drawn in the sky views, up to this `Prominence` level (1 showpieces … 4 everything). */
     val deepSkyProminence: Int = 2,
     val starMagnitudeLimit: Double = 5.0,
@@ -267,6 +291,8 @@ data class AppSettings(
             aperture = active.aperture,
             pixelPitch = active.pixelPitch,
             smoothingTimeConstant = clamp(smoothingTimeConstant, 0.0..1.0, 0.12),
+            polarErrorDegrees = clamp(polarErrorDegrees, POLAR_ERROR_RANGE, 1.0),
+            exposureISO = exposureISO.coerceIn(EXPOSURE_ISO_RANGE),
             nightIntensity = clamp(nightIntensity, 0.25..1.0, 0.7),
             nightBrightness = clamp(nightBrightness, 0.01..1.0, 0.2),
             starMagnitudeLimit = clamp(starMagnitudeLimit, 1.0..6.5, 5.0),
@@ -290,6 +316,12 @@ data class AppSettings(
         const val MAXIMUM_RECENTS = 20
         const val MAXIMUM_FAVORITES = 200
 
+        /** The polar-alignment errors the exposure calculator offers, in degrees. */
+        val POLAR_ERROR_RANGE: ClosedFloatingPointRange<Double> = 0.1..5.0
+
+        /** The ISO speeds the exposure calculator offers. */
+        val EXPOSURE_ISO_RANGE: IntRange = 100..12800
+
         private val json = Json { ignoreUnknownKeys = true }
 
         fun encode(settings: AppSettings): String {
@@ -309,6 +341,9 @@ data class AppSettings(
                 put("focalLength", JsonPrimitive(s.focalLength))
                 put("aperture", JsonPrimitive(s.aperture))
                 s.pixelPitch?.let { put("pixelPitch", JsonPrimitive(it)) }
+                put("imagingFilter", json.encodeToJsonElement(ImagingFilter.serializer(), s.imagingFilter))
+                put("polarErrorDegrees", JsonPrimitive(s.polarErrorDegrees))
+                put("exposureISO", JsonPrimitive(s.exposureISO))
                 put("nightMode", json.encodeToJsonElement(NightModeSetting.serializer(), s.nightMode))
                 put("nightIntensity", JsonPrimitive(s.nightIntensity))
                 put("dimScreenAtNight", JsonPrimitive(s.dimScreenAtNight))
@@ -323,6 +358,7 @@ data class AppSettings(
                 put("showConstellationNames", JsonPrimitive(s.showConstellationNames))
                 put("showDeepSkyObjects", JsonPrimitive(s.showDeepSkyObjects))
                 put("showMilkyWay", JsonPrimitive(s.showMilkyWay))
+                put("showHorizonGlow", JsonPrimitive(s.showHorizonGlow))
                 put("deepSkyProminence", JsonPrimitive(s.deepSkyProminence))
                 put("starMagnitudeLimit", JsonPrimitive(s.starMagnitudeLimit))
                 put("coordinateStyle", json.encodeToJsonElement(CoordinateStyle.serializer(), s.coordinateStyle))
@@ -358,6 +394,9 @@ data class AppSettings(
                 focalLength = value("focalLength", Double.serializer(), d.focalLength),
                 aperture = value("aperture", Double.serializer(), d.aperture),
                 pixelPitch = value("pixelPitch", Double.serializer().nullable, d.pixelPitch),
+                imagingFilter = value("imagingFilter", ImagingFilter.serializer(), d.imagingFilter),
+                polarErrorDegrees = value("polarErrorDegrees", Double.serializer(), d.polarErrorDegrees),
+                exposureISO = value("exposureISO", Int.serializer(), d.exposureISO),
                 nightMode = value("nightMode", NightModeSetting.serializer(), d.nightMode),
                 nightIntensity = value("nightIntensity", Double.serializer(), d.nightIntensity),
                 dimScreenAtNight = value("dimScreenAtNight", Boolean.serializer(), d.dimScreenAtNight),
@@ -372,6 +411,7 @@ data class AppSettings(
                 showConstellationNames = value("showConstellationNames", Boolean.serializer(), d.showConstellationNames),
                 showDeepSkyObjects = value("showDeepSkyObjects", Boolean.serializer(), d.showDeepSkyObjects),
                 showMilkyWay = value("showMilkyWay", Boolean.serializer(), d.showMilkyWay),
+                showHorizonGlow = value("showHorizonGlow", Boolean.serializer(), d.showHorizonGlow),
                 deepSkyProminence = value("deepSkyProminence", Int.serializer(), d.deepSkyProminence),
                 starMagnitudeLimit = value("starMagnitudeLimit", Double.serializer(), d.starMagnitudeLimit),
                 coordinateStyle = value("coordinateStyle", CoordinateStyle.serializer(), d.coordinateStyle),

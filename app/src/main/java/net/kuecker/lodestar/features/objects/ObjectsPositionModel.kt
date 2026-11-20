@@ -22,8 +22,10 @@ import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.foundation.timeIntervalSince
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.horizon.HorizonVisibility
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.model.SkyClock
 import java.time.Instant
+import java.time.ZoneId
 
 /** Where one object is in the observer's sky at the moment it was computed, and when it next rises. */
 internal data class ObjectSkyPosition(
@@ -113,39 +115,58 @@ internal object ObjectsPositionCalculator {
  * The Objects list sorts and filters by these positions and shows them in every row. They are computed off the
  * main thread and refreshed every 30 s while the list is visible. [positions] is Compose state, so readers
  * recompose when a pass finishes. Main-thread only.
+ *
+ * When the list asks for them (the "Hours Visible Tonight" order or filter), the same loop also works out how many
+ * hours tonight each tracked object is above the skyline ([tonight]). That is done once per observer, skyline and
+ * night, for the objects that have no hours yet, and kept until one of them changes.
  */
 internal class ObjectsPositionModel {
     /** The latest position of each tracked object, keyed by object identifier. */
     var positions: Map<String, ObjectSkyPosition> by mutableStateOf(emptyMap())
         private set
 
+    /** Tonight's hours above the skyline of each tracked object, keyed by object identifier; empty until computed. */
+    var tonight: Map<String, UnobstructedVisibility> by mutableStateOf(emptyMap())
+        private set
+
     private var observer: Observer? = null
     private var skyline: HorizonProfile? = null
+    private var tonightKey: TonightKey? = null
+
+    /** What tonight's hours were computed for. */
+    private data class TonightKey(val observer: Observer, val skyline: HorizonProfile?, val night: ObjectsNight)
 
     /** The latest position of the object with [id], or `null` when it is not tracked or not yet computed. */
     fun position(id: String): ObjectSkyPosition? = positions[id]
 
     /**
      * Computes the positions of the objects [tracked] returns now and then every 30 s until the calling coroutine
-     * is cancelled. [tracked] is asked again on every pass, so the objects can change over time.
+     * is cancelled. [tracked] is asked again on every pass, so the objects can change over time. With [wantsTonight]
+     * it also keeps tonight's hours above the skyline up to date; [zone] decides which night is tonight.
      */
     suspend fun keepFresh(
         observer: Observer,
         skyline: HorizonProfile?,
+        zone: ZoneId,
         clock: SkyClock,
+        wantsTonight: Boolean,
         tracked: () -> List<CelestialObject>,
     ) {
         while (currentCoroutineContext().isActive) {
-            refresh(tracked(), observer, skyline, clock.now)
+            val objects = tracked()
+            refresh(objects, observer, skyline, clock.now)
+            if (wantsTonight) refreshTonight(objects, observer, skyline, zone, clock.now)
             delay(REFRESH_INTERVAL_MS)
         }
     }
 
-    /** Forgets every position, for when there is no observer. */
+    /** Forgets every position and every hour, for when there is no observer. */
     fun clear() {
         positions = emptyMap()
         observer = null
         skyline = null
+        tonight = emptyMap()
+        tonightKey = null
     }
 
     private suspend fun refresh(objects: List<CelestialObject>, observer: Observer, skyline: HorizonProfile?, date: Instant) {
@@ -170,6 +191,28 @@ internal class ObjectsPositionModel {
         } else {
             positions = positions + computed
         }
+    }
+
+    /**
+     * Works out tonight's hours for the [objects] that have none. Another observer, another skyline or the next night
+     * makes every known hour wrong, so those start again.
+     */
+    private suspend fun refreshTonight(
+        objects: List<CelestialObject>,
+        observer: Observer,
+        skyline: HorizonProfile?,
+        zone: ZoneId,
+        now: Instant,
+    ) {
+        val night = withContext(Dispatchers.Default) { ObjectsTonight.night(observer, zone, now) }
+        val key = TonightKey(observer, skyline, night)
+        val isNewKey = tonightKey != key
+        val missing = if (isNewKey) objects else objects.filter { it.id !in tonight }
+        if (missing.isEmpty()) return
+        val computed = withContext(Dispatchers.Default) { ObjectsTonight.visibility(missing, observer, night, skyline) }
+        currentCoroutineContext().ensureActive()
+        tonight = if (isNewKey) computed else tonight + computed
+        tonightKey = key
     }
 
     private companion object {

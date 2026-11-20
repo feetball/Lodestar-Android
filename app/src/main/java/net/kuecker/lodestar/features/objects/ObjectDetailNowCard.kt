@@ -77,6 +77,7 @@ private fun Rows(current: ObjectDetailCurrent, style: CoordinateStyle) {
     current.skylineAltitude?.let { InfoRow("Skyline this way", AppFormat.altitude(it)) }
     InfoRow("RA (of date)", AppFormat.rightAscension(current.equatorial, style))
     InfoRow("Dec (of date)", AppFormat.declination(current.equatorial, style))
+    current.meridian?.let { InfoRow("Hour angle", it.rowText(style)) }
     if (current.isSmallBody) {
         // A comet or an asteroid: badges, brightness estimate, distances, elongation and phase.
         SmallBodyNowRows(current.smallBody)

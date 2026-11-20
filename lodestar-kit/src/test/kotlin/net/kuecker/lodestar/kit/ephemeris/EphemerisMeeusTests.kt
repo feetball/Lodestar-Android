@@ -135,20 +135,20 @@ class EphemerisMeeusTests {
 
     // MARK: Planets
 
-    /** Distance ranges over 1900–2100 from DE440s, widened by a little. */
+    /** Distance ranges over 2000–2065 (the grid below) from DE440s, widened by a little. */
     @Test
     fun testPlanetDistancesStayWithinTheirOrbits() {
         val heliocentricRange: Map<SolarSystemBody, ClosedFloatingPointRange<Double>> = mapOf(
             SolarSystemBody.MERCURY to 0.30..0.47, SolarSystemBody.VENUS to 0.71..0.73,
             SolarSystemBody.MARS to 1.37..1.67, SolarSystemBody.JUPITER to 4.94..5.47,
             SolarSystemBody.SATURN to 9.0..10.1, SolarSystemBody.URANUS to 18.2..20.15,
-            SolarSystemBody.NEPTUNE to 29.7..30.4,
+            SolarSystemBody.NEPTUNE to 29.7..30.4, SolarSystemBody.PLUTO to 30.1..44.6,
         )
         val geocentricRange: Map<SolarSystemBody, ClosedFloatingPointRange<Double>> = mapOf(
             SolarSystemBody.MERCURY to 0.54..1.46, SolarSystemBody.VENUS to 0.26..1.74,
             SolarSystemBody.MARS to 0.37..2.68, SolarSystemBody.JUPITER to 3.9..6.5,
             SolarSystemBody.SATURN to 7.9..11.1, SolarSystemBody.URANUS to 17.2..21.1,
-            SolarSystemBody.NEPTUNE to 28.7..31.4,
+            SolarSystemBody.NEPTUNE to 28.7..31.4, SolarSystemBody.PLUTO to 29.4..45.5,
         )
         for ((body, helio) in heliocentricRange) {
             for (step in 0 until 120) {
@@ -293,11 +293,14 @@ class EphemerisMeeusTests {
                 assertTrue(state.angularDiameterArcseconds > 0, message)
                 assertTrue(state.eclipticLongitudeOfDate in 0.0..<360.0, message)
                 assertTrue(state.eclipticLatitudeOfDate in -90.0..90.0, message)
-                // Largest geocentric ecliptic latitudes: the Moon 5.3°, Venus 8.9°, the other planets less.
+                // Largest geocentric ecliptic latitudes: the Moon 5.3°, Venus 8.9°, Pluto 17.7° (its orbit is inclined
+                // 17.1° to the ecliptic), the other planets less.
                 val latitudeLimit = if (body == SolarSystemBody.SUN) {
                     0.001
                 } else if (body == SolarSystemBody.MOON) {
                     5.4
+                } else if (body == SolarSystemBody.PLUTO) {
+                    18.0
                 } else {
                     9.5
                 }
@@ -358,13 +361,17 @@ class EphemerisMeeusTests {
 
     @Test
     fun testStateForTimesFarFromToday() {
-        // The series are trigonometric, so they stay finite and sensible for thousands of years.
+        // The series are trigonometric, so they stay finite and sensible for thousands of years (Pluto's, which is
+        // only fitted to 1885-2099, is bounded too, but not accurate outside that span).
         for (year in listOf(-2000, -1000, 0, 1000, 1800, 2200, 3000, 4000)) {
             val jd = JulianDate(JulianDate.julianDay(year, 6, 1))
             for (body in SolarSystemBody.entries) {
                 val state = Ephemeris.state(body, jd)
                 assertTrue(state.geocentricJ2000.isFinite, "$body in $year")
-                assertTrue(state.distanceAU > 0.002 && state.distanceAU < 35, "$body distance in $year")
+                // Pluto's radius is 40.7241 ± 11.08 AU whatever the date (the sum of the term amplitudes), so its
+                // distance stays below 52.9 AU; Neptune and the rest stay below 35.
+                val farthest = if (body == SolarSystemBody.PLUTO) 55.0 else 35.0
+                assertTrue(state.distanceAU > 0.002 && state.distanceAU < farthest, "$body distance in $year")
             }
         }
     }
@@ -423,19 +430,21 @@ class EphemerisMeeusTests {
     @Test
     fun testSolarSystemBodyProperties() {
         assertEquals(
-            listOf("sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune"),
+            listOf("sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"),
             SolarSystemBody.entries.map { it.rawValue },
         )
         assertEquals(
-            listOf("Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"),
+            listOf("Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"),
             SolarSystemBody.entries.map { it.displayName },
         )
-        assertEquals(7, SolarSystemBody.entries.count { it.isPlanet })
+        assertEquals(8, SolarSystemBody.entries.count { it.isPlanet })
+        assertTrue(SolarSystemBody.PLUTO.isPlanet, "Pluto is listed with the planets")
         assertFalse(SolarSystemBody.SUN.isPlanet)
         assertFalse(SolarSystemBody.MOON.isPlanet)
         assertEquals(1737.4, SolarSystemBody.MOON.meanRadiusKilometers, 0.05)
         assertEquals(695_700.0, SolarSystemBody.SUN.meanRadiusKilometers, 1.0)
         assertEquals(69_911.0, SolarSystemBody.JUPITER.meanRadiusKilometers, 1.0)
+        assertEquals(1188.3, SolarSystemBody.PLUTO.meanRadiusKilometers, 0.05)
         for (body in SolarSystemBody.entries) {
             assertTrue(body.meanRadiusKilometers > 0)
             val data = Json.encodeToString(SolarSystemBody.serializer(), body)

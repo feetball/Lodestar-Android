@@ -9,6 +9,7 @@ import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -42,8 +43,9 @@ internal object EphemerisFixtureStore {
 }
 
 /**
- * Compares `Ephemeris` with `bodies_apparent.json`: apparent places of the Sun, Moon and planets from
- * DE440s, at 50 instants between 1950 and 2049, each seen from one of six observing sites.
+ * Compares `Ephemeris` with `bodies_apparent.json`: apparent places of the Sun, Moon, planets and Pluto from
+ * DE440s, at 50 instants between 1950 and 2049, each seen from one of six observing sites. Pluto's fixture is
+ * the Pluto-system barycentre (its centre is up to 0.10″ away) and has no magnitude: Skyfield has no model.
  */
 class EphemerisFixtureTests {
     @Serializable
@@ -85,13 +87,15 @@ class EphemerisFixtureTests {
         /**
          * Maximum acceptable angular error in arcseconds of an apparent position, by body. The Sun and
          * planets come from truncated VSOP87 (observed maxima 0.2″ Sun, 0.6″ Mercury, 1.6″ Venus, 4.8″
-         * Mars, 2.7″ Jupiter, 4.3″ Saturn, 4.2″ Uranus, 4.1″ Neptune); the Moon from Meeus' truncated
-         * ELP-2000 (8.1″). The limits leave room for other instants and platforms.
+         * Mars, 2.7″ Jupiter, 4.3″ Saturn, 4.2″ Uranus, 4.1″ Neptune), Pluto from the 43 terms of Meeus, chapter 37
+         * (1.4″); the Moon from Meeus' truncated ELP-2000 (8.1″). The limits leave room for other instants and
+         * platforms.
          */
         val positionToleranceArcseconds: Map<SolarSystemBody, Double> = mapOf(
             SolarSystemBody.SUN to 1.0, SolarSystemBody.MOON to 15.0, SolarSystemBody.MERCURY to 2.0,
             SolarSystemBody.VENUS to 4.0, SolarSystemBody.MARS to 10.0, SolarSystemBody.JUPITER to 6.0,
             SolarSystemBody.SATURN to 8.0, SolarSystemBody.URANUS to 8.0, SolarSystemBody.NEPTUNE to 8.0,
+            SolarSystemBody.PLUTO to 3.0,
         )
 
         /** Maximum acceptable relative error of the geocentric and heliocentric distances. */
@@ -99,12 +103,13 @@ class EphemerisFixtureTests {
             SolarSystemBody.SUN to 5e-6, SolarSystemBody.MOON to 2.5e-4, SolarSystemBody.MERCURY to 1e-5,
             SolarSystemBody.VENUS to 2e-5, SolarSystemBody.MARS to 4e-5, SolarSystemBody.JUPITER to 4e-5,
             SolarSystemBody.SATURN to 5e-5, SolarSystemBody.URANUS to 4e-5, SolarSystemBody.NEPTUNE to 3e-5,
+            SolarSystemBody.PLUTO to 1e-5,
         )
     }
 
     private fun fixtureCases(): List<BodyCase> {
         val cases = EphemerisFixtureStore.load<BodyFixture>("bodies_apparent.json").cases
-        assertEquals(450, cases.size, "50 instants x 9 bodies")
+        assertEquals(500, cases.size, "50 instants x 10 bodies")
         for (body in SolarSystemBody.entries) {
             assertEquals(50, cases.count { it.solarSystemBody == body }, "cases for $body")
         }
@@ -266,7 +271,8 @@ class EphemerisFixtureTests {
      * Mallama & Hilton (2018) as implemented by Skyfield. Skyfield takes the Sun to be at the
      * solar-system barycentre, which shifts r and α slightly; for Mercury at large phase angles that is
      * worth up to 0.13 mag, for the others at most 0.03 mag (Uranus) — Skyfield also switches on its
-     * phase term for Uranus above 3.1° while this implementation ignores it.
+     * phase term for Uranus above 3.1° while this implementation ignores it. Pluto is not in Mallama & Hilton
+     * and has no magnitude in the fixture; its magnitude is checked against JPL Horizons in `EphemerisPlutoTests`.
      */
     @Test
     fun testPlanetMagnitudesMatchMallamaHilton() {
@@ -279,9 +285,19 @@ class EphemerisFixtureTests {
             val state = Ephemeris.state(fixtureCase.solarSystemBody, fixtureCase.julianDate)
             val expected = fixtureCase.apparentMagnitude
             if (expected == null) {
-                assertFalse(fixtureCase.solarSystemBody.isPlanet, "planets have a magnitude in the fixture")
+                // Skyfield's magnitudelib has no Pluto model, so the fixture magnitude is always null for it (the
+                // magnitude is checked against JPL Horizons in `EphemerisPlutoTests`); the engine still has one.
+                if (fixtureCase.solarSystemBody == SolarSystemBody.PLUTO) {
+                    assertNotNull(state.apparentMagnitude, "Pluto has a magnitude")
+                } else {
+                    assertFalse(
+                        fixtureCase.solarSystemBody.isPlanet,
+                        "planets other than Pluto have a magnitude in the fixture",
+                    )
+                }
                 continue
             }
+            assertNotEquals(SolarSystemBody.PLUTO, fixtureCase.solarSystemBody, "Pluto's fixture magnitude is null")
             assertEquals(
                 expected, assertNotNull(state.apparentMagnitude), tolerance[fixtureCase.solarSystemBody] ?: 0.0,
                 "${fixtureCase.body} magnitude at ${fixtureCase.utc}",

@@ -8,6 +8,8 @@
     <!-- Map tiles and place search when you add an observing site. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The countdown notification of the satellite pass that Aim follows (asked for when a pass is followed). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- WorkManager (the widget refresh) asks for this; Lodestar never runs foreground work. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
@@ -47,7 +49,33 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Long press on the icon: Aim, Red torch, Night mode. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Quick settings tiles: switch night mode, open the red torch. -->
+        <service
+            android:name=".features.system.NightModeTile"
+            android:exported="true"
+            android:icon="@drawable/ic_system_night"
+            android:label="@string/tile_night_mode"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".features.system.RedTorchTile"
+            android:exported="true"
+            android:icon="@drawable/ic_system_torch"
+            android:label="@string/tile_red_torch"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
         <!-- Home-screen widgets: Tonight at a glance, in two sizes of the widget picker. -->
         <receiver

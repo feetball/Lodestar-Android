@@ -177,6 +177,8 @@ data class AppSettings(
     val nightIntensity: Double = 0.7,
     val dimScreenAtNight: Boolean = true,
     val nightBrightness: Double = 0.2,
+    /** The screen brightness of the red torch. */
+    val torchBrightness: Double = 0.3,
     /** Experimental: multiply-blend red layer over the whole UI. */
     val redFilterOverlay: Boolean = false,
     val cameraPreviewEnabled: Boolean = true,
@@ -221,6 +223,7 @@ data class AppSettings(
             pixelPitch = pixelPitch?.takeIf { it.isFinite() && it in 0.5..20.0 },
             nightIntensity = clamp(nightIntensity, 0.25..1.0, 0.7),
             nightBrightness = clamp(nightBrightness, 0.01..1.0, 0.2),
+            torchBrightness = clamp(torchBrightness, 0.01..1.0, 0.3),
             starMagnitudeLimit = clamp(starMagnitudeLimit, 1.0..6.5, 5.0),
             deepSkyProminence = deepSkyProminence.coerceIn(1, 4),
             temperatureCelsius = clamp(temperatureCelsius, -60.0..60.0, 10.0),
@@ -262,6 +265,7 @@ data class AppSettings(
                 put("nightIntensity", JsonPrimitive(s.nightIntensity))
                 put("dimScreenAtNight", JsonPrimitive(s.dimScreenAtNight))
                 put("nightBrightness", JsonPrimitive(s.nightBrightness))
+                put("torchBrightness", JsonPrimitive(s.torchBrightness))
                 put("redFilterOverlay", JsonPrimitive(s.redFilterOverlay))
                 put("cameraPreviewEnabled", JsonPrimitive(s.cameraPreviewEnabled))
                 put("cameraPreviewAtNight", JsonPrimitive(s.cameraPreviewAtNight))
@@ -308,6 +312,7 @@ data class AppSettings(
                 nightIntensity = value("nightIntensity", Double.serializer(), d.nightIntensity),
                 dimScreenAtNight = value("dimScreenAtNight", Boolean.serializer(), d.dimScreenAtNight),
                 nightBrightness = value("nightBrightness", Double.serializer(), d.nightBrightness),
+                torchBrightness = value("torchBrightness", Double.serializer(), d.torchBrightness),
                 redFilterOverlay = value("redFilterOverlay", Boolean.serializer(), d.redFilterOverlay),
                 cameraPreviewEnabled = value("cameraPreviewEnabled", Boolean.serializer(), d.cameraPreviewEnabled),
                 cameraPreviewAtNight = value("cameraPreviewAtNight", Boolean.serializer(), d.cameraPreviewAtNight),

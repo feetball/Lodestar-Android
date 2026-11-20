@@ -114,6 +114,23 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             syncServices()
         }
 
+    private var torchShownState by mutableStateOf(false)
+
+    /**
+     * Whether the red torch covers the app (Settings, the launcher shortcut and the quick settings tile show it). While it
+     * does, the screen is at the torch's brightness and stays awake, and the camera is off.
+     */
+    var isTorchShown: Boolean
+        get() = torchShownState
+        set(value) {
+            if (value == torchShownState) return
+            torchShownState = value
+            syncServices()
+        }
+
+    /** Asks for the permission to post notifications; set by the activity. `true` when it is granted. */
+    var notificationPrompt: (suspend () -> Boolean)? = null
+
     /** Whether the Sun is below −6° at the observer (drives automatic night mode). */
     var isSunBelowCivilTwilight by mutableStateOf(false)
         private set
@@ -266,6 +283,14 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         selectedTab = AppTab.AIM
     }
 
+    /** Makes the object with this catalog identifier the target and shows Aim, once the catalog is loaded; unknown ids do nothing. */
+    fun aim(objectID: String) {
+        scope.launch {
+            catalog.load()
+            catalog.objectWithID(objectID)?.let(::aim)
+        }
+    }
+
     /** Makes [obj] the aiming target without changing tabs. */
     fun select(obj: CelestialObject) {
         target = obj
@@ -320,7 +345,7 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         val backCameraAlongLens = mountProfile.cameraAxis.dot(DeviceAttitude.backCameraAxis) > 0.99
         val wantsPreview = settings.cameraPreviewEnabled && (backCameraAlongLens || keepsCameraRunning) &&
             (!isNightModeActive || settings.cameraPreviewAtNight)
-        if (active && onboarded && (selectedTab == AppTab.AIM || keepsCameraRunning) && wantsPreview &&
+        if (active && onboarded && !isTorchShown && (selectedTab == AppTab.AIM || keepsCameraRunning) && wantsPreview &&
             observerContext != null
         ) {
             camera.start(if (isNightModeActive) settings.nightIntensity else null)
@@ -328,12 +353,16 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             camera.stop()
         }
 
-        // Screen: dim at night, keep awake while aiming.
+        // Screen: dim at night, keep awake while aiming; the torch has its own brightness and keeps the screen awake.
         if (active) {
             screen.setBrightnessOverride(
-                if (isNightModeActive && settings.dimScreenAtNight) settings.nightBrightness else null,
+                when {
+                    isTorchShown -> settings.torchBrightness
+                    isNightModeActive && settings.dimScreenAtNight -> settings.nightBrightness
+                    else -> null
+                },
             )
-            screen.setKeepScreenOn(selectedTab == AppTab.AIM && settings.keepScreenAwake)
+            screen.setKeepScreenOn(isTorchShown || (selectedTab == AppTab.AIM && settings.keepScreenAwake))
         } else {
             screen.restore()
         }

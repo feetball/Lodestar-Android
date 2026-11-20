@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.CompletableDeferred
+import net.kuecker.lodestar.features.system.SystemLaunch
 import net.kuecker.lodestar.features.widget.WidgetLaunch
 import net.kuecker.lodestar.shared.AppFormat
 
@@ -29,6 +30,12 @@ class MainActivity : ComponentActivity() {
         cameraResult = null
     }
 
+    private var notificationResult: CompletableDeferred<Boolean>? = null
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        notificationResult?.complete(granted)
+        notificationResult = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -40,11 +47,16 @@ class MainActivity : ComponentActivity() {
         model.location.permissionPrompt = ::requestLocation
         model.camera.permissionPrompt = ::requestCamera
         model.camera.lifecycleOwner = this
+        model.notificationPrompt = ::requestNotifications
         model.screen.attach(window)
         model.feedback.view = window.decorView
         model.launch()
         WidgetLaunch.handle(intent, model)
-        addOnNewIntentListener { WidgetLaunch.handle(it, model) }
+        SystemLaunch.handle(intent, model)
+        addOnNewIntentListener {
+            WidgetLaunch.handle(it, model)
+            SystemLaunch.handle(it, model)
+        }
         setContent { RootScreen(model) }
     }
 
@@ -63,6 +75,7 @@ class MainActivity : ComponentActivity() {
         val model = app
         model.screen.detach(window)
         if (model.camera.lifecycleOwner === this) model.camera.lifecycleOwner = null
+        model.notificationPrompt = null
         if (model.feedback.view === window.decorView) model.feedback.view = null
         super.onDestroy()
     }
@@ -92,6 +105,16 @@ class MainActivity : ComponentActivity() {
         cameraResult?.complete(false)
         cameraResult = result
         cameraPermission.launch(Manifest.permission.CAMERA)
+        return result.await()
+    }
+
+    /** Asks once for the permission to post the satellite pass countdown (Android 13 and later). */
+    private suspend fun requestNotifications(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return true
+        val result = CompletableDeferred<Boolean>()
+        notificationResult?.complete(false)
+        notificationResult = result
+        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         return result.await()
     }
 

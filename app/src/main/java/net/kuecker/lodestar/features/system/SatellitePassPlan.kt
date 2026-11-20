@@ -38,6 +38,13 @@ internal data class SatellitePassPlan(
         else -> Stage.OVER
     }
 
+    /** The moment the countdown runs to in [stage]: the rise before it, the peak after it, none later. */
+    fun countdownTarget(stage: Stage): Instant? = when (stage) {
+        Stage.WAITING -> rise
+        Stage.RISEN -> peak
+        Stage.PEAKED, Stage.OVER -> null
+    }
+
     /** The moment the notification has to change next (the rise, the peak, the set), or `null` once the pass is over. */
     fun nextChange(at: Instant): Instant? = when (stage(at)) {
         Stage.WAITING -> rise
@@ -126,8 +133,16 @@ internal object SatellitePassWords {
     const val CHANNEL_NAME = "Satellite pass countdown"
     const val CHANNEL_DESCRIPTION = "A countdown to the peak of the satellite pass you follow in Aim."
     const val COUNTING_NOTE = "Counting down to the peak"
+    const val COUNTING_NOTE_RISE = "Counting down to the rise"
 
     fun title(plan: SatellitePassPlan): String = "${plan.name} pass"
+
+    /** What the countdown counts to in [stage], or `null` when there is none (past the peak). */
+    fun note(stage: SatellitePassPlan.Stage): String? = when (stage) {
+        SatellitePassPlan.Stage.WAITING -> COUNTING_NOTE_RISE
+        SatellitePassPlan.Stage.RISEN -> COUNTING_NOTE
+        SatellitePassPlan.Stage.PEAKED, SatellitePassPlan.Stage.OVER -> null
+    }
 
     /**
      * The line under the title for [stage]; [time] writes a clock time in the observer's zone.

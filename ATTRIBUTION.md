@@ -117,7 +117,8 @@ credit: *"Orbital data: CelesTrak, T. S. Kelso"*. The groups used are `stations`
 `starlink` (about 4.7 MB); Lodestar never requests a group more than once per two hours, as CelesTrak asks. The SGP4/SDP4
 propagator is a port of the reference implementation by D. A. Vallado, P. Crawford, R. Hujsak and T. S. Kelso ("Revisiting
 Spacetrack Report #3", AIAA 2006-6753), distributed by CelesTrak. Intrinsic magnitudes of the ISS, Tiangong and Hubble are
-from Heavens-Above.
+from Heavens-Above. The sizes used to decide whether a satellite crosses the Sun's or the Moon's disc are the ISS's 109 m
+truss span (NASA) and about 55 m for the Chinese space station (approximate), with 50 m for any other satellite.
 
 ### Comet and asteroid orbits
 

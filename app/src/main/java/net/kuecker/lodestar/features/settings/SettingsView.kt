@@ -115,6 +115,7 @@ private fun SettingsRoot(onOpen: (SettingsRoute) -> Unit) {
             SettingsFeedbackSection()
             SettingsSkyDisplaySection()
             SettingsAtmosphereSection()
+            SettingsJupiterSection()
             SettingsOnlineDataSection()
             SettingsToolsSection(onOpen)
             SettingsAboutSection(onOpen)

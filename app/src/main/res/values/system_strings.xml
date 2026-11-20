@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tile_night_mode">Night mode</string>
+    <string name="tile_red_torch">Red torch</string>
+    <string name="shortcut_aim_short">Aim</string>
+    <string name="shortcut_aim_long">Open Aim</string>
+    <string name="shortcut_torch_short">Red torch</string>
+    <string name="shortcut_torch_long">Open the red torch</string>
+    <string name="shortcut_night_short">Night mode</string>
+    <string name="shortcut_night_long">Switch night mode</string>
+</resources>

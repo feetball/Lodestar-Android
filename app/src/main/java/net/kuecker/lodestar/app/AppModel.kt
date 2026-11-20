@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import net.kuecker.lodestar.features.horizon.SiteHorizon
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.ephemeris.SolarSystemBody
 import net.kuecker.lodestar.kit.ephemeris.horizontal
@@ -92,6 +93,13 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     /** Star-alignment corrections for the current mount and heading source. */
     var alignment by mutableStateOf(AlignmentModel.identity)
 
+    /**
+     * When the current alignment was made: the time of its newest point, or null without an alignment. It follows
+     * the alignment, so a reset clears it, and removing a point never makes an old alignment look fresh.
+     */
+    val alignedAt: Instant?
+        get() = alignment.points.maxOfOrNull { it.timestamp }
+
     private var keepsMotionRunningState by mutableStateOf(false)
 
     /** Keeps the motion sensors running outside the Aim and Sky tabs (e.g. Sensor Diagnostics). */
@@ -113,6 +121,23 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             keepsCameraRunningState = value
             syncServices()
         }
+
+    private var torchShownState by mutableStateOf(false)
+
+    /**
+     * Whether the red torch covers the app (Settings, the launcher shortcut and the quick settings tile show it). While it
+     * does, the screen is at the torch's brightness and stays awake, and the camera is off.
+     */
+    var isTorchShown: Boolean
+        get() = torchShownState
+        set(value) {
+            if (value == torchShownState) return
+            torchShownState = value
+            syncServices()
+        }
+
+    /** Asks for the permission to post notifications; set by the activity. `true` when it is granted. */
+    var notificationPrompt: (suspend () -> Boolean)? = null
 
     /** Whether the Sun is below −6° at the observer (drives automatic night mode). */
     var isSunBelowCivilTwilight by mutableStateOf(false)
@@ -158,10 +183,12 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
                 }
                 is LocationSource.Site -> {
                     val site = settings.savedSites.firstOrNull { it.id == source.id } ?: return null
+                    // The recorded skyline and the terrain horizon, as they apply together (see SiteHorizon).
+                    val skyline = SiteHorizon.resolve(site, localPreferences)
                     ObserverContext(
                         observer = Observer(site.location, atmosphere),
                         timeZone = site.timeZone ?: ZoneId.systemDefault(), name = site.name, source = source,
-                        horizon = site.horizon,
+                        horizon = skyline.profile, horizonSource = skyline.source,
                     )
                 }
             }
@@ -171,13 +198,9 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     val mountProfile: MountProfile
         get() = MountProfile.presets.firstOrNull { it.id == settings.mountPresetID } ?: MountProfile.backCameraPortrait
 
-    /** The camera body + lens used for the framing rectangle and exposure tools. */
+    /** The camera body + lens used for the framing rectangle and exposure tools: the active camera profile. */
     val lensSetup: LensSetup
-        get() {
-            val sensor = SensorFormat.presets.firstOrNull { it.id == settings.sensorID }
-                ?: SensorFormat.custom(settings.customSensorWidth, settings.customSensorHeight)
-            return LensSetup(sensor, settings.focalLength, settings.aperture, settings.pixelPitch)
-        }
+        get() = settings.activeCameraProfile.lensSetup
 
     // Lifecycle
 
@@ -266,6 +289,14 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         selectedTab = AppTab.AIM
     }
 
+    /** Makes the object with this catalog identifier the target and shows Aim, once the catalog is loaded; unknown ids do nothing. */
+    fun aim(objectID: String) {
+        scope.launch {
+            catalog.load()
+            catalog.objectWithID(objectID)?.let(::aim)
+        }
+    }
+
     /** Makes [obj] the aiming target without changing tabs. */
     fun select(obj: CelestialObject) {
         target = obj
@@ -320,7 +351,7 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         val backCameraAlongLens = mountProfile.cameraAxis.dot(DeviceAttitude.backCameraAxis) > 0.99
         val wantsPreview = settings.cameraPreviewEnabled && (backCameraAlongLens || keepsCameraRunning) &&
             (!isNightModeActive || settings.cameraPreviewAtNight)
-        if (active && onboarded && (selectedTab == AppTab.AIM || keepsCameraRunning) && wantsPreview &&
+        if (active && onboarded && !isTorchShown && (selectedTab == AppTab.AIM || keepsCameraRunning) && wantsPreview &&
             observerContext != null
         ) {
             camera.start(if (isNightModeActive) settings.nightIntensity else null)
@@ -328,12 +359,16 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             camera.stop()
         }
 
-        // Screen: dim at night, keep awake while aiming.
+        // Screen: dim at night, keep awake while aiming; the torch has its own brightness and keeps the screen awake.
         if (active) {
             screen.setBrightnessOverride(
-                if (isNightModeActive && settings.dimScreenAtNight) settings.nightBrightness else null,
+                when {
+                    isTorchShown -> settings.torchBrightness
+                    isNightModeActive && settings.dimScreenAtNight -> settings.nightBrightness
+                    else -> null
+                },
             )
-            screen.setKeepScreenOn(selectedTab == AppTab.AIM && settings.keepScreenAwake)
+            screen.setKeepScreenOn(isTorchShown || (selectedTab == AppTab.AIM && settings.keepScreenAwake))
         } else {
             screen.restore()
         }

@@ -306,7 +306,7 @@ class CatalogMalformedDataTests {
     @Test
     fun testAMinimalCatalogWorks() {
         val catalog = CatalogFixture.syntheticCatalog()
-        assertEquals(9 + 3 + 1 + 1, catalog.objects.size)
+        assertEquals(10 + 3 + 1 + 1, catalog.objects.size)
         assertEquals(1, catalog.renderStars.size)
         assertEquals(listOf("Ori"), catalog.constellations.map { it.abbreviation })
         assertEquals("Orion", catalog.objectWithID("star.hip1")?.constellationName)
@@ -687,7 +687,7 @@ class CatalogMalformedDataTests {
                 Callable { runCatching { CatalogFixture.syntheticCatalog().objects.size }.getOrDefault(-1) }
             }
             val counts = pool.invokeAll(tasks).map { it.get() }
-            assertEquals(List(8) { 14 }, counts)
+            assertEquals(List(8) { 15 }, counts)
         } finally {
             pool.shutdown()
         }

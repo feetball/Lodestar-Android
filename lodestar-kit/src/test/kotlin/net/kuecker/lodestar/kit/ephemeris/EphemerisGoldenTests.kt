@@ -13,8 +13,9 @@ import kotlin.test.assertTrue
 /**
  * Pins the port to the Swift algorithms more tightly than the reference fixtures can: the expected values were
  * computed by an independent Python transliteration of the Swift sources (same series tables, same formulas,
- * glibc `libm`). The Kotlin results agree with it to about 1e-14 (positions, magnitudes, angles) and, for the
- * rise/set searches, to the last bit of the event times over several thousand random cases.
+ * glibc `libm`; the Pluto row is the exception, see there). The Kotlin results agree with it to about 1e-14
+ * (positions, magnitudes, angles) and, for the rise/set searches, to the last bit of the event times over several
+ * thousand random cases.
  */
 class EphemerisGoldenTests {
     private class Golden(
@@ -41,6 +42,12 @@ class EphemerisGoldenTests {
         Golden(SolarSystemBody.SATURN, 9.200185453015369, -5.093833553296655, -2.4689130897644755, 0.8691938454392028, 7.4740278262817, 0.7510370284041006, 328.740841940183, -1.2689871053961066),
         Golden(SolarSystemBody.URANUS, 14.112424660002022, 13.035210431549439, 5.523746834506865, 5.813294853745334, 69.30417212314357, 2.6989253870906453, 45.41077208452628, -0.3335185467005317),
         Golden(SolarSystemBody.NEPTUNE, 30.6785896986986, -2.6660930021336617, -1.841537011268762, 7.825404071558248, 18.33460502383711, 0.596359499764235, 354.4055805648261, -1.1684743850759078),
+        // Pluto: NOT from the Python transliteration (which does not cover Meeus' chapter 37 series) but the output of
+        // this implementation. Skyfield's apparent place from DE440s (Pluto-system barycentre) differs by 1.1e-4 AU in
+        // the worst component (3e-6 of the distance), and `EphemerisPlutoTests` checks the place on another day against
+        // DE440s. `EphemerisPlutoTests.testStateAtTheGoldenInstant` pins the same digits in both twins (to 1e-9), so
+        // this row is also a cross-twin check.
+        Golden(SolarSystemBody.PLUTO, 17.233150638279188, -27.870347727564585, -13.661324765442227, 14.493880860819205, 36.78370544834634, 0.9782224377925626, 299.3872492780666, -2.339787769333409),
     )
 
     @Test

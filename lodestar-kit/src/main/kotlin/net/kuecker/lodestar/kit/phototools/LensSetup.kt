@@ -15,16 +15,19 @@ import kotlinx.serialization.json.JsonObject
 import kotlin.math.PI
 
 /**
- * A camera and lens combination: the sensor, focal length, aperture and, optionally, pixel pitch.
+ * A camera and lens combination: the sensor, focal length, aperture and, optionally, pixel pitch, projection and
+ * image circle.
  *
  * Every value of this type is inside the supported ranges, whichever factory or decoder
  * produced it, so code that receives a `LensSetup` never has to re-validate it. The constructor is
- * private; create values with `LensSetup(sensor, focalLengthMillimeters, aperture, pixelPitchMicrometers)`
+ * private; create values with
+ * `LensSetup(sensor, focalLengthMillimeters, aperture, pixelPitchMicrometers, projection, imageCircleDiameterMillimeters)`
  * (a companion `invoke`, which limits every value to its range) or [validated].
  *
  * The JSON form has the keys `sensor`, `focalLengthMillimeters`, `aperture` and, when known,
- * `pixelPitchMicrometers`, as in the Swift original. Decoding ignores unknown keys, whatever the
- * `Json` configuration.
+ * `pixelPitchMicrometers`, as in the Swift original; `projection` is written only for a fisheye lens and
+ * `imageCircleDiameterMillimeters` only when there is an image circle, so the JSON of an ordinary lens is unchanged.
+ * Decoding ignores unknown keys, whatever the `Json` configuration, and reads a missing `projection` as rectilinear.
  */
 @Serializable(with = LensSetupSerializer::class)
 @ConsistentCopyVisibility
@@ -42,6 +45,15 @@ data class LensSetup private constructor(
      * from the camera's resolution.
      */
     val pixelPitchMicrometers: Double?,
+    /** How the lens maps angles to positions on the sensor; [LensProjection.RECTILINEAR] for an ordinary lens. */
+    val projection: LensProjection,
+    /**
+     * The diameter in millimetres of the circle the lens draws on the sensor, or null if it covers the whole sensor.
+     *
+     * Only a circular fisheye whose image circle is smaller than the sensor has one: the frame is then that circle,
+     * or what is left of it inside the sensor.
+     */
+    val imageCircleDiameterMillimeters: Double?,
 ) {
     // MARK: Derived values
 
@@ -54,7 +66,7 @@ data class LensSetup private constructor(
 
     /** The angular size of the frame, for a camera held in landscape orientation. */
     val fieldOfView: FrameSize
-        get() = FrameSize(sensor, focalLengthMillimeters)
+        get() = FrameSize(sensor, focalLengthMillimeters, projection, imageCircleDiameterMillimeters)
 
     /**
      * The angle on the sky covered by one pixel, in arcseconds, or null if the pixel pitch is unknown.
@@ -77,6 +89,9 @@ data class LensSetup private constructor(
         /** The supported apertures, as f-numbers. */
         val apertureRange: ClosedFloatingPointRange<Double> = 0.95..32.0
 
+        /** The supported diameters of an image circle, in millimetres; the range of a sensor dimension. */
+        val imageCircleRange: ClosedFloatingPointRange<Double> = SensorFormat.dimensionRange
+
         /** The focal length used in place of one that is not a number, in millimetres. */
         const val defaultFocalLengthMillimeters = 24.0
 
@@ -95,24 +110,30 @@ data class LensSetup private constructor(
          * The focal length is limited to [focalLengthRange] and the aperture to [apertureRange]; a
          * value that is not finite becomes [defaultFocalLengthMillimeters] or [defaultAperture]. A
          * pixel pitch that is not finite or lies outside [SensorFormat.pixelPitchRange] is more likely a
-         * unit mistake than a near miss, so it is dropped and treated as unknown. Use
-         * [validated] to reject invalid input instead of correcting it.
+         * unit mistake than a near miss, so it is dropped and treated as unknown; so is an image circle outside
+         * [imageCircleRange]. Use [validated] to reject invalid input instead of correcting it.
          *
          * @param sensor The camera's sensor.
          * @param focalLengthMillimeters The lens focal length.
          * @param aperture The f-number.
          * @param pixelPitchMicrometers The pixel pitch, or null if unknown.
+         * @param projection The lens projection.
+         * @param imageCircleDiameterMillimeters The diameter of the lens's image circle, or null if it covers the sensor.
          */
         operator fun invoke(
             sensor: SensorFormat,
             focalLengthMillimeters: Double,
             aperture: Double,
             pixelPitchMicrometers: Double? = null,
+            projection: LensProjection = LensProjection.RECTILINEAR,
+            imageCircleDiameterMillimeters: Double? = null,
         ): LensSetup = LensSetup(
             sensor,
             RangeLimiter.limit(focalLengthMillimeters, focalLengthRange, defaultFocalLengthMillimeters),
             RangeLimiter.limit(aperture, apertureRange, defaultAperture),
             pixelPitchMicrometers?.takeIf { SensorFormat.pixelPitchRange.contains(it) },
+            projection,
+            imageCircleDiameterMillimeters?.takeIf { imageCircleRange.contains(it) },
         )
 
         /**
@@ -124,24 +145,32 @@ data class LensSetup private constructor(
             focalLengthMillimeters: Double,
             aperture: Double,
             pixelPitchMicrometers: Double? = null,
+            projection: LensProjection = LensProjection.RECTILINEAR,
+            imageCircleDiameterMillimeters: Double? = null,
         ): LensSetup? {
             // `ClosedFloatingPointRange.contains` is false for NaN and infinities, so these checks also reject them.
             if (!focalLengthRange.contains(focalLengthMillimeters) ||
                 !apertureRange.contains(aperture) ||
-                (pixelPitchMicrometers != null && !SensorFormat.pixelPitchRange.contains(pixelPitchMicrometers))
+                (pixelPitchMicrometers != null && !SensorFormat.pixelPitchRange.contains(pixelPitchMicrometers)) ||
+                (imageCircleDiameterMillimeters != null && !imageCircleRange.contains(imageCircleDiameterMillimeters))
             ) {
                 return null
             }
-            return invoke(sensor, focalLengthMillimeters, aperture, pixelPitchMicrometers)
+            return invoke(
+                sensor, focalLengthMillimeters, aperture, pixelPitchMicrometers, projection, imageCircleDiameterMillimeters,
+            )
         }
     }
 }
 
 /**
  * Serializes a [LensSetup] as a JSON object with the keys `sensor`, `focalLengthMillimeters`,
- * `aperture` and, when the pixel pitch is known, `pixelPitchMicrometers`. Decoding reads the
+ * `aperture` and, when the pixel pitch is known, `pixelPitchMicrometers`; a fisheye lens adds `projection`
+ * (its raw value) and an image circle adds `imageCircleDiameterMillimeters`. Decoding reads the
  * object itself, so unknown keys are ignored (like Swift's `JSONDecoder`); a missing key, a value of
- * the wrong type or a value outside the supported ranges throws a [SerializationException].
+ * the wrong type or a value outside the supported ranges throws a [SerializationException]. The
+ * optional keys `projection`, `pixelPitchMicrometers` and `imageCircleDiameterMillimeters` may be absent
+ * (or null), which reads as rectilinear, unknown and no image circle; an unknown projection name throws.
  * Stored data is rejected rather than corrected, so corruption is not hidden.
  */
 internal object LensSetupSerializer : KSerializer<LensSetup> {
@@ -151,6 +180,8 @@ internal object LensSetupSerializer : KSerializer<LensSetup> {
             element<Double>("focalLengthMillimeters")
             element<Double>("aperture")
             element<Double>("pixelPitchMicrometers", isOptional = true)
+            element<String>("projection", isOptional = true)
+            element<Double>("imageCircleDiameterMillimeters", isOptional = true)
         }
 
     override fun serialize(encoder: Encoder, value: LensSetup) {
@@ -160,6 +191,9 @@ internal object LensSetupSerializer : KSerializer<LensSetup> {
             encodeDoubleElement(descriptor, 2, value.aperture)
             // An unknown pixel pitch is left out rather than written as null.
             value.pixelPitchMicrometers?.let { encodeDoubleElement(descriptor, 3, it) }
+            // The default projection and a missing image circle are left out, so an ordinary lens keeps its JSON.
+            if (value.projection != LensProjection.RECTILINEAR) encodeStringElement(descriptor, 4, value.projection.rawValue)
+            value.imageCircleDiameterMillimeters?.let { encodeDoubleElement(descriptor, 5, it) }
         }
     }
 
@@ -178,7 +212,11 @@ internal object LensSetupSerializer : KSerializer<LensSetup> {
         val focalLength = fields.requireDouble("focalLengthMillimeters")
         val aperture = fields.requireDouble("aperture")
         val pitch = fields.optionalDouble("pixelPitchMicrometers")
-        return LensSetup.validated(sensor, focalLength, aperture, pitch)
+        val projection = fields.optionalString("projection")?.let {
+            LensProjection.fromRawValue(it) ?: throw SerializationException("Unknown lens projection '$it'.")
+        } ?: LensProjection.RECTILINEAR
+        val imageCircle = fields.optionalDouble("imageCircleDiameterMillimeters")
+        return LensSetup.validated(sensor, focalLength, aperture, pitch, projection, imageCircle)
             ?: throw SerializationException("The lens setup has a value outside the supported ranges.")
     }
 }

@@ -21,19 +21,23 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import net.kuecker.lodestar.app.AppModel
+import net.kuecker.lodestar.features.aim.AimLensFrame
 import net.kuecker.lodestar.kit.foundation.AstroMath
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.foundation.roundedHalfAwayFromZero
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
-import net.kuecker.lodestar.kit.phototools.FrameSize
+import net.kuecker.lodestar.kit.phototools.CameraFrameOutline
+import net.kuecker.lodestar.kit.phototools.LensSetup
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
 import net.kuecker.lodestar.kit.pointing.MountProfile
-import net.kuecker.lodestar.kit.pointing.PinholeProjection
 import net.kuecker.lodestar.kit.pointing.PointingSolution
 import net.kuecker.lodestar.services.MotionService
 import net.kuecker.lodestar.shared.StatusChip
 import net.kuecker.lodestar.theme.Palette
+
+/** Points per edge of a rectilinear picture's footprint on the chart; a fisheye picture's curves need more. */
+private const val FRAME_SAMPLES_PER_EDGE = 6
 
 /** Where the camera points, from the phone's attitude, the mount and the star alignment. */
 internal class SkyChartCameraPose(
@@ -44,16 +48,22 @@ internal class SkyChartCameraPose(
     val footprint: List<FloatArray>,
 ) {
     companion object {
-        /** The pose for the newest motion sample, or `null` while the sensors deliver none. */
+        /**
+         * The pose for the newest motion sample, or `null` while the sensors deliver none. [lensOutline] is the border
+         * of the picture in the camera's frame (see `CameraFrameOutline`); it is turned to the camera's pointing here.
+         */
         fun current(
             motion: MotionService,
             mount: MountProfile,
             alignment: AlignmentModel,
-            frame: FrameSize,
+            lensOutline: List<Vector3>,
         ): SkyChartCameraPose? {
             val sample = motion.latestSample() ?: return null
             val solution = PointingSolution.solve(sample.attitude, mount, alignment)
-            val outline = PinholeProjection.dslrFrameOutline(solution, frame.horizontal, frame.vertical, 6)
+            val right = solution.cameraRightVector
+            val up = solution.cameraUpVector
+            val forward = solution.boresightVector
+            val outline = lensOutline.map { right * it.x + up * it.y + forward * it.z }
             val first = outline.firstOrNull()
             val footprint = if (first == null) emptyList() else PlanisphereProjection.visiblePolylines(outline + first)
             return SkyChartCameraPose(solution.boresight, solution.boresightVector, footprint)
@@ -119,9 +129,19 @@ internal class SkyChartLiveState {
     private val hold = SkyChartHeadingHold()
     private var readoutKey = Int.MIN_VALUE
 
+    /** The border of the picture for [outlineLens], in the camera's frame; worked out again when the lens changes. */
+    private var outlineLens: LensSetup? = null
+    private var lensOutline: List<Vector3> = emptyList()
+
     /** Polls the newest sample of the motion sensors. */
     fun refresh(app: AppModel) {
-        val pose = SkyChartCameraPose.current(app.motion, app.mountProfile, app.alignment, app.lensSetup.fieldOfView)
+        val lens = app.lensSetup
+        if (lens != outlineLens) {
+            outlineLens = lens
+            val samples = if (lens.projection.isFisheye) AimLensFrame.FISHEYE_SAMPLES_PER_EDGE else FRAME_SAMPLES_PER_EDGE
+            lensOutline = CameraFrameOutline.directions(lens, samples)
+        }
+        val pose = SkyChartCameraPose.current(app.motion, app.mountProfile, app.alignment, lensOutline)
         this.pose = pose
         rotation = hold.rotation(pose)
         if (pose == null) {

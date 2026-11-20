@@ -1,11 +1,15 @@
 # Ephemeris (Kotlin) — API reference
 
 Package `net.kuecker.lodestar.kit.ephemeris`. Port of `LodestarKit/Sources/LodestarKit/Ephemeris/*.swift`
-(SolarSystemBody, BodyState, Ephemeris, PlanetaryTheory, LunarTheory, Photometry, MoonPhase, RiseSetCalculator,
+(SolarSystemBody, BodyState, Ephemeris, PlanetaryTheory, PlutoTheory, LunarTheory, Photometry, MoonPhase, RiseSetCalculator,
 RiseSetProfile, RiseSetSampler, TwilightCalculator). Depends on the Foundation area.
 
 Import with `import net.kuecker.lodestar.kit.ephemeris.*` — that also brings in the `SkyFrame` extension functions
 (`state`, `horizontal`, `topocentricEquatorial`, `geocentricApparentEquatorial`), which a plain class import would miss.
+
+Jupiter's physical ephemeris (`JupiterPhysical`), the Galilean moons (`GalileanMoons`) and the Great Red Spot (`GreatRedSpot`) live in this
+package too; they are documented with the events that use them, in `API-events.md` (section "Jupiter (Great Red Spot, Galilean moons) and
+planet stations").
 
 Conventions used below
 - `public` is the default; `internal` is marked. `Companion` members are listed under their class and are called
@@ -19,15 +23,15 @@ Conventions used below
 ## SolarSystemBody.kt  (Swift `SolarSystemBody.swift`)
 
 ```kotlin
-@Serializable enum class SolarSystemBody(val rawValue: String) {      // SUN, MOON, MERCURY, VENUS, MARS, JUPITER, SATURN, URANUS, NEPTUNE
-    val displayName: String                                            // "Sun", "Moon", "Mercury", …
-    val meanRadiusKilometers: Double                                   // 695_700, 1_737.4, 2_439.7, 6_051.8, 3_389.5, 69_911, 58_232, 25_362, 24_622
-    val isPlanet: Boolean                                              // Mercury…Neptune
+@Serializable enum class SolarSystemBody(val rawValue: String) {      // SUN, MOON, MERCURY, VENUS, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
+    val displayName: String                                            // "Sun", "Moon", "Mercury", …, "Pluto"
+    val meanRadiusKilometers: Double                                   // 695_700, 1_737.4, 2_439.7, 6_051.8, 3_389.5, 69_911, 58_232, 25_362, 24_622, 1_188.3
+    val isPlanet: Boolean                                              // Mercury…Neptune and Pluto (a dwarf planet, listed with the planets)
     companion object { fun fromRawValue(raw: String): SolarSystemBody? }   // Swift init?(rawValue:)
 }
 ```
-`rawValue` is "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune" (also the JSON form,
-`@SerialName`). `allCases` is `SolarSystemBody.entries`.
+`rawValue` is "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto" (also the JSON form,
+`@SerialName`). `allCases` is `SolarSystemBody.entries`; Pluto comes last, so the order of the other nine is unchanged.
 
 ## BodyState.kt  (Swift `BodyState.swift`)
 
@@ -74,6 +78,10 @@ fun SkyFrame.geocentricApparentEquatorial(body: SolarSystemBody): EquatorialCoor
 `frame.horizontal(SolarSystemBody.SUN, false)` and `frame.state(body)` resolve next to Foundation's `SkyFrame.horizontal(j2000, …)` /
 `horizontal(geocentricJ2000: Vector3, …)` members by the type of the first argument.
 
+Sources: VSOP87B (Earth, Mercury to Neptune), Meeus chapter 47 (Moon), Meeus chapter 37 (Pluto, `PlutoTheory`, valid 1885–2099: 1.4″ against
+DE440s over 1950–2049, 3.1″ in heliocentric longitude at worst). The light-time loop is shared: `planetGeometry` (VSOP87) and `plutoGeometry`
+pass their heliocentric position function to one private helper; `planetState` takes the finished geometry.
+
 ## PlanetaryTheory.kt  (Swift `Ephemeris.PlanetaryTheory`, internal)
 
 ```kotlin
@@ -87,6 +95,23 @@ internal class TableDigest { fun add(value: Int); fun add(value: Double); fun he
 ```
 The truncated VSOP87B tables (1,002 terms) are literals in one function per planet and coordinate (largest method: 2.5 KB of
 bytecode, limit 64 KB), held in a private object per planet that loads on first use.
+
+## PlutoTheory.kt  (Swift `Ephemeris.PlutoTheory`, internal)
+
+```kotlin
+internal object PlutoTheory {
+    data class Position(val longitude: Double, val latitude: Double, val radius: Double)   // degrees [0, 360), degrees, AU; J2000.0 mean ecliptic and equinox
+    val termCount: Int                                                                  // 43 (Kotlin addition, for tests)
+    val tableDigest: String                                                             // SHA-256 of Table 37.A (Kotlin addition, for tests)
+    fun heliocentricJ2000(julianDayTT: Double): Vector3                                 // AU, mean equatorial J2000, no light-time
+    fun heliocentricEcliptic(centuries: Double): Position                               // Swift heliocentricEcliptic(centuries t:)
+}
+```
+Jean Meeus, *Astronomical Algorithms* (2nd ed.), chapter 37: the 43 rows of Table 37.A (integer multipliers of the mean arguments J, S, P of
+Jupiter, Saturn and Pluto; A and B of the sine and the cosine for l, b and r), flat `IntArray`/`DoubleArray` literals copied digit for digit
+from `PlutoTheory.swift`. Valid 1885–2099; outside it the error grows to about 1400″ within 50 years, but the series stays finite
+(r between 29.6 and 51.8 AU for any date). `tableDigest` covers the multipliers (their number, 129, then each as four bytes) and then, for longitude, latitude
+and radius in that order, the number of coefficients (86) followed by each as IEEE 754 bits (big endian).
 
 ## LunarTheory.kt  (Swift `Ephemeris.LunarTheory`, internal)
 
@@ -105,7 +130,7 @@ internal object LunarTheory {
 object Photometry {
     fun sun(distanceAU: Double): Double
     fun moon(sunDistance: Double, earthDistance: Double, phaseAngle: Double): Double
-    fun planet(body: SolarSystemBody, heliocentric: Vector3, geocentric: Vector3, phaseAngle: Double, julianDate: JulianDate): Double?
+    fun planet(body: SolarSystemBody, heliocentric: Vector3, geocentric: Vector3, phaseAngle: Double, julianDate: JulianDate): Double?   // null for the Sun and the Moon
     fun mercury(sunDistance: Double, earthDistance: Double, phaseAngle: Double): Double
     fun venus(sunDistance: Double, earthDistance: Double, phaseAngle: Double): Double
     fun mars(sunDistance: Double, earthDistance: Double, phaseAngle: Double): Double
@@ -113,6 +138,7 @@ object Photometry {
     fun saturn(sunDistance: Double, earthDistance: Double, phaseAngle: Double, sunLatitude: Double, earthLatitude: Double): Double
     fun uranus(sunDistance: Double, earthDistance: Double, sunLatitude: Double, earthLatitude: Double): Double
     fun neptune(sunDistance: Double, earthDistance: Double, year: Double): Double
+    fun pluto(sunDistance: Double, earthDistance: Double, phaseAngle: Double): Double  // 5 log10(r d) − 1.00 + 0.041 α, Pluto and Charon together (Binzel & Mulholland 1984; not in Mallama & Hilton)
 }
 ```
 
@@ -266,7 +292,7 @@ object TwilightCalculator {
 | `MoonPhaseCalculator.info(at:)`, `.nextPhases(after:count:)` | `info(date)`, `nextPhases(date, count)`; the array of tuples `[(kind:, date:)]` is `List<MoonPhaseCalculator.PhaseEvent>` |
 | `TwilightCalculator.night(startingOn:observer:timeZone:)` | `night(localDate, observer, timeZone)` |
 | `RiseSetCalculator.crossings(of: closure …)`, `.crossings(of: body …)`, `.crossings(ofJ2000: …)` (same for `upperCulminations`, `riseTransitSet(of:/for:/forJ2000:)`) | one name per search, overloaded on the first parameter (`(Instant) -> Double`, `SolarSystemBody`, `EquatorialCoordinate`); parameters `altitude, threshold, interval, sampleInterval, tolerance` / `body, observer, interval` / `position, properMotion, observer, interval` |
-| `LunarTheory.geocentricEcliptic(centuries t:)` | `geocentricEcliptic(centuries)` — the label is kept (the internal name `t` says nothing) |
+| `LunarTheory.geocentricEcliptic(centuries t:)`, `PlutoTheory.heliocentricEcliptic(centuries t:)` | `geocentricEcliptic(centuries)`, `heliocentricEcliptic(centuries)` — the label is kept (the internal name `t` says nothing); Pluto's result is a `Position(longitude, latitude, radius)` instead of the tuple |
 | `Photometry.mercury(sunDistance r:, earthDistance d:, phaseAngle α:)` (and the other planets, `moon`) | parameters keep their labels `sunDistance`, `earthDistance`, `phaseAngle` (the internal names `r`, `d`, `α` say nothing) |
 | enum cases (`.rising`, `.alwaysUp`, `.newMoon`, …) | UPPER_SNAKE constants (`RISING`, `ALWAYS_UP`, `NEW_MOON`, …); `PlanetaryTheory.Planet.EARTH` … `NEPTUNE` |
 | `.body(_)` / `.fixed(_, _)` of `Sampler.Target` | `Target.Body(body)` / `Target.Fixed(position, properMotion)` (unlabeled in Swift) |
@@ -275,7 +301,7 @@ object TwilightCalculator {
 
 ### Types Swift declares inside extensions of other files
 Kotlin cannot add nested types from another file, so these become top-level types of the package (same file name as in Swift):
-`Ephemeris.PlanetaryTheory` → `PlanetaryTheory` (internal), `Ephemeris.LunarTheory` → `LunarTheory` (internal),
+`Ephemeris.PlanetaryTheory` → `PlanetaryTheory` (internal), `Ephemeris.PlutoTheory` → `PlutoTheory` (internal), `Ephemeris.LunarTheory` → `LunarTheory` (internal),
 `Ephemeris.Photometry` → `Photometry` (**public** — Swift keeps it internal, but the task lists it among the API the app uses),
 `RiseSetCalculator.Sample/.Profile/.Sampler` → `RiseSetSample` / `RiseSetProfile` / `RiseSetSampler` (internal; their nested
 `Evaluator`, `Target` stay nested). Test code writes `LunarTheory.geocentricEcliptic(…)`, `Photometry.mercury(…)`,
@@ -311,7 +337,10 @@ strings (`"sun"`, `"waxingCrescent"`, `"firstQuarter"`, `"rising"`, `"alwaysUp"`
 
 ### Numerical fidelity
 - The 1,002 VSOP87B terms and the 120 Meeus chapter 47 rows were generated from the Swift source text by script and compared again by an
-  independent script (token for token for VSOP87, row by row for Meeus): identical digits, 1,002 terms in 67 groups.
+  independent script (token for token for VSOP87, row by row for Meeus): identical digits, 1,002 terms in 67 groups. The 43 rows of Meeus
+  chapter 37 (Pluto) are written into both twins by `Tools/ephemeris/gen_pluto_theory.py` from `pluto_tables.py`, which records their
+  comparison with four published transcriptions of the book's table (`check_pluto_theory.py` checks the series against the book's example
+  and DE440s); the digest pin below covers them in Kotlin.
 - An independent Python transliteration of the Swift sources (tables parsed from the Swift files, written without looking at the Kotlin)
   was compared with the Kotlin results on 405 body states (JD 1.0·10⁶ … 3.1·10⁶, i.e. the years −1970 … 3770), 200 magnitude evaluations,
   80 moon-phase infos, 14 `nextPhases` runs, 410 rise/set windows (stars with proper motion, Sun, Moon, planets, 260 of them near the
@@ -319,8 +348,10 @@ strings (`"sun"`, `"waxingCrescent"`, `"firstQuarter"`, `"rising"`, `"alwaysUp"`
   and 60 twilight nights. Positions, magnitudes and angles differ by ≤ 6·10⁻¹⁴ (relative ≤ 3·10⁻¹⁵); every rise, set, transit, culmination
   and twilight time is bit-identical, as are all event counts and kinds; moon-phase instants differ by ≤ 1.2·10⁻⁷ s (one ulp of the date).
   The compact `EphemerisGoldenTests` keeps that comparison in the build.
-- `tableDigest` (SHA-256 over the bits of every coefficient, in table order) of both theories is pinned in `EphemerisApiTests` to the digest of
-  the numbers in the Swift source files, so any later edit of a digit fails the build.
+- `tableDigest` (SHA-256 over the bits of every coefficient, in table order) of the three theories is pinned in `EphemerisApiTests` to the digest of
+  the numbers in the Swift source files, so any later edit of a digit fails the build. `EphemerisGoldenTests` has a Pluto row, but it was
+  computed by the Kotlin code itself and checked against DE440s (about 1e-4 AU per component), not by the independent transliteration;
+  `EphemerisPlutoTests.testStateAtTheGoldenInstant` pins the same digits in both twins.
 
 ### Performance notes (JVM 21, warmed up, one core)
 `Ephemeris.state` 9–16 µs; `geocentricJ2000` 4–9 µs; `RiseSetCalculator.riseTransitSet` for a star over 24 h 40–55 µs (29 KB allocated, almost
@@ -331,8 +362,9 @@ allocates nothing; Brent and golden-section searches allocate nothing per iterat
 ## Tests
 
 `src/test/kotlin/.../ephemeris/` — 1:1 ports of the Swift suites (same names, inputs, expected values and tolerances):
-`EphemerisFixtureTests` (9), `EphemerisMeeusTests` (20), `EphemerisTwilightTests` (14), `MoonPhaseTests` (10), `RiseSetCalculatorTests` (20),
-`RiseSetFixtureTests` (5) = 78 tests; fixtures `bodies_apparent.json`, `moon_phases.json`, `riseset.json` in `src/test/resources/fixtures/`.
+`EphemerisFixtureTests` (9), `EphemerisMeeusTests` (20), `EphemerisPlutoTests` (9), `EphemerisTwilightTests` (14), `MoonPhaseTests` (10),
+`RiseSetCalculatorTests` (20), `RiseSetFixtureTests` (5) = 87 tests; fixtures `bodies_apparent.json` (500 cases: 50 instants × 10 bodies, Pluto
+without a magnitude), `moon_phases.json`, `riseset.json` in `src/test/resources/fixtures/`.
 
 Changed Swift tests (platform-specific):
 - `EphemerisMeeusTests.testStateIsSendableHashableAndStable` — the `Sendable` assertion has no Kotlin counterpart and is dropped (a comment says so).
@@ -340,6 +372,6 @@ Changed Swift tests (platform-specific):
   maps NaN to the epoch); the assertion uses `Instant.MAX` and the saturated ±∞ instants instead.
 - Foundation types differ in spelling only (`JulianDate.fromTt`, `Instant`, `ZoneId`/`ZoneOffset`, `DateComponents` → `ZonedDateTime`).
 
-Extras (not in Swift): `EphemerisApiTests` (13: term count and table digests, Earth/Moon sanity, enum JSON shapes and raw-value lookups, sampler cache independence from the
+Extras (not in Swift): `EphemerisApiTests` (14: term count and table digests, Earth/Moon sanity, enum JSON shapes and raw-value lookups, the Pluto magnitude formula, sampler cache independence from the
 evaluation order, sampler near its limits, Brent/golden-section, profile grid, extreme night intervals), `EphemerisGoldenTests` (3: pinned values from the
-Python transliteration).
+Python transliteration; the Pluto row is the Kotlin code's own output, see its comment).

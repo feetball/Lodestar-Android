@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,10 +22,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.GpsFixed
+import androidx.compose.material.icons.outlined.PanTool
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.UnfoldLess
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,9 +41,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,8 +56,10 @@ import net.kuecker.lodestar.kit.catalog.horizontal
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.pointing.AlignmentError
+import net.kuecker.lodestar.kit.pointing.AlignmentHygiene
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
 import net.kuecker.lodestar.kit.pointing.AlignmentPoint
+import net.kuecker.lodestar.kit.pointing.SteadinessSample
 import net.kuecker.lodestar.model.HeadingSource
 import net.kuecker.lodestar.shared.CardTitle
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -61,12 +68,15 @@ import net.kuecker.lodestar.shared.LodestarButtonKind
 import net.kuecker.lodestar.shared.LodestarSheet
 import net.kuecker.lodestar.theme.LocalPalette
 import java.time.Instant
+import kotlin.math.floor
 
 /** Milliseconds between the refreshes of the candidates' positions. */
 private const val CANDIDATE_REFRESH_INTERVAL_MS = 30_000L
 
 /** Milliseconds between the re-sortings of the candidates by distance from the camera. */
 private const val SORT_INTERVAL_MS = 2_500L
+
+private const val NANOSECONDS_PER_SECOND = 1_000_000_000.0
 
 /**
  * The share of the screen's height the sheet fills: small by default, so the sky behind it can still be seen and the
@@ -99,16 +109,28 @@ private fun AlignmentContent(model: AimViewModel, onDismiss: () -> Unit) {
     var selected by remember { mutableStateOf<AimAlignmentCandidate?>(null) }
     var notice by remember { mutableStateOf<AimAlignmentNotice?>(null) }
     var isExpanded by remember { mutableStateOf(false) }
+    // While Sync waits for a steady camera: how much of the steady window has passed, from 0 to 1; null otherwise.
+    var hold by remember { mutableStateOf<Double?>(null) }
 
-    /** Orders the candidates by distance from where the camera points; without sensor data, by brightness. */
+    /**
+     * Orders the candidates by distance from where the camera points; without sensor data, by brightness. Each row
+     * also knows its distance from the nearest alignment point.
+     */
     fun sortRows() {
         val boresight = model.engine.frame()?.pointing?.boresightVector
+        val points = app.alignment.points
         rows = candidates
-            .map { candidate -> AimAlignmentRow(candidate, boresight?.angle(candidate.horizontal.unitVector)) }
+            .map { candidate ->
+                AimAlignmentRow(
+                    candidate, boresight?.angle(candidate.horizontal.unitVector),
+                    AlignmentHygiene.bestSeparation(candidate.horizontal, points),
+                )
+            }
             .sortedWith(compareBy({ it.separation == null }, { it.separation }, { it.candidate.magnitude ?: 99.0 }))
     }
 
     fun deselect() {
+        hold = null
         selected = null
         model.alignmentTarget = null
         sortRows()
@@ -121,7 +143,7 @@ private fun AlignmentContent(model: AimViewModel, onDismiss: () -> Unit) {
     }
 
     /** Records the camera's attitude together with the object's true apparent position at this instant. */
-    fun sync() {
+    fun syncNow() {
         val chosen = selected
         val sample = app.motion.latestSample()
         val observer = app.observerContext?.observer
@@ -144,10 +166,22 @@ private fun AlignmentContent(model: AimViewModel, onDismiss: () -> Unit) {
         }
     }
 
+    /** Starts waiting for a steady camera; the sync follows by itself (see the effect below). */
+    fun sync() {
+        if (selected == null || app.motion.latestSample() == null || app.observerContext?.observer == null) {
+            // The same notice as a sync without sensors, which `syncNow` words.
+            syncNow()
+            return
+        }
+        notice = null
+        hold = 0.0
+    }
+
     fun remove(index: Int) {
         try {
             app.alignment = app.alignment.removingPoint(index, app.mountProfile)
             notice = null
+            sortRows()
         } catch (error: AlignmentError) {
             notice = AimAlignmentNotice.Failure(error.aimMessage("the object"))
         }
@@ -173,6 +207,34 @@ private fun AlignmentContent(model: AimViewModel, onDismiss: () -> Unit) {
         }
     }
     DisposableEffect(model) { onDispose { model.alignmentTarget = null } }
+    // The wait after a tap on Sync: syncs the moment the camera has been still for the whole window, and gives up
+    // after a few seconds. Leaving the sheet or choosing another object ends the effect, which cancels the wait.
+    val isHolding = hold != null
+    LaunchedEffect(isHolding) {
+        if (!isHolding) return@LaunchedEffect
+        val wait = AimHoldStill(startedAt = System.nanoTime() / NANOSECONDS_PER_SECOND)
+        while (true) {
+            val sample = app.motion.latestSample()?.let { SteadinessSample.create(it.rawAttitude, app.mountProfile) }
+            when (val step = wait.update(System.nanoTime() / NANOSECONDS_PER_SECOND, sample)) {
+                is AimHoldStillStatus.Waiting -> {
+                    // In steps of 2 %, so that the sheet is not recomposed at the polling rate for a slow bar.
+                    val shown = floor(step.progress * 50) / 50
+                    if (shown != hold) hold = shown
+                }
+                AimHoldStillStatus.Steady -> {
+                    hold = null
+                    syncNow()
+                    return@LaunchedEffect
+                }
+                AimHoldStillStatus.TimedOut -> {
+                    hold = null
+                    notice = AimAlignmentNotice.Failure(AimHoldStill.TIMEOUT_NOTICE)
+                    return@LaunchedEffect
+                }
+            }
+            delay(AimHoldStill.POLL_INTERVAL_MS)
+        }
+    }
 
     Column(
         Modifier
@@ -190,13 +252,19 @@ private fun AlignmentContent(model: AimViewModel, onDismiss: () -> Unit) {
             val chosen = selected
             if (chosen != null) {
                 AimReferenceCard(model, chosen)
+                AimAlignmentSpacing.warningText(chosen.horizontal, app.alignment.points)?.let { SpacingWarning(it) }
             } else {
                 CandidateList(rows, onSelect = ::select)
             }
-            AimAlignmentSummaryCard(app.alignment, onRemove = ::remove, onReset = {
-                app.resetAlignment()
-                notice = null
-            })
+            AimAlignmentSummaryCard(
+                app.alignment, app.alignedAt, app.motion.headingSource == HeadingSource.GYRO_LOCK,
+                onRemove = ::remove,
+                onReset = {
+                    app.resetAlignment()
+                    notice = null
+                    sortRows()
+                },
+            )
         }
         // The sync button, always in reach.
         Column(
@@ -204,7 +272,10 @@ private fun AlignmentContent(model: AimViewModel, onDismiss: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (selected != null) {
+            val waiting = hold
+            if (selected != null && waiting != null) {
+                HoldStill(waiting, onCancel = { hold = null })
+            } else if (selected != null) {
                 LodestarButton(
                     "Centered — Sync", onClick = ::sync, modifier = Modifier.fillMaxWidth(), icon = Icons.Outlined.GpsFixed,
                 )
@@ -302,6 +373,43 @@ private fun Notice(notice: AimAlignmentNotice) {
             color = color,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** Sync is waiting for the camera to be still: a line, a thin bar that fills while it is, and a way out. */
+@Composable
+private fun HoldStill(progress: Double, onCancel: () -> Unit) {
+    val palette = LocalPalette.current
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(Icons.Outlined.PanTool, contentDescription = null, tint = palette.guidance, modifier = Modifier.size(20.dp))
+            Text("Hold still…", color = palette.guidance, style = MaterialTheme.typography.bodyLarge)
+        }
+        LinearProgressIndicator(
+            progress = { progress.toFloat().coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(4.dp),
+            color = palette.guidance,
+            trackColor = palette.stroke,
+        )
+        LodestarButton("Cancel", onClick = onCancel, kind = LodestarButtonKind.SECONDARY)
+    }
+}
+
+/** The chosen object is close to an alignment point already taken: syncing still works, a wider pair fits better. */
+@Composable
+private fun SpacingWarning(text: String) {
+    val palette = LocalPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(Icons.Filled.Warning, contentDescription = null, tint = palette.warning, modifier = Modifier.size(16.dp))
+        Text(
+            text,
+            color = palette.warning,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
         )
     }
 }

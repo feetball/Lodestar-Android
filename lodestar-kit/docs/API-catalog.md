@@ -30,7 +30,7 @@ Conventions used below
 
 class Catalog private constructor(contents: CatalogContents) {
     constructor(starsData: ByteArray, dsosData: ByteArray, constellationsData: ByteArray, milkyWayData: ByteArray)  // throws CatalogError
-    val objects: List<CelestialObject>            // Sun, Moon, planets, Milky Way core + poles, deep-sky objects, stars bright to faint
+    val objects: List<CelestialObject>            // Sun, Moon, planets and Pluto, Milky Way core + poles, deep-sky objects, stars bright to faint
     val listedObjects: List<CelestialObject>      // objects with isListed, in the order of `objects`
     val constellations: List<Constellation>       // 88, in file order (alphabetical by name)
     val milkyWay: MilkyWayOutline
@@ -210,6 +210,14 @@ fun RiseSetCalculator.riseTransitSet(obj: CelestialObject, observer: Observer, i
 ```
 `frame.horizontal(obj, true)` resolves next to Foundation's members and Ephemeris' `horizontal(body, refraction)` by the type of the first argument.
 
+## CelestialObjectMeridian.kt  (Swift `CelestialObject+Meridian.swift`)
+
+```kotlin
+fun MeridianClock.transit(obj: CelestialObject, date: Instant, observer: Observer): MeridianTransits   // Swift MeridianClock.transit(for:around:observer:)
+```
+Fixed objects and solar-system bodies use the `MeridianClock` overloads of the Planning area (`API-planning.md`); a comet or an asteroid (a few ms) has
+no transit while its orbit cannot be evaluated; a celestial pole never transits (both results `null`). Import `net.kuecker.lodestar.kit.catalog.transit`.
+
 ## Search internals  (Swift `SearchText.swift`, `SearchIndex.swift`, `GreekAlphabet.swift`) — all internal
 
 ```kotlin
@@ -341,6 +349,7 @@ resources (checked with md5). Loaded by the absolute path `/net/kuecker/lodestar
 | `Catalog(starsData:dsosData:constellationsData:milkyWayData:)` | same four `ByteArray`s, positional or named |
 | `SkyFrame.horizontal(of:refraction:)` etc. | extension functions `horizontal(obj, refraction = true)`, `apparentEquatorial(obj)`, `currentAngularSize(obj)`, `currentMagnitude(obj)` |
 | `RiseSetCalculator.riseTransitSet(for:observer:within:)` | `RiseSetCalculator.riseTransitSet(obj, observer, interval)` (extension; `obj` is a `CelestialObject`) |
+| `MeridianClock.transit(for:around:observer:)` (a `CelestialObject`) | `MeridianClock.transit(obj, date, observer)` (extension) |
 | `AngularSize(majorArcminutes:minorArcminutes:positionAngle:)` (failable) | **`AngularSize.create(major, minor = null, angle = null)`** |
 | `ObjectCategory(openNGCType:)` | `ObjectCategory.fromOpenNGCType(code)` |
 | `ObjectCategory(rawValue:)`, `ObjectGroup(rawValue:)`, `CatalogFile(rawValue:)`, `CatalogSortOrder(rawValue:)`, `MatchKind(rawValue:)` | `X.fromRawValue(raw)` |

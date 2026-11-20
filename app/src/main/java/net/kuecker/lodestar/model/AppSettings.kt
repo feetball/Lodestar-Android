@@ -18,6 +18,7 @@ import net.kuecker.lodestar.kit.foundation.Atmosphere
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
 import net.kuecker.lodestar.kit.phototools.SensorFormat
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.kit.pointing.MountProfile
 import java.time.DateTimeException
 import java.time.ZoneId
@@ -171,6 +172,14 @@ data class AppSettings(
     val focalLength: Double = 24.0,
     val aperture: Double = 2.8,
     val pixelPitch: Double? = null,
+    /** The filter in front of the sensor: it decides how far the Moon warnings are relaxed for emission nebulae. */
+    val imagingFilter: ImagingFilter = ImagingFilter.NONE,
+
+    // Exposure calculator
+    /** The angle between a tracker's axis and the pole that the Tracked section works with, in degrees. */
+    val polarErrorDegrees: Double = 1.0,
+    /** The ISO speed of the Moon section. */
+    val exposureISO: Int = 100,
 
     // Night mode
     val nightMode: NightModeSetting = NightModeSetting.AUTOMATIC,
@@ -219,6 +228,8 @@ data class AppSettings(
             focalLength = clamp(focalLength, 4.0..2000.0, 24.0),
             aperture = clamp(aperture, 0.95..32.0, 2.8),
             pixelPitch = pixelPitch?.takeIf { it.isFinite() && it in 0.5..20.0 },
+            polarErrorDegrees = clamp(polarErrorDegrees, POLAR_ERROR_RANGE, 1.0),
+            exposureISO = exposureISO.coerceIn(EXPOSURE_ISO_RANGE),
             nightIntensity = clamp(nightIntensity, 0.25..1.0, 0.7),
             nightBrightness = clamp(nightBrightness, 0.01..1.0, 0.2),
             starMagnitudeLimit = clamp(starMagnitudeLimit, 1.0..6.5, 5.0),
@@ -241,6 +252,12 @@ data class AppSettings(
         const val MAXIMUM_RECENTS = 20
         const val MAXIMUM_FAVORITES = 200
 
+        /** The polar-alignment errors the exposure calculator offers, in degrees. */
+        val POLAR_ERROR_RANGE: ClosedFloatingPointRange<Double> = 0.1..5.0
+
+        /** The ISO speeds the exposure calculator offers. */
+        val EXPOSURE_ISO_RANGE: IntRange = 100..12800
+
         private val json = Json { ignoreUnknownKeys = true }
 
         fun encode(settings: AppSettings): String {
@@ -258,6 +275,9 @@ data class AppSettings(
                 put("focalLength", JsonPrimitive(s.focalLength))
                 put("aperture", JsonPrimitive(s.aperture))
                 s.pixelPitch?.let { put("pixelPitch", JsonPrimitive(it)) }
+                put("imagingFilter", json.encodeToJsonElement(ImagingFilter.serializer(), s.imagingFilter))
+                put("polarErrorDegrees", JsonPrimitive(s.polarErrorDegrees))
+                put("exposureISO", JsonPrimitive(s.exposureISO))
                 put("nightMode", json.encodeToJsonElement(NightModeSetting.serializer(), s.nightMode))
                 put("nightIntensity", JsonPrimitive(s.nightIntensity))
                 put("dimScreenAtNight", JsonPrimitive(s.dimScreenAtNight))
@@ -304,6 +324,9 @@ data class AppSettings(
                 focalLength = value("focalLength", Double.serializer(), d.focalLength),
                 aperture = value("aperture", Double.serializer(), d.aperture),
                 pixelPitch = value("pixelPitch", Double.serializer().nullable, d.pixelPitch),
+                imagingFilter = value("imagingFilter", ImagingFilter.serializer(), d.imagingFilter),
+                polarErrorDegrees = value("polarErrorDegrees", Double.serializer(), d.polarErrorDegrees),
+                exposureISO = value("exposureISO", Int.serializer(), d.exposureISO),
                 nightMode = value("nightMode", NightModeSetting.serializer(), d.nightMode),
                 nightIntensity = value("nightIntensity", Double.serializer(), d.nightIntensity),
                 dimScreenAtNight = value("dimScreenAtNight", Boolean.serializer(), d.dimScreenAtNight),

@@ -21,12 +21,12 @@ class PlanningPlanetTests {
     // MARK: Contents
 
     @Test
-    fun testPlanetsRunFromMercuryToNeptune() {
+    fun testPlanetsRunFromMercuryToPluto() {
         val summary = PlanningTestSupport.summary(boulder, 2026, 12, 14)
         assertEquals(
             listOf(
                 SolarSystemBody.MERCURY, SolarSystemBody.VENUS, SolarSystemBody.MARS, SolarSystemBody.JUPITER,
-                SolarSystemBody.SATURN, SolarSystemBody.URANUS, SolarSystemBody.NEPTUNE,
+                SolarSystemBody.SATURN, SolarSystemBody.URANUS, SolarSystemBody.NEPTUNE, SolarSystemBody.PLUTO,
             ),
             summary.planets.map { it.body },
         )
@@ -57,7 +57,7 @@ class PlanningPlanetTests {
             SolarSystemBody.MERCURY to (-2.7)..6.0, SolarSystemBody.VENUS to (-4.95)..(-3.3),
             SolarSystemBody.MARS to (-3.0)..2.0, SolarSystemBody.JUPITER to (-3.0)..(-1.5),
             SolarSystemBody.SATURN to (-0.6)..1.6, SolarSystemBody.URANUS to 5.3..6.1,
-            SolarSystemBody.NEPTUNE to 7.7..8.0,
+            SolarSystemBody.NEPTUNE to 7.7..8.0, SolarSystemBody.PLUTO to 14.3..14.9,
         )
         for (planet in summary.planets) {
             val magnitude = assertNotNull(planet.magnitude, planet.body.displayName)
@@ -70,14 +70,15 @@ class PlanningPlanetTests {
     @Test
     fun testDecemberEveningSkyHoldsTheOuterPlanets() {
         // Boulder, 14 December 2026: Saturn, Uranus and Neptune are up in the evening; Mars and Jupiter climb
-        // from the east before midnight; Venus is a morning object; Mercury is lost in the dawn.
+        // from the east before midnight; Venus is a morning object; Mercury is lost in the dawn. Pluto, 40° east of
+        // the Sun, is 11.5° high at astronomical dusk and sinks below 10° eleven minutes later.
         val summary = PlanningTestSupport.summary(boulder, 2026, 12, 14)
         val visible = summary.planets.associate { it.body to it.visibleDuringDarkness }
         assertEquals(
             mapOf(
                 SolarSystemBody.MERCURY to false, SolarSystemBody.VENUS to true, SolarSystemBody.MARS to true,
                 SolarSystemBody.JUPITER to true, SolarSystemBody.SATURN to true, SolarSystemBody.URANUS to true,
-                SolarSystemBody.NEPTUNE to true,
+                SolarSystemBody.NEPTUNE to true, SolarSystemBody.PLUTO to true,
             ),
             visible,
         )

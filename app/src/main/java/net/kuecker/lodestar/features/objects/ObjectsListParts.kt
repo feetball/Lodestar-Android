@@ -291,6 +291,7 @@ internal fun ObjectsSwipeRow(
     onToggleFavorite: () -> Unit,
     onAim: () -> Unit,
     modifier: Modifier = Modifier,
+    isImaged: Boolean = false,
 ) {
     val palette = LocalPalette.current
     val haptics = LocalHapticFeedback.current
@@ -382,7 +383,7 @@ internal fun ObjectsSwipeRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                ObjectRow(obj, Modifier.weight(1f), position, isFavorite, zone, showsProminence, tonight)
+                ObjectRow(obj, Modifier.weight(1f), position, isFavorite, zone, showsProminence, tonight, isImaged = isImaged)
                 // The disclosure chevron is drawn in a palette colour; the system's would be grey.
                 Icon(
                     Icons.AutoMirrored.Outlined.KeyboardArrowRight,

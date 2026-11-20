@@ -41,6 +41,7 @@ import net.kuecker.lodestar.services.LocationService
 import net.kuecker.lodestar.services.MagneticReference
 import net.kuecker.lodestar.services.MotionService
 import net.kuecker.lodestar.services.OnlineDataService
+import net.kuecker.lodestar.services.SessionLogStore
 import net.kuecker.lodestar.services.ScreenController
 import net.kuecker.lodestar.shared.RetainedState
 import net.kuecker.lodestar.theme.Palette
@@ -66,6 +67,9 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
     val motion = MotionService(context, scope)
     val camera = CameraService(context)
     val catalog = CatalogService(scope)
+
+    /** What was shot on which night, kept in the app's private storage. */
+    val sessionLog = SessionLogStore(java.io.File(context.filesDir, "SessionLog.json"), scope)
 
     /** The optional downloads (Settings ▸ Online Data): satellites, comets and the cloud forecast. All off until switched on. */
     val online: OnlineDataService by lazy {
@@ -275,6 +279,7 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
             online.onForeground()
         } else {
             settingsStore.saveNow()
+            sessionLog.saveNow()
             clock.stop()
             maintenanceJob?.cancel()
             maintenanceJob = null

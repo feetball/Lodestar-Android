@@ -40,6 +40,10 @@ same astronomy engine ported line for line from Swift to Kotlin.
   to aim at it. With the satellite feed on, a section lists when the ISS or Tiangong crosses the Sun or the Moon in
   the next 14 days, from your site or from a centreline within 50 km, with the time to the second, the duration and
   the coordinates to copy.
+- **Session log and lists** — a private diary of what you shot (frames, exposure, ISO, filter, notes) with CSV
+  and OpenAstronomyLog 2.1 export, a check mark on the objects you imaged, observing lists imported from CSV,
+  Telescopius and SkySafari files into your favorites (favorites export as CSV or a SkySafari list), and mosaic
+  panels saved as a table or a text list for a planetarium or an ASIAIR.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
   - **Alignment finder** — when does the Milky Way core, the Moon or any object stand over a ridge or in a gap

@@ -123,6 +123,8 @@ internal data class ObjectsListOptions(
     val catalogue: ObjectsCatalogueFilter = ObjectsCatalogueFilter.ALL,
     /** Only showpieces and prominent objects. */
     val showsOnlyPopular: Boolean = false,
+    /** Only objects that have a session log entry marked as imaged. */
+    val showsOnlyImaged: Boolean = false,
     /** Only objects that are above the site's skyline, and at least 20° high, for [ObjectsTonight.MINIMUM_HOURS] tonight. */
     val showsOnlyVisibleTonight: Boolean = false,
 ) {
@@ -172,6 +174,7 @@ internal class ObjectsOptionsState(context: Context) {
             putBoolean(HIDE_FAINT_KEY, next.hidesFaintObjects)
             putString(CATALOGUE_KEY, next.catalogue.rawValue)
             putBoolean(POPULAR_KEY, next.showsOnlyPopular)
+            putBoolean(IMAGED_KEY, next.showsOnlyImaged)
             putBoolean(VISIBLE_TONIGHT_KEY, next.showsOnlyVisibleTonight)
         }
     }
@@ -189,6 +192,7 @@ internal class ObjectsOptionsState(context: Context) {
             hidesFaintObjects = preferences.getBoolean(HIDE_FAINT_KEY, false),
             catalogue = catalogue,
             showsOnlyPopular = preferences.getBoolean(POPULAR_KEY, false),
+            showsOnlyImaged = preferences.getBoolean(IMAGED_KEY, false),
             showsOnlyVisibleTonight = preferences.getBoolean(VISIBLE_TONIGHT_KEY, false),
         )
     }
@@ -202,6 +206,7 @@ internal class ObjectsOptionsState(context: Context) {
         const val HIDE_FAINT_KEY = "lodestar.objects.hideFaint"
         const val CATALOGUE_KEY = "lodestar.objects.catalogue"
         const val POPULAR_KEY = "lodestar.objects.popularOnly"
+        const val IMAGED_KEY = "lodestar.objects.imagedOnly"
         const val VISIBLE_TONIGHT_KEY = "lodestar.objects.visibleTonightOnly"
     }
 }

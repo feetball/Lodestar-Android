@@ -317,6 +317,15 @@ planetary ephemeris DE440s (NASA/JPL, public domain). Skyfield has no magnitude 
 the test of Pluto's magnitude quotes a few values from JPL Horizons (NASA/JPL, public domain; credit
 requested). Used only by the unit tests; not shipped in the app.
 
+### File formats — `lodestar-kit/.../interchange/`
+
+- **OpenAstronomyLog 2.1** (https://github.com/openastronomylog/openastronomylog, schema `src/oal21.xsd`, Apache-2.0):
+  the session log is written as a document of this format. No schema file is shipped; the test fixture
+  `session_log_oal.xml` was validated against it.
+- **Telescopius CSV** and **SkySafari observing lists** (`.skylist`): read as described in the fixtures' README
+  (`lodestar-kit/src/test/resources/fixtures/interchange/README.md`); the fixtures are small files in the shape of
+  real exports, written for the tests, and no third-party data is copied.
+
 ## Credit line for the app's About screen
 
 > Star data: HYG Database v4.1 (astronexus, CC BY-SA 4.0). Deep-sky data: OpenNGC by Mattia

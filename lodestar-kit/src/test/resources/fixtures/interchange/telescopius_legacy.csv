@@ -1,0 +1,3 @@
+"Catalogue Entry","Familiar Name","Alternative Entries","Type","Constellation","Right Ascension","Declination","Magnitude","Size","Surface Brightness (mag/arcsec2)","Rises over 10º","Transit Time","Sets below 10º","Maximum Altitude","Position Angle (East)","Next Opposition","Notes","Label"
+M 45,Pleiades,"CL MELOTTE 22,H 0346+24,OCL 421.0",Open Cluster,Taurus,03h 46' 24",24º 06' 50",1.60,1.3º,20.40,00:01 hr,06:54 hr,13:57 hr,63.4323º,,November 20,,Pleiades
+M 42,Orion Nebula,"NGC 1976",Emission Nebula,Orion,05h 35' 17",-05º 23' 28",4.00,1.4º,,13:46 hr,20:50 hr,03:55 hr,54.9000º,,,,

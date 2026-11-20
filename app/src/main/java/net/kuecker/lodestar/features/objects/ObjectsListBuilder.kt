@@ -140,6 +140,7 @@ internal object ObjectsListBuilder {
         recentIDs: List<String>,
         positions: Map<String, ObjectSkyPosition>,
         tonight: Map<String, UnobstructedVisibility> = emptyMap(),
+        imagedIDs: Set<String> = emptySet(),
     ): List<ObjectsListSection> {
         val catalogue = options.catalogue
         // Catalogue number only orders a catalogue; name order is the pool's own order for "All".
@@ -158,14 +159,14 @@ internal object ObjectsListBuilder {
         fun resolved(ids: List<String>): List<CelestialObject> {
             val seen = HashSet<String>()
             return ids.mapNotNull { id -> if (seen.add(id)) catalog.objectWithID(id) else null }
-                .filter { passes(it, effective, positions, tonight) }
+                .filter { passes(it, effective, positions, tonight, imagedIDs) }
         }
 
         val sections = mutableListOf<ObjectsListSection>()
         val favorites = ordered(resolved(favoriteIDs), effective, index, positions, tonight)
         // A favorite comet that dropped out of the orbit data stays, as "no current orbit", unless a filter is on.
         val hasFilter = effective.showsOnlyAboveHorizon || effective.showsOnlyVisibleTonight ||
-            effective.showsOnlyPopular || catalogue.isCatalogue
+            effective.showsOnlyPopular || effective.showsOnlyImaged || catalogue.isCatalogue
         val lostFavorites = if (hasFilter) {
             emptyList()
         } else {
@@ -181,7 +182,7 @@ internal object ObjectsListBuilder {
         // The pool is in name order (All) or catalogue order, and filtering and grouping keep that order, so a list
         // sorted the same way needs no sorting.
         val poolOrder = if (catalogue.isCatalogue) ObjectsSortOrder.NUMBER else ObjectsSortOrder.NAME
-        val visible = index.pool(catalogue).filter { passes(it, effective, positions, tonight) }
+        val visible = index.pool(catalogue).filter { passes(it, effective, positions, tonight, imagedIDs) }
         when (effective.grouping) {
             ObjectsGrouping.NONE -> {
                 val all = ordered(visible, effective, index, positions, tonight, presorted = poolOrder)
@@ -234,7 +235,9 @@ internal object ObjectsListBuilder {
         options: ObjectsListOptions,
         positions: Map<String, ObjectSkyPosition>,
         tonight: Map<String, UnobstructedVisibility>,
+        imagedIDs: Set<String>,
     ): Boolean {
+        if (options.showsOnlyImaged && obj.id !in imagedIDs) return false
         if (options.catalogue.isCatalogue && options.catalogue.numberKey(obj) == null) return false
         if (options.showsOnlyPopular && obj.prominence > Prominence.PROMINENT) return false
         if (options.showsOnlyAboveHorizon && positions[obj.id]?.isUp != true) return false

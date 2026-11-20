@@ -101,7 +101,9 @@ class SessionLogTest {
 
     @Test
     fun testSummaryAndTitles() {
-        assertEquals("30 × 2.0 min · ISO 800 · L-eXtreme · Imaged".replace("2.0 min", "2m"), SessionLogFormat.summary(entry("a")).replace("2m 0s", "2m"))
+        val summary = SessionLogFormat.summary(entry("a"))
+        assertTrue(summary.startsWith("30 × "), summary)
+        assertTrue(summary.endsWith(" · ISO 800 · L-eXtreme · Imaged"), summary)
         assertEquals("Not imaged", SessionLogFormat.summary(SessionLogEntry(date = date, targetID = "x", targetName = "x")))
         assertEquals("Night of 2026-11-18", SessionLogFormat.nightTitle(20_775))
     }

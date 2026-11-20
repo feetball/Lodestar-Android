@@ -23,6 +23,10 @@ same astronomy engine ported line for line from Swift to Kotlin.
 - **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
   solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
   and where to look and a button to aim at it.
+- **Session log and lists** — a private diary of what you shot (frames, exposure, ISO, filter, notes) with CSV
+  and OpenAstronomyLog 2.1 export, a check mark on the objects you imaged, observing lists imported from CSV,
+  Telescopius and SkySafari files into your favorites (favorites export as CSV or a SkySafari list), and mosaic
+  panels saved as a table or a text list for a planetarium or an ASIAIR.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
 - **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set

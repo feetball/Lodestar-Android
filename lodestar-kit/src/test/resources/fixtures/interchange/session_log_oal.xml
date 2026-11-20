@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oal:observations version="2.1" xmlns:oal="http://groups.google.com/group/openastronomylog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://groups.google.com/group/openastronomylog oal21.xsd">
+  <observers>
+    <observer id="observer_1">
+      <name>Lodestar</name>
+      <surname>Observer</surname>
+    </observer>
+  </observers>
+  <sites>
+    <site id="site_1">
+      <name>Dark Site</name>
+      <longitude unit="deg">-105.270000</longitude>
+      <latitude unit="deg">40.015000</latitude>
+      <timezone>-420</timezone>
+    </site>
+  </sites>
+  <sessions>
+    <session id="session_1">
+      <begin>2026-11-19T03:15:30Z</begin>
+      <end>2026-11-19T05:25:30Z</end>
+      <site>site_1</site>
+    </session>
+  </sessions>
+  <targets>
+    <target id="target_1">
+      <datasource>Lodestar</datasource>
+      <name>Andromeda Galaxy</name>
+      <position>
+        <ra unit="deg">10.68470</ra>
+        <dec unit="deg">41.26870</dec>
+        <frame>
+          <origin>geo</origin>
+          <equinox>J2000</equinox>
+        </frame>
+      </position>
+    </target>
+    <target id="target_2">
+      <datasource>Lodestar</datasource>
+      <name>Orion Nebula</name>
+      <position>
+        <ra unit="deg">83.82210</ra>
+        <dec unit="deg">-5.39110</dec>
+        <frame>
+          <origin>geo</origin>
+          <equinox>J2000</equinox>
+        </frame>
+      </position>
+    </target>
+  </targets>
+  <scopes>
+    <scope id="scope_1" xsi:type="oal:scopeType">
+      <model>Camera lens 135 mm f/2.8</model>
+      <aperture>48.21</aperture>
+      <focalLength>135</focalLength>
+    </scope>
+  </scopes>
+  <eyepieces/>
+  <lenses/>
+  <filters>
+    <filter id="filter_1">
+      <model>L-eXtreme</model>
+      <type>other</type>
+    </filter>
+  </filters>
+  <imagers>
+    <imager id="imager_1" xsi:type="oal:ccdCameraType">
+      <model>Full Frame 36 × 24 mm</model>
+      <pixelsX>6000</pixelsX>
+      <pixelsY>4000</pixelsY>
+      <binning>1</binning>
+    </imager>
+  </imagers>
+  <observation id="observation_1">
+    <observer>observer_1</observer>
+    <site>site_1</site>
+    <session>session_1</session>
+    <target>target_1</target>
+    <begin>2026-11-19T03:15:30Z</begin>
+    <end>2026-11-19T04:15:30Z</end>
+    <scope>scope_1</scope>
+    <filter>filter_1</filter>
+    <imager>imager_1</imager>
+    <result lang="en">
+      <description>Imaged: 30 × 120 s, ISO 800, filter L-eXtreme, lens 135 mm f/2.8, camera Full Frame 36 × 24 mm.
+Good seeing, &lt;clear&gt; &amp; dark &quot;sky&quot;</description>
+    </result>
+  </observation>
+  <observation id="observation_2">
+    <observer>observer_1</observer>
+    <site>site_1</site>
+    <session>session_1</session>
+    <target>target_2</target>
+    <begin>2026-11-19T05:15:30Z</begin>
+    <end>2026-11-19T05:25:30Z</end>
+    <scope>scope_1</scope>
+    <imager>imager_1</imager>
+    <result lang="en">
+      <description>Not imaged: 10 × 60 s, ISO 1600, lens 135 mm f/2.8, camera Full Frame 36 × 24 mm.</description>
+    </result>
+  </observation>
+  <observation id="observation_3">
+    <observer>observer_1</observer>
+    <target>target_1</target>
+    <begin>2026-11-20T03:15:30Z</begin>
+    <result lang="en">
+      <description>Imaged.</description>
+    </result>
+  </observation>
+</oal:observations>

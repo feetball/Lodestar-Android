@@ -1,0 +1,5 @@
+"Catalogue Entry","Familiar Name","Alternative Entries","Type","Constellation","Right Ascension (j2000)","Declination (j2000)","Magnitude","Size","Surface Brightness (mag/arcsec2)","Rises over 10º","Transit Time","Sets below 10º","Maximum Altitude","Position Angle (East)","Next Opposition","Notes","Right Ascension (jNow)","Declination (jNow)","Label"
+M 45,Pleiades,"CL MELOTTE 22,H 0346+24,OCL 421.0",Open Cluster,Taurus,03h 46' 24"",24º 06' 50"",1.60,1.3º,20.40,00:01 hr,06:54 hr,13:57 hr,63.4323º,,November 20,,03h 47' 56"",24º 11' 31"",Pleiades
+M 31,Andromeda Galaxy,"NGC 224,UGC 454",Galaxy,Andromeda,00h 42' 44",41º 16' 09",3.44,3.0º,22.20,22:41 hr,05:32 hr,12:24 hr,81.2000º,35º,,,00h 43' 46",41º 22' 11",Andromeda Galaxy
+NGC 7000,North America Nebula,"Caldwell 20,Sh2-117",Emission Nebula,Cygnus,20h 58' 48",44º 19' 48",4.00,2.0º,,15:02 hr,21:41 hr,04:20 hr,89.1000º,,,,20h 59' 52",44º 28' 42","Veil, west"
+IC 434,,,Emission Nebula,Orion,05h 41' 00",-02º 28' 00",,60.0'x10.0',,17:20 hr,01:45 hr,10:10 hr,47.5000º,,,,05h 42' 22",-02º 27' 22",

@@ -26,6 +26,11 @@ same astronomy engine ported line for line from Swift to Kotlin.
   and where to look and a button to aim at it.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting
   order, guided panel by panel in Aim), and star-trail and time-lapse planners.
+- **Exposure calculator** — the longest exposure before stars trail by the NPF, 500, 400 and 300 rules for your
+  camera, lens and target; for a star tracker, the drift and the limit for a polar-alignment error of 0.1° to 5°;
+  for an alt-azimuth mount, the field-rotation rate and the limit at the target's place; and a shutter time for the
+  Moon by the Looney 11 rule, adjusted for phase and height, with the Moon's size in pixels. The pages of the Sun,
+  Moon and planets show their size in pixels too.
 - **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set
   times, Tonight and the charts then use the site's own skyline.
 - **Comets and asteroids** — 216 bright asteroids built in and, optionally, the daily comet file: brightness

@@ -208,6 +208,16 @@ internal data class ObjectDetailFraming(
     }
 }
 
+/** How large the disc of the Sun, the Moon or a planet is in the user's frame. */
+internal data class ObjectDetailBodySize(
+    /** The apparent diameter in degrees. */
+    val diameterDegrees: Double,
+    /** The diameter in pixels of the image. */
+    val pixels: Double,
+    /** Whether the pixel pitch was assumed because the lens setup has none. */
+    val assumedPixelPitch: Boolean,
+)
+
 /** How an object fits the user's lens and how long an exposure can be before stars trail. */
 internal data class ObjectDetailPhotography(
     /** The frame of the user's camera and lens, in landscape orientation. */
@@ -217,4 +227,6 @@ internal data class ObjectDetailPhotography(
     /** `null` for the Sun and the Moon, for which star trails do not matter. */
     val npf: ExposureEstimate?,
     val rule500: ExposureEstimate?,
+    /** `null` unless the object is a solar-system body with a known apparent diameter. */
+    val bodySize: ObjectDetailBodySize?,
 )

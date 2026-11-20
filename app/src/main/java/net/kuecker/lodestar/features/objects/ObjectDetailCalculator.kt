@@ -29,6 +29,7 @@ import net.kuecker.lodestar.kit.phototools.ExposureCalculator
 import net.kuecker.lodestar.kit.phototools.ExposureRule
 import net.kuecker.lodestar.kit.phototools.FieldOfView
 import net.kuecker.lodestar.kit.phototools.LensSetup
+import net.kuecker.lodestar.kit.phototools.TrackedExposure
 import net.kuecker.lodestar.model.ObserverContext
 import java.time.Instant
 import java.time.ZoneId
@@ -264,7 +265,21 @@ internal object ObjectDetailCalculator {
         val tracksStars = obj.category != ObjectCategory.SUN && obj.category != ObjectCategory.MOON
         fun exposure(rule: ExposureRule) =
             if (tracksStars) ExposureCalculator.maxExposure(rule, lens, declination) else null
-        return ObjectDetailPhotography(frame, framing, npf = exposure(ExposureRule.NPF), rule500 = exposure(ExposureRule.RULE500))
+        return ObjectDetailPhotography(
+            frame,
+            framing,
+            npf = exposure(ExposureRule.NPF),
+            rule500 = exposure(ExposureRule.RULE500),
+            bodySize = bodySize(obj, size, lens),
+        )
+    }
+
+    /** How large the disc of a solar-system body is in the frame, from its apparent diameter now. */
+    private fun bodySize(obj: CelestialObject, size: AngularSize?, lens: LensSetup): ObjectDetailBodySize? {
+        if (obj.position !is ObjectPosition.SolarSystem || size == null) return null
+        val diameter = size.majorArcminutes / 60
+        val pixels = TrackedExposure.pixelSize(diameter, lens) ?: return null
+        return ObjectDetailBodySize(diameter, pixels, assumedPixelPitch = lens.pixelPitchMicrometers == null)
     }
 
     /**

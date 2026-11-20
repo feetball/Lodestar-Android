@@ -64,7 +64,7 @@ class SmallBodyObjectsTest {
         val system = list[0]
         assertEquals(ObjectsListSection.Kind.Group(ObjectGroup.SOLAR_SYSTEM), system.kind)
         assertTrue(system.objects.all { it.smallBody == null })
-        assertEquals(9, system.objects.size)
+        assertEquals(10, system.objects.size)
         val comets = list[1]
         assertEquals(ObjectsListSection.Kind.SmallBodies(ObjectCategory.COMET), comets.kind)
         assertEquals("category.comet", comets.id)
@@ -127,6 +127,22 @@ class SmallBodyObjectsTest {
         // Without a magnitude yet, nothing is hidden.
         val unknown = sections(ObjectsListOptions(hidesFaintObjects = true), positions = mapOf(dim.id to position(null)))
         assertTrue(dim.id in unknown.flatMap { it.objects }.map { it.id })
+    }
+
+    @Test
+    fun theFaintFilterHidesPlutoButKeepsTheBrightPlanets() {
+        val pluto = assertNotNull(catalog.objectWithID("planet.pluto"))
+        val mars = assertNotNull(catalog.objectWithID("planet.mars"))
+        assertTrue(pluto.isListed)
+        val positions = mapOf(pluto.id to position(14.5), mars.id to position(-1.0))
+        val ids = sections(ObjectsListOptions(hidesFaintObjects = true), positions = positions)
+            .flatMap { it.objects }.map { it.id }
+        assertFalse(pluto.id in ids)
+        assertTrue(mars.id in ids)
+        // Without a magnitude yet, nothing is hidden, and the filter is off by default.
+        val unknown = sections(ObjectsListOptions(hidesFaintObjects = true)).flatMap { it.objects }.map { it.id }
+        assertTrue(pluto.id in unknown)
+        assertTrue(pluto.id in sections(positions = positions).flatMap { it.objects }.map { it.id })
     }
 
     @Test

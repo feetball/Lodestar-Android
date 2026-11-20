@@ -16,6 +16,7 @@ import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
 import net.kuecker.lodestar.kit.catalog.Prominence
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.shared.icon
 
 /**
@@ -128,7 +129,8 @@ internal object ObjectsListBuilder {
      * by [options].
      *
      * Without sky positions the options that need them (the horizon filter and the altitude and rise-time
-     * orders) cannot be applied; they are skipped until positions arrive.
+     * orders) cannot be applied; they are skipped until positions arrive. The same goes for the hours-tonight order
+     * and filter until [tonight] arrives.
      */
     fun sections(
         options: ObjectsListOptions,
@@ -137,6 +139,7 @@ internal object ObjectsListBuilder {
         favoriteIDs: List<String>,
         recentIDs: List<String>,
         positions: Map<String, ObjectSkyPosition>,
+        tonight: Map<String, UnobstructedVisibility> = emptyMap(),
     ): List<ObjectsListSection> {
         val catalogue = options.catalogue
         // Catalogue number only orders a catalogue; name order is the pool's own order for "All".
@@ -144,22 +147,26 @@ internal object ObjectsListBuilder {
         val sortOrder = when {
             options.sortOrder == ObjectsSortOrder.NUMBER && !catalogue.isCatalogue -> ObjectsSortOrder.NAME
             options.sortOrder.needsSkyPositions && positions.isEmpty() -> fallbackOrder
+            options.sortOrder.needsTonightHours && tonight.isEmpty() -> fallbackOrder
             else -> options.sortOrder
         }
         val effective = options.copy(
             sortOrder = sortOrder,
             showsOnlyAboveHorizon = options.showsOnlyAboveHorizon && positions.isNotEmpty(),
+            showsOnlyVisibleTonight = options.showsOnlyVisibleTonight && tonight.isNotEmpty(),
         )
         fun resolved(ids: List<String>): List<CelestialObject> {
             val seen = HashSet<String>()
             return ids.mapNotNull { id -> if (seen.add(id)) catalog.objectWithID(id) else null }
-                .filter { passes(it, effective, positions) }
+                .filter { passes(it, effective, positions, tonight) }
         }
 
         val sections = mutableListOf<ObjectsListSection>()
-        val favorites = ordered(resolved(favoriteIDs), effective, index, positions)
+        val favorites = ordered(resolved(favoriteIDs), effective, index, positions, tonight)
         // A favorite comet that dropped out of the orbit data stays, as "no current orbit", unless a filter is on.
-        val lostFavorites = if (effective.showsOnlyAboveHorizon || effective.showsOnlyPopular || catalogue.isCatalogue) {
+        val hasFilter = effective.showsOnlyAboveHorizon || effective.showsOnlyVisibleTonight ||
+            effective.showsOnlyPopular || catalogue.isCatalogue
+        val lostFavorites = if (hasFilter) {
             emptyList()
         } else {
             SmallBodyFavorites.withoutOrbit(favoriteIDs, catalog)
@@ -174,10 +181,10 @@ internal object ObjectsListBuilder {
         // The pool is in name order (All) or catalogue order, and filtering and grouping keep that order, so a list
         // sorted the same way needs no sorting.
         val poolOrder = if (catalogue.isCatalogue) ObjectsSortOrder.NUMBER else ObjectsSortOrder.NAME
-        val visible = index.pool(catalogue).filter { passes(it, effective, positions) }
+        val visible = index.pool(catalogue).filter { passes(it, effective, positions, tonight) }
         when (effective.grouping) {
             ObjectsGrouping.NONE -> {
-                val all = ordered(visible, effective, index, positions, presorted = poolOrder)
+                val all = ordered(visible, effective, index, positions, tonight, presorted = poolOrder)
                 if (all.isNotEmpty()) {
                     val kind = if (catalogue.isCatalogue) {
                         ObjectsListSection.Kind.Catalogue(catalogue)
@@ -204,7 +211,7 @@ internal object ObjectsListBuilder {
                     }
                     for ((kind, part) in split) {
                         if (part.isEmpty()) continue
-                        sections.add(ObjectsListSection(kind, ordered(part, effective, index, positions, presorted = poolOrder)))
+                        sections.add(ObjectsListSection(kind, ordered(part, effective, index, positions, tonight, presorted = poolOrder)))
                     }
                 }
             }
@@ -212,7 +219,7 @@ internal object ObjectsListBuilder {
                 val byProminence = visible.groupBy { it.prominence }
                 for (prominence in Prominence.entries) {
                     val members = byProminence[prominence] ?: continue
-                    val objects = ordered(members, effective, index, positions, presorted = poolOrder)
+                    val objects = ordered(members, effective, index, positions, tonight, presorted = poolOrder)
                     sections.add(ObjectsListSection(ObjectsListSection.Kind.ByProminence(prominence), objects))
                 }
             }
@@ -222,12 +229,18 @@ internal object ObjectsListBuilder {
 
     // Filtering
 
-    private fun passes(obj: CelestialObject, options: ObjectsListOptions, positions: Map<String, ObjectSkyPosition>): Boolean {
+    private fun passes(
+        obj: CelestialObject,
+        options: ObjectsListOptions,
+        positions: Map<String, ObjectSkyPosition>,
+        tonight: Map<String, UnobstructedVisibility>,
+    ): Boolean {
         if (options.catalogue.isCatalogue && options.catalogue.numberKey(obj) == null) return false
         if (options.showsOnlyPopular && obj.prominence > Prominence.PROMINENT) return false
         if (options.showsOnlyAboveHorizon && positions[obj.id]?.isUp != true) return false
-        // A comet or an asteroid has no catalog magnitude: its current one decides.
-        val magnitude = obj.magnitude ?: if (obj.smallBody != null) positions[obj.id]?.magnitude else null
+        if (options.showsOnlyVisibleTonight && (tonight[obj.id]?.hours ?: 0.0) < ObjectsTonight.MINIMUM_HOURS) return false
+        // A planet, a comet or an asteroid has no catalog magnitude: its current one decides.
+        val magnitude = obj.magnitude ?: if (obj.isSolarSystem) positions[obj.id]?.magnitude else null
         if (options.hidesFaintObjects && magnitude != null && magnitude > ObjectsListOptions.FAINT_MAGNITUDE_LIMIT) return false
         return true
     }
@@ -260,6 +273,7 @@ internal object ObjectsListBuilder {
         options: ObjectsListOptions,
         index: ObjectsCatalogIndex,
         positions: Map<String, ObjectSkyPosition>,
+        tonight: Map<String, UnobstructedVisibility>,
         presorted: ObjectsSortOrder? = null,
     ): List<CelestialObject> {
         val order = options.sortOrder
@@ -283,6 +297,8 @@ internal object ObjectsListBuilder {
                 )
                 // Highest first; objects without a position come last.
                 ObjectsSortOrder.ALTITUDE -> make(value = position?.let { -it.altitude } ?: Double.POSITIVE_INFINITY)
+                // The most hours clear of the skyline tonight first; objects with no hours known come last.
+                ObjectsSortOrder.HOURS_TONIGHT -> make(value = tonight[obj.id]?.let { -it.hours } ?: Double.POSITIVE_INFINITY)
                 // Objects already up come first, highest first; then the soonest risings; then those that never rise.
                 ObjectsSortOrder.RISE_TIME -> when {
                     position == null -> make(tier = 2)

@@ -2,7 +2,7 @@
 
 Package `net.kuecker.lodestar.kit.pointing`. Port of `LodestarKit/Sources/LodestarKit/Pointing/*.swift`
 (DeviceAttitude, ReferenceFrames, MountProfile, AlignmentModel, AlignmentSolver, PointingSolution, Guidance,
-PinholeProjection, AttitudeQuaternion, AttitudeSmoother, PointingMath).
+PinholeProjection, AttitudeQuaternion, AttitudeSmoother, PointingMath, AlignmentHygiene).
 
 Dependencies: only `net.kuecker.lodestar.kit.foundation` (`Vector3`, `Matrix3`, `AstroMath`, the coordinate types,
 `swiftMax`/`swiftMin`, `formatFixed`, the `Instant` helpers) and `kotlinx-serialization-json`. Neither Formatting nor
@@ -275,6 +275,67 @@ internal fun JsonElement.toMatrix3(what: String): Matrix3
 
 ---------------------------------------------------------------------------------------------------------
 
+## AlignmentHygiene.kt  (`AlignmentHygiene.swift`)
+
+Three checks that keep a star alignment trustworthy: is the camera still while syncing, are the alignment stars far enough apart,
+is the alignment too old. Pure values and functions, no state beyond the detector's window.
+
+```kotlin
+@ConsistentCopyVisibility
+data class SteadinessSample private constructor(val timestamp: Double, val direction: Vector3) {      // direction: ENU unit vector
+    companion object {
+        fun create(timestamp: Double, direction: Vector3): SteadinessSample?                          // Swift init?(timestamp:direction:); null for non-finite or zero
+        fun create(timestamp: Double, boresight: HorizontalCoordinate): SteadinessSample?             // Swift init?(timestamp:boresight:)
+        fun create(attitude: DeviceAttitude, mount: MountProfile): SteadinessSample?                  // Swift init?(attitude:mount:); attitude.timestamp, deviceToWorld · cameraAxis
+    }
+}
+
+@ConsistentCopyVisibility
+data class SteadinessDetector private constructor(/* windowSeconds, toleranceDegrees, maximumGapSeconds, private window */) {
+    val windowSeconds: Double; val toleranceDegrees: Double; val maximumGapSeconds: Double
+    val isSteady: Boolean                                        // window full and every sample within toleranceDegrees of the newest
+    val progress: Double                                         // [0, 1]: time the camera has been still / windowSeconds; 1 exactly when isSteady
+    val sampleCount: Int                                         // bounded by the window
+    fun adding(sample: SteadinessSample): SteadinessDetector     // Swift adding(_:)
+    companion object {
+        const val defaultWindowSeconds: Double                   // 1.5
+        const val defaultToleranceDegrees: Double                // 0.35
+        const val defaultMaximumGapSeconds: Double               // 0.5
+        operator fun invoke(windowSeconds: Double = 1.5, toleranceDegrees: Double = 0.35, maximumGapSeconds: Double = 0.5): SteadinessDetector   // Swift init(windowSeconds:toleranceDegrees:maximumGapSeconds:)
+    }
+}
+
+data class AlignmentPointSeparation(val degrees: Double, val pointIndex: Int, val pointName: String?)
+
+object AlignmentHygiene {
+    const val minimumPointSeparationDegrees: Double              // 20.0
+    const val compassStaleAfterSeconds: Double                   // 3 h
+    const val gyroLockStaleAfterSeconds: Double                  // 90 min
+    fun staleAfterSeconds(gyroLock: Boolean): Double
+    fun isStale(alignedAt: Instant, now: Instant, gyroLock: Boolean): Boolean        // age >= staleAfterSeconds; a future alignedAt is not stale
+    fun bestSeparation(candidate: HorizontalCoordinate, existing: List<AlignmentPoint>): AlignmentPointSeparation?   // nearest point; null without points
+    fun separationWarning(candidate: HorizontalCoordinate, existing: List<AlignmentPoint>): Double?                  // nearest separation when < minimum, else null
+}
+```
+Steadiness. The detector keeps the samples of the last `windowSeconds` (a sample exactly at the start of the window is kept) and compares each of them
+with the newest by `Vector3.angle` (`<= toleranceDegrees`, so a sample exactly at the tolerance counts as still). The window is full when the unbroken stream
+reaches back `windowSeconds` before the newest sample: the stream starts over after a gap longer than `maximumGapSeconds` and after a sample stamped earlier than
+the newest (a different clock); a sample with the newest timestamp is ignored. Non-finite or non-positive configuration falls back to the defaults. Each `adding` copies
+one window (about 90 samples at 60 Hz) and does one angle computation per sample in it; Swift's value semantics and Kotlin's immutable data class give the same results.
+A `SteadinessSample` can be built from the attitude an `AlignmentPoint` stores, so the apps feed it `sample.rawAttitude` and the current mount.
+
+Separation. The separation is the great-circle angle between the candidate's apparent horizontal position and the `target` recorded with each point (the frame the fit is
+solved in, so the 0°/360° azimuth seam and the zenith need no special cases: the angle comes from unit vectors). The first of equally near points wins. `bestSeparation`
+returns the nearest point whatever the distance (for "47° from Vega"); `separationWarning` only when it is under 20°.
+
+Staleness. 3 h with the compass heading, 90 min in gyro lock. The compass heading itself does not drift: an alignment goes wrong slowly because the phone slips in its
+bracket, the tripod is moved, the magnetic surroundings change. Gyro lock keeps its heading by integrating the gyroscope in a frame without an absolute reference, so its
+error also grows with time. The values are rules of thumb chosen for the apps, not measurements.
+
+Cost: `adding` is O(window) with a window copy; `bestSeparation` is O(points) (at most 12 in a model); none of them allocates beyond that.
+
+---------------------------------------------------------------------------------------------------------
+
 ## Per-frame use: allocation-free overloads (Kotlin additions)
 
 `project`/`unproject` keep the Swift signatures. A frame with thousands of stars should use the primitive overloads instead; they
@@ -387,3 +448,6 @@ Numerical fidelity
 that define them in Swift) plus `PointingPortTests.kt` (26 Kotlin-only tests: bit-for-bit comparison of the allocation-free overloads with the
 regular API, a heap-allocation check, JSON forms and strictness, grapheme-cluster truncation, IEEE zero checks, filter independence). Fixture:
 `src/test/resources/fixtures/stars_apparent.json` (identical to the Foundation copy).
+`AlignmentHygieneTests` (20 tests, in both languages with the same names, inputs and tolerances) covers the steadiness window (not enough history, one outlier,
+a sample exactly at the tolerance, slow drift, gaps, clock restarts, bounded memory), invalid samples, separations across the azimuth seam and near the zenith
+(checked against the haversine formula, Sinnott, Sky & Telescope 68, 159, 1984) and the staleness thresholds.

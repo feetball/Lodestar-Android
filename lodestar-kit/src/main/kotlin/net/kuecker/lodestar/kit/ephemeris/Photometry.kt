@@ -18,6 +18,7 @@ import kotlin.math.sqrt
  * Mars omits the sub-Earth-longitude and Ls corrections (about ±0.05 mag).
  * Jupiter, Saturn, Uranus and Neptune use the equations for the phase angles seen from the
  * Earth (up to 12°, 6.5°, 3.1° and 1.9°).
+ * Pluto is not in that paper; it uses the older Pluto-plus-Charon law described on [pluto].
  *
  * In Swift this is the internal `Ephemeris.Photometry`; Kotlin cannot add nested types from another file,
  * so it is a top-level object of the same package, and it is public. The Swift internal parameter names
@@ -38,7 +39,7 @@ object Photometry {
     }
 
     /**
-     * Visual magnitude of a planet, or `null` for the Sun and the Moon.
+     * Visual magnitude of a planet or Pluto, or `null` for the Sun and the Moon.
      *
      * @param body The planet.
      * @param heliocentric The planet's position relative to the Sun (J2000 equatorial, AU).
@@ -81,6 +82,7 @@ object Photometry {
                 )
             }
             SolarSystemBody.NEPTUNE -> neptune(r, d, julianDate.julianYearTT)
+            SolarSystemBody.PLUTO -> pluto(r, d, phaseAngle)
         }
     }
 
@@ -145,6 +147,22 @@ object Photometry {
         val brightness = if (year < 1980) -6.89 else if (year <= 2000) -6.89 - 0.0054 * (year - 1980) else -7.00
         return 5 * log10(sunDistance * earthDistance) + brightness
     }
+
+    /**
+     * Visual magnitude of Pluto and Charon together, V = 5 log₁₀(r d) − 1.00 + 0.041 α, for the Sun–Pluto and
+     * Earth–Pluto distances in AU and the Sun–Pluto–Earth phase angle α in degrees.
+     *
+     * Mallama & Hilton (2018) do not cover Pluto. The absolute magnitude V(1, 0) = −1.00 is the long-standing
+     * value for the unresolved pair (NASA's Pluto fact sheet gives −1.0) and 0.041 mag/deg is the phase
+     * coefficient that Binzel & Mulholland measured at α = 0.6°–1.7° (*Astronomical Journal* 89, 1759, 1984).
+     * JPL Horizons' APmag for Pluto, whose value "includes Charon", follows the same line: 60 Horizons values
+     * spread over 1900–2099 fit −1.0001 and 0.0411 with residuals within 0.0006 mag. Seen from the Earth Pluto
+     * is always within 2° of full phase (0.01° to 1.96° from 1885 to 2100), so the straight line is never stretched.
+     * Pluto's rotational light curve (a few tenths of a magnitude) and the mutual eclipses with Charon are not
+     * modelled.
+     */
+    fun pluto(sunDistance: Double, earthDistance: Double, phaseAngle: Double): Double =
+        5 * log10(sunDistance * earthDistance) - 1.00 + 0.041 * phaseAngle
 
     // MARK: Rotation poles
 

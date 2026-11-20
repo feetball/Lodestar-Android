@@ -16,12 +16,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.horizon.HorizonFormat
+import net.kuecker.lodestar.features.tonight.TonightFormat
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.ephemeris.RiseTransitSet
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.CardTitle
 import net.kuecker.lodestar.shared.InfoRow
+import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.theme.LocalPalette
 import net.kuecker.lodestar.theme.card
 import java.time.Instant
@@ -77,6 +81,7 @@ private fun Content(obj: CelestialObject, night: ObjectDetailNight, now: Instant
 @Composable
 private fun SkylineNote() {
     val palette = LocalPalette.current
+    val applied = HorizonFormat.applied(LocalAppModel.current.observerContext?.horizonSource)
     Row(
         Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -89,7 +94,9 @@ private fun SkylineNote() {
             modifier = Modifier.size(14.dp),
         )
         Text(
-            "Skyline applied: rising is clearing your recorded skyline and setting is sinking behind it.",
+            "$applied: rising is clearing the skyline and setting is sinking behind it. " +
+                "Hours above the skyline count the dark time the object is at least " +
+                "${ObjectsTonight.MINIMUM_ALTITUDE.toInt()}° high.",
             color = palette.tertiaryText,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -150,4 +157,14 @@ private fun DarknessRows(obj: CelestialObject, night: ObjectDetailNight, zone: Z
         }
         InfoRow("Highest in the dark", text)
     }
+    val unobstructed = night.unobstructed
+    if (obj.category != ObjectCategory.SUN && unobstructed != null) {
+        InfoRow("Above your skyline", skylineHoursText(unobstructed, zone))
+    }
+}
+
+/** The stretches of the dark above the skyline with their total, such as "21:40 – 01:10 (3.5 h)". */
+private fun skylineHoursText(unobstructed: UnobstructedVisibility, zone: ZoneId): String {
+    if (unobstructed.intervals.isEmpty()) return "None tonight"
+    return "${TonightFormat.windows(unobstructed.intervals, zone)} (${ObjectsFormat.hours(unobstructed.hours)})"
 }

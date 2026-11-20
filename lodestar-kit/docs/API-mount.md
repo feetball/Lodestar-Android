@@ -336,6 +336,10 @@ Rules the controller enforces (all tested against the simulators of all three pr
 - **Timeouts**: every driver exchange has a deadline (LX200 3 s, NexStar 5.5 s, Alpaca 10 s by default); a slew longer than `maximumSlewSeconds` is aborted
   (`.slewTimeout`; if the abort itself fails the phase stays `.slewing` and the next poll retries); a nudge ends by itself at the first `poll()` after its
   duration (poll at least once a second while nudging; Alpaca guide-rate pulses and `pulseguide` are timed by the mount itself).
+- **Stopping**: `abort()` sends the driver's abort and, while a nudge runs, the nudge's stop as well, whatever became of the abort (the abort of
+  NexStar and Alpaca cancels only a GoTo); each step keeps its three attempts, the first failure is reported and the phase is left alone, so the call
+  can be repeated. A nudge whose start fails is stopped at once: when that stop is confirmed the controller is idle, when it is not the move stays on
+  the books, so that `stopNudge()`, `abort()` and the end of its duration still send the stop.
 - **Arrival**: a slew is *arrived* when the mount reports "not slewing" and its position (in its own frame) is within `arrivalToleranceDegrees` of what was sent;
   "not slewing" after having been slewing but far away → `.slewStopped(remainingDegrees)`; "not slewing" and far away without ever slewing for `slewStartGraceSeconds`
   → the same error. After a communication failure *during* `goto` (the slew may or may not have started) the controller sends an abort before reporting the error.
@@ -616,17 +620,18 @@ point programmatically (API 29+): `WifiNetworkSpecifier` (needs the user's appro
 
 ## Tests (mirrored: same names, inputs, expected values and tolerances in Swift and Kotlin)
 
-185 mount tests per language (Kotlin whole kit 1289 green, Swift whole package 1127 green; zero compiler warnings in the Mount files):
+203 mount tests per language, with the same names in both:
 
 | File | Tests | What it checks |
 |---|---|---|
 | `LX200CodecTests` | 22 | encode/decode examples from the Meade/OnStep references: RA/Dec in both precisions, 24 h wrap and carries, negative declinations (`-00*30`, no `-00*00`), apostrophe and 0xDF separators, fractional seconds, boundaries, 40+ malformed replies, `:MS#` digits, `:GU#`, `:GW#`, site/time commands (west-positive longitude, UTC offset in both dialects), 500 random round trips |
 | `NexStarCodecTests` | 16 | the documentation's own examples (`34AB,12CE` → 26.4441°, `12AB0500` → 26.252°, `R34AB,12CE`, `r34AB0500,12CE0500`, rate 150″/s → 2/88, `W` 118°20′17″ W 33°50′41″ N, `H` 3:26 PM zone −5), negative declinations, RA wrap, version formats, 18 malformed replies, 500 random round trips |
-| `AlpacaCodecTests` | 23 | request paths/parameters against the OpenAPI definitions, transaction numbering (wrap), form encoding, number/date formatting, reply parsing, error-number mapping, HTTP errors, wrong transaction, discovery datagram and reply, management lists |
+| `AlpacaCodecTests` | 24 | request paths/parameters against the OpenAPI definitions, transaction numbering (wrap), form encoding, number/date formatting, reply parsing, error-number mapping, HTTP errors, wrong transaction, discovery datagram and reply, management lists |
 | `MountJSONTests` | 6 | grammar, escapes, surrogates, limits, 40 malformed documents |
 | `MountEpochTests` | 8 | Meeus 21.b / 23.a, proper motion, round trips (3 frames × 5 dates × 51 places incl. poles and RA wrap), raw values |
 | `MountSupportTests` | 6 | calendar arithmetic against the platform library, clamping of settings/configurations, error texts, clocks |
-| `MountControllerTests`, `…CommandTests`, `…FaultTests` | 12 + 18 + 22 | all six simulator rigs end to end: connect, goto completes (J2000 → mount frame → J2000), sync, abort mid-slew, second goto refused, altitude limit and lookahead, nudges in all directions, tracking, site/time, silent mount, partial/garbled/truncated replies, 1-byte chunks, NAK retries, refusals (OnStep digits 1…9, Meade text, unaligned, parked, tracking off, Alpaca error numbers), slew timeout, stopped short, never started, link lost during a slew, dropped connection, abort retries |
+| `MountControllerTests`, `…CommandTests`, `…FaultTests` | 15 + 19 + 26 | all six simulator rigs end to end: connect, goto completes (J2000 → mount frame → J2000), sync, abort mid-slew, second goto refused, altitude limit and lookahead, nudges in all directions, tracking, site/time, silent mount, partial/garbled/truncated replies, 1-byte chunks, NAK retries, refusals (OnStep digits 1…9, Meade text, unaligned, parked, tracking off, Alpaca error numbers), slew timeout, stopped short, never started, link lost during a slew, dropped connection, abort retries |
+| `MountSafetyControllerTests` | 9 | the stop logic: a replacement nudge that cannot start (scripted driver, Alpaca), a move whose start and stop are both unconfirmed (kept for Stop and for the end of its duration), an abort that fails or only cancels a GoTo (scripted driver, NexStar, Alpaca), the retries of both steps and the failure reported |
 | `MountDriverTests` | 31 | precision toggling (once), forced dialect, firmware gates, epoch defaults/overrides, tracking-mode memory, pass-through failure, unaligned/meaningless positions, Alpaca fallbacks, request numbering, sign configuration, transport exceptions |
 | `MountSimulatorTests` | 21 | the simulators themselves: physics, raw replies of OnStep/Meade/NexStar/SynScan/Alpaca, fault injection, chunking |
 

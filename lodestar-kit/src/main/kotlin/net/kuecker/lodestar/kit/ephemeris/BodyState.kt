@@ -25,7 +25,9 @@ import kotlin.math.asin
  * @property illuminatedFraction Fraction of the visible disc that is sunlit, [0, 1]; `null` for the Sun.
  * @property apparentMagnitude Apparent visual magnitude. The planets follow Mallama & Hilton (2018) and are good to a
  * few hundredths of a magnitude (Mars to about 0.05, because its surface markings are not
- * modelled); the Moon and the Sun are good to about 0.2 magnitude.
+ * modelled); Pluto (with Charon) follows the Binzel & Mulholland phase law and reproduces JPL Horizons' value to
+ * better than 0.001 magnitude, though its own rotational light curve varies by a few tenths; the Moon and the
+ * Sun are good to about 0.2 magnitude.
  * @property angularDiameterArcseconds Apparent angular diameter of the body's mean disc in arcseconds, as seen from
  * the geocentre.
  * @property isWaxing For the Moon, whether it is waxing (east of the Sun: its ecliptic longitude exceeds the

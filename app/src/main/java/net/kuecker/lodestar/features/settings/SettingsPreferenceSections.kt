@@ -2,6 +2,8 @@ package net.kuecker.lodestar.features.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.FlashlightOn
+import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.Composable
@@ -136,6 +138,13 @@ internal fun SettingsSkyDisplaySection() {
             onCheckedChange = { shown -> store.update { it.copy(showMilkyWay = shown) } },
         )
         SettingsDivider()
+        SettingsToggleRow(
+            title = "Horizon glow",
+            checked = settings.showHorizonGlow,
+            onCheckedChange = { shown -> store.update { it.copy(showHorizonGlow = shown) } },
+            caption = "A thin ring along the sky chart's horizon that is brighter toward the artificial light around you.",
+        )
+        SettingsDivider()
         SettingsSliderRow(
             title = "Faintest stars",
             valueText = AppFormat.magnitude(settings.starMagnitudeLimit),
@@ -187,7 +196,7 @@ internal fun SettingsAtmosphereSection() {
     }
 }
 
-/** Settings ▸ Tools: links to the exposure calculator, the star trails and time-lapse planner, and polar alignment. */
+/** Settings ▸ Tools: links to the exposure calculator, the star trails and time-lapse planner, polar alignment, the alignment finder and the red torch. */
 @Composable
 internal fun SettingsToolsSection(onOpen: (SettingsRoute) -> Unit) {
     SettingsSection(title = "Tools") {
@@ -198,5 +207,10 @@ internal fun SettingsToolsSection(onOpen: (SettingsRoute) -> Unit) {
         }
         SettingsDivider()
         SettingsNavigationRow("Polar Alignment", Icons.Outlined.AutoAwesome) { onOpen(SettingsRoute.PolarAlignment) }
+        SettingsDivider()
+        SettingsNavigationRow("Alignment Finder", Icons.Outlined.Landscape) { onOpen(SettingsRoute.AlignmentFinder) }
+        SettingsDivider()
+        val app = LocalAppModel.current
+        SettingsNavigationRow("Red Torch", Icons.Outlined.FlashlightOn) { app.isTorchShown = true }
     }
 }

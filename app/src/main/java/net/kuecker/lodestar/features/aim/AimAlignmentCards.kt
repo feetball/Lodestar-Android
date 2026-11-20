@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
+import net.kuecker.lodestar.kit.foundation.timeIntervalSince
+import net.kuecker.lodestar.kit.pointing.AlignmentHygiene
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.CardTitle
@@ -44,6 +47,7 @@ import net.kuecker.lodestar.shared.LodestarButtonKind
 import net.kuecker.lodestar.shared.ObjectIcon
 import net.kuecker.lodestar.shared.monospacedDigits
 import net.kuecker.lodestar.theme.LocalPalette
+import java.time.Instant
 
 /** A reference object in the alignment list: name, kind, brightness, position and distance from the camera. */
 @Composable
@@ -85,6 +89,10 @@ internal fun AimCandidateRow(row: AimAlignmentRow, onClick: () -> Unit) {
                 style = style,
             )
             row.separation?.let { Text("${AppFormat.separation(it)} away", color = palette.secondaryText, style = style) }
+            row.nearest?.let {
+                val color = if (AimAlignmentSpacing.isTooClose(it)) palette.warning else palette.secondaryText
+                Text(AimAlignmentSpacing.nearestText(it), color = color, style = style)
+            }
         }
     }
 }
@@ -144,9 +152,18 @@ private fun ProgressLabel(text: String, icon: ImageVector, color: Color) {
     }
 }
 
-/** What the alignment has found so far, its points and a way to start over. */
+/**
+ * What the alignment has found so far, its points and a way to start over. [alignedAt] is when it was made and
+ * [gyroLock] whether the heading comes from gyro lock, which ages an alignment faster.
+ */
 @Composable
-internal fun AimAlignmentSummaryCard(alignment: AlignmentModel, onRemove: (Int) -> Unit, onReset: () -> Unit) {
+internal fun AimAlignmentSummaryCard(
+    alignment: AlignmentModel,
+    alignedAt: Instant?,
+    gyroLock: Boolean,
+    onRemove: (Int) -> Unit,
+    onReset: () -> Unit,
+) {
     val palette = LocalPalette.current
     Column(
         Modifier.fillMaxWidth().aimPanel(palette, padding = 12.dp),
@@ -154,6 +171,7 @@ internal fun AimAlignmentSummaryCard(alignment: AlignmentModel, onRemove: (Int) 
     ) {
         CardTitle("Current alignment", icon = Icons.Outlined.Verified)
         if (alignment.isAligned) {
+            if (alignedAt != null) AlignmentAge(alignedAt, gyroLock)
             InfoRow("Heading correction", AngleFormatter.formatSignedDegrees(alignment.headingOffset, 1))
             InfoRow("Bracket correction", AngleFormatter.formatDegrees(alignment.deviceCorrection.length, 1))
             InfoRow("Fit error (RMS)", AngleFormatter.formatDegrees(alignment.rmsResidual, 2))
@@ -177,6 +195,24 @@ internal fun AimAlignmentSummaryCard(alignment: AlignmentModel, onRemove: (Int) 
                 color = palette.secondaryText,
                 style = MaterialTheme.typography.bodyMedium,
             )
+        }
+    }
+}
+
+/** "Aligned 12 min ago", counting on with the clock, and a note once the alignment is stale. */
+@Composable
+private fun AlignmentAge(alignedAt: Instant, gyroLock: Boolean) {
+    val palette = LocalPalette.current
+    val now by rememberWallClock()
+    val isStale = AlignmentHygiene.isStale(alignedAt, now, gyroLock)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            AimAlignmentAge.cardText(now.timeIntervalSince(alignedAt)),
+            color = if (isStale) palette.warning else palette.secondaryText,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+        )
+        if (isStale) {
+            Text(AimAlignmentAge.STALE_ADVICE, color = palette.warning, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

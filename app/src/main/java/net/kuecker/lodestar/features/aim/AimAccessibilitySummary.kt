@@ -9,6 +9,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.mosaic.MosaicSession
 import net.kuecker.lodestar.features.satellites.SatelliteAimText
+import net.kuecker.lodestar.model.HorizonSource
+import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.SkylineSummary
 
 /**
@@ -20,14 +22,32 @@ import net.kuecker.lodestar.shared.SkylineSummary
 @Composable
 internal fun AimAccessibilitySummary(model: AimViewModel, isActive: Boolean, modifier: Modifier = Modifier) {
     val frame = rememberAimFrame(model, 1_000, isActive)
-    val description = summary(model, frame)
+    val description = summary(model, frame, LocalAppModel.current.observerContext?.horizonSource)
     Box(modifier.size(1.dp).semantics { contentDescription = description })
 }
 
-private fun summary(model: AimViewModel, frame: AimFrame?): String {
+private fun summary(model: AimViewModel, frame: AimFrame?, skylineSource: HorizonSource?): String =
+    previewLead(model, frame) + liveSummary(model, frame, skylineSource)
+
+/** While the sky is previewed: where it is previewed at and where the target will stand then. */
+private fun previewLead(model: AimViewModel, frame: AimFrame?): String {
+    val moment = model.previewMoment() ?: return ""
+    val time = moment.day?.let { "$it ${moment.time}" } ?: moment.time
+    val lead = AimPreview.spokenChip(moment.time, moment.day, model.isDaylightAtPreview == true)
+    val target = model.guidanceTarget
+    val placed = frame?.target
+    val place = if (target != null && placed != null && !model.mosaic.isActive && model.isSkyBuiltForPreview) {
+        " " + AimPreview.spokenPlace(target.name, placed.horizontal.altitude, time, moment.isFuture)
+    } else {
+        ""
+    }
+    return "$lead$place "
+}
+
+private fun liveSummary(model: AimViewModel, frame: AimFrame?, skylineSource: HorizonSource?): String {
     if (frame == null) return "Waiting for the motion sensors."
     val skyline = model.skyContent?.snapshot?.horizon?.takeUnless { it.isFlat }
-        ?.let { " ${SkylineSummary.describe(it)} It is drawn as a line, with the ground below it shaded." }.orEmpty()
+        ?.let { " ${SkylineSummary.describe(it, skylineSource)} It is drawn as a line, with the ground below it shaded." }.orEmpty()
     if (model.mosaic.isActive) return mosaicSummary(model.mosaic, frame) + skyline
     model.satellite.source?.let { return SatelliteAimText.spoken(it, frame) + skyline }
     val target = model.guidanceTarget ?: return "No target. Use the Target button to choose one.$skyline"

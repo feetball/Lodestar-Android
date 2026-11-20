@@ -229,6 +229,7 @@ private fun MountConnectedCard(
             )
         }
         snapshot.skyWatcher?.let { info -> MountSkyWatcherLines(snapshot, info) }
+        MountMeridianChip(snapshot)
         alignmentBanner?.let { MountNote(it, palette.warning) }
         MountText.trackingStopLine(snapshot)?.let { MountNote(it, palette.warning) }
         snapshot.linkProblem?.let { MountNote(it, palette.warning) }

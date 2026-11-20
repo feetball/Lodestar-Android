@@ -109,6 +109,16 @@ The meteor shower table (peak solar longitudes, activity periods, ZHR, radiant p
 hand-entered from the **IMO Meteor Shower Calendar 2026** (© International Meteor Organization), whose source is cited
 in the code. Radiant drift rates are least-squares fits to the calendar's radiant tables.
 
+### Jupiter's physical ephemeris, Galilean moons and Great Red Spot — `ephemeris/JupiterPhysical`, `ephemeris/GalileanMoons`, `ephemeris/GreatRedSpot`
+
+The rotation elements, central meridians and position angle of Jupiter follow Jean Meeus, *Astronomical Algorithms*,
+2nd ed. (Willmann-Bell, 1998), chapter 43, and the positions of the four Galilean moons its chapter 44 (the low-accuracy
+method); the formulas are cross-checked against the MIT-licensed `soniakeys/meeus`. The Great Red Spot's System II
+longitude (91° on 2026 June 1, drifting 1.75° a month) is the one assumed by **Sky & Telescope**'s online tool "Transit
+Times of Jupiter's Great Red Spot", which takes it from trends noted by the JUPOS project (the BAA Jupiter Section's and
+ALPO-Japan's measurements are consistent with it). The user can replace it in Settings. The stations of the planets are
+computed from the VSOP87 positions and compared with JPL's DE440s.
+
 ### Satellite data and SGP4
 
 Satellite orbital elements are downloaded at run time from **CelesTrak** (Dr. T. S. Kelso, <https://celestrak.org>), only when
@@ -117,7 +127,8 @@ credit: *"Orbital data: CelesTrak, T. S. Kelso"*. The groups used are `stations`
 `starlink` (about 4.7 MB); Lodestar never requests a group more than once per two hours, as CelesTrak asks. The SGP4/SDP4
 propagator is a port of the reference implementation by D. A. Vallado, P. Crawford, R. Hujsak and T. S. Kelso ("Revisiting
 Spacetrack Report #3", AIAA 2006-6753), distributed by CelesTrak. Intrinsic magnitudes of the ISS, Tiangong and Hubble are
-from Heavens-Above.
+from Heavens-Above. The sizes used to decide whether a satellite crosses the Sun's or the Moon's disc are the ISS's 109 m
+truss span (NASA) and about 55 m for the Chinese space station (approximate), with 50 m for any other satellite.
 
 ### Comet and asteroid orbits
 
@@ -128,16 +139,67 @@ reference positions come from **NASA/JPL** (SBDB and Horizons, public domain; cr
 extracts of both. The bundled `asteroids.txt` (bright asteroids, osculating epoch 2026-06-09) is an extract of the
 MPC orbit file and keeps the MPC header verbatim.
 
+### Night lights — `lightpollution.bin`
+
+The sky-quality estimate (`lodestar-kit/src/main/resources/net/kuecker/lodestar/kit/catalog/lightpollution.bin`, 137 kB) is built by
+`Tools/build_light_pollution.py` (iOS repository) from **NASA GIBS** (Global Imagery Browse Services), layer `VIIRS_Black_Marble`:
+**Black Marble**, the Suomi NPP VIIRS day/night band night-lights composite of **2016-01-01**, TileMatrixSet `500m`,
+zoom level 4 (200 PNG tiles, each pinned by sha256 in `Tools/lightpollution.lock.json` (iOS repository)).
+
+- **Credit:** NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP). The app shows this line in *Settings > Data credits*.
+- **Sources:** GIBS API, <https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api>;
+  Black Marble product suite, <https://blackmarble.gsfc.nasa.gov/>; Román et al., *NASA's Black Marble nighttime lights
+  product suite*, Remote Sensing of Environment 210 (2018).
+- **License:** NASA data and imagery are open (NASA's media usage guidelines; GIBS imagery is free to use with credit, no
+  login). The World Atlas of Artificial Night Sky Brightness (2015) is **not** used: it is CC BY-NC.
+- **Changes made for Lodestar:** the 8-bit display tiles' faint land base texture was removed, the light converted to
+  linear luminance, averaged into 0.1 degree cells, quantized to 16 levels on a log scale and run-length encoded; the
+  app turns the grid into a sky-glow index and an estimated Bortle class. The result is an estimate from 2016
+  satellite imagery, not a sky measurement. NASA does not endorse Lodestar.
+
 ### Weather forecast
 
 The cloud forecast is downloaded at run time from **MET Norway** (the Norwegian Meteorological Institute), Locationforecast 2.0
 `complete` (<https://api.met.no/weatherapi/locationforecast/2.0/documentation>), only when the user switches on *Cloud forecast*
 in Settings ▸ Online Data. MET Norway licenses its data under the **Creative Commons Attribution 4.0 International** licence
 (<https://creativecommons.org/licenses/by/4.0/>) and the Norwegian Licence for Open Government Data 2.0. Credit:
-*"Weather forecast from MET Norway"* (the card also shows *"Forecast: MET Norway"*). Lodestar shows the forecast's cloud-cover
-values unchanged; the clear-spell sentence is its own summary and does not imply endorsement by MET Norway. The request carries
+*"Weather forecast from MET Norway"* (the card also shows *"Forecast: MET Norway"*). Lodestar shows the forecast's cloud-cover,
+temperature, dew-point and wind values as forecast (rounded for display, and converted to °F and mph where the region uses
+them); the clear-spell sentence and the dew, wind and fog warnings are its own summaries of them and do not imply endorsement
+by MET Norway. The unit tests contain a small extract of one real answer (`app/src/test/resources`). The request carries
 the location rounded to 0.1° (at most four decimals are allowed), an identifying User-Agent, honours `Expires` and
 `If-Modified-Since`, and is made only while the app is in use.
+
+### Terrain elevation tiles
+
+The optional terrain horizon (Settings > Online Data > Terrain horizons, off by default) is computed from elevation tiles that
+are downloaded at run time, only when the user asks a site for its terrain horizon, from the **Terrain Tiles** of the AWS Open
+Data registry (<https://registry.opendata.aws/terrain-tiles/>), managed by Mapzen, a Linux Foundation project (Tilezen /
+Joerd, <https://github.com/tilezen/joerd>). The files are `skadi/<N47>/<N47E008>.hgt.gz` (1° x 1° tiles of 3601 x 3601
+big-endian 16-bit metres, void -32768) at `https://s3.amazonaws.com/elevation-tiles-prod/skadi/`. They are not part of the app;
+they are deleted after the calculation, and only the resulting 360-value skyline is kept with the site. The tile set merges
+NASA SRTM, USGS GMTED2010 and 3DEP (NED), EU-DEM and several national surveys; each source's terms are collected in Tilezen's
+attribution page (<https://github.com/tilezen/joerd/blob/master/docs/attribution.md>), and the registry names that page as the
+licence. SRTM, GMTED2010 and 3DEP are public domain; the USGS asks for credit. The attribution the tile set requires (the app
+shows it under Settings > Data Credits) is:
+
+- ArcticDEM terrain data DEM(s) were created from DigitalGlobe, Inc., imagery and funded under National Science Foundation awards 1043681, 1559691, and 1542736;
+- Australia terrain data © Commonwealth of Australia (Geoscience Australia) 2017;
+- Austria terrain data © offene Daten Österreichs – Digitales Geländemodell (DGM) Österreich;
+- Canada terrain data contains information licensed under the Open Government Licence – Canada;
+- Europe terrain data produced using Copernicus data and information funded by the European Union - EU-DEM layers;
+- Global ETOPO1 terrain data U.S. National Oceanic and Atmospheric Administration;
+- Mexico terrain data source: INEGI, Continental relief, 2016;
+- New Zealand terrain data Copyright 2011 Crown copyright (c) Land Information New Zealand and the New Zealand Government (All rights reserved);
+- Norway terrain data © Kartverket;
+- United Kingdom terrain data © Environment Agency copyright and/or database right 2015. All rights reserved;
+- United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey.
+
+**Changes made by Lodestar:** it reads the elevations, interpolates them bilinearly along 360 rays, applies earth curvature
+and standard refraction, and keeps the highest apparent altitude per degree of azimuth, rounded to 0.1 degree. The data is a
+surface model (it sees tree tops and roofs where the radar did), the tiles are 30 m (1 arc-second) or 90 m (3 arc-second)
+samples, and the result is for planning only. The request carries the app's name and version as User-Agent; the server sees the
+IP address and which 1 degree tiles are asked for.
 
 ### d3-celestial — `constellations.json` and `milkyway.json`
 
@@ -223,23 +285,37 @@ files are shipped for them.
 
 ### Solar-system theories — `ephemeris/`
 
-- **VSOP87B** planetary theory, P. Bretagnon & G. Francou, *Astronomy & Astrophysics* 202, 309
-  (1988), files from IMCCE (`ftp.imcce.fr/pub/ephem/planets/vsop87/`, also CDS VizieR VI/81),
-  truncated to 1,002 terms (`Tools/ephemeris/gen_planetary_theory.py`).
+- **VSOP87B** planetary theory (the Earth and Mercury to Neptune), P. Bretagnon & G. Francou,
+  *Astronomy & Astrophysics* 202, 309 (1988), files from IMCCE
+  (`ftp.imcce.fr/pub/ephem/planets/vsop87/`, also CDS VizieR VI/81), truncated to 1,002 terms
+  (`Tools/ephemeris/gen_planetary_theory.py`).
 - **Lunar theory:** ELP-2000/82 as truncated by Jean Meeus, *Astronomical Algorithms*, 2nd ed.
   (Willmann-Bell, 1998), chapter 47, with coefficients cross-checked against the MIT-licensed
   implementations `soniakeys/meeus` and `commenthol/astronomia`.
+- **Pluto theory:** the series of Jean Meeus, *Astronomical Algorithms*, 2nd ed. (Willmann-Bell,
+  1998), chapter 37 (Table 37.A, 43 periodic terms), valid 1885–2099; outside that span the error
+  grows quickly. The table was read from the open-source implementations `soniakeys/meeus`,
+  `commenthol/astronomia` and `saurvs/astro-rust` (MIT) and `architest/pymeeus` (LGPL-3), which agree
+  in every digit, and checked against JPL DE440s (`Tools/ephemeris/gen_pluto_theory.py`,
+  `pluto_tables.py`, `check_pluto_theory.py`). libnova's `pluto.c` (LGPL-2+) differs from them in
+  three digits and was not used. No code of these projects is included.
 - **Nutation, precession, sidereal time, aberration, refraction:** IAU 1980 nutation (Meeus
   Table 22.A), IAU 1976 precession (Lieske et al. 1977), IAU 1982 sidereal time, Sæmundsson
   and Bennett refraction formulas, all as given by Meeus.
 - **Planetary magnitudes:** A. Mallama & J. L. Hilton, "Computing apparent planetary magnitudes for
-  The Astronomical Almanac", *Astronomy and Computing* 25, 10 (2018), arXiv:1808.01973.
+  The Astronomical Almanac", *Astronomy and Computing* 25, 10 (2018), arXiv:1808.01973 (Mercury to
+  Neptune; they do not cover Pluto).
+- **Pluto's magnitude:** V = 5 log₁₀(r d) − 1.00 + 0.041 α for Pluto and Charon together. The phase
+  coefficient 0.041 mag/° is from R. P. Binzel & J. D. Mulholland, *Astronomical Journal* 89, 1759
+  (1984); the absolute magnitude −1.00 is the long-standing value (NASA NSSDCA Pluto fact sheet). Both
+  together reproduce the apparent magnitude of JPL Horizons within 0.001 mag (60 dates, 1900–2099).
 
 ### Test reference data — `lodestar-kit/src/test/resources/fixtures/`
 
 Generated by `Tools/make_fixtures.py` with Skyfield (Brandon Rhodes, MIT License) and the JPL
-planetary ephemeris DE440s (NASA/JPL, public domain). Used only by the unit tests; not shipped in
-the app.
+planetary ephemeris DE440s (NASA/JPL, public domain). Skyfield has no magnitude model for Pluto, so
+the test of Pluto's magnitude quotes a few values from JPL Horizons (NASA/JPL, public domain; credit
+requested). Used only by the unit tests; not shipped in the app.
 
 ## Credit line for the app's About screen
 
@@ -248,10 +324,11 @@ the app.
 > notes. Constellation figures and Milky Way outlines: d3-celestial by Olaf Frohn (BSD-3-Clause),
 > the latter after Jose R. Vieira's Milky Way Outline Catalog.
 > Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey (public domain).
-> Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); lunar theory after J. Meeus.
+> Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); Pluto and lunar theory after J. Meeus.
+> Night lights: NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP).
 >
 > Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital elements: IAU Minor Planet Center; weather forecast from
-> MET Norway (CC BY 4.0).
+> MET Norway (CC BY 4.0); terrain elevation data from the AWS Open Data Terrain Tiles (SRTM and GMTED2010 courtesy of the U.S. Geological Survey, and the national sources credited in ATTRIBUTION.md).
 
 ## Reproducing and updating
 
@@ -268,7 +345,7 @@ changed so the terms above can be re-checked.
 
 | Library | License |
 | --- | --- |
-| Android Jetpack (AndroidX: Compose, Activity, Lifecycle, CameraX, Core) | Apache-2.0 |
+| Android Jetpack (AndroidX: Compose, Activity, Lifecycle, CameraX, Core, ExifInterface) | Apache-2.0 |
 | Kotlin standard library, kotlinx.coroutines, kotlinx.serialization | Apache-2.0 |
 | Material Components / Material Icons for Compose | Apache-2.0 |
 | MapLibre Native for Android (<https://github.com/maplibre/maplibre-native>) | BSD-2-Clause |

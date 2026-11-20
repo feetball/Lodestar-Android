@@ -25,9 +25,12 @@ class SettingsStore(private val preferences: SharedPreferences, private val scop
 
     private var saveJob: Job? = null
 
-    /** Replaces the settings with `transform(settings)` (sanitised) and schedules a save. */
+    /**
+     * Replaces the settings with `transform(settings)` (sanitised) and schedules a save. A change that only touches the
+     * single camera keys goes to the active camera profile, and the keys follow the profile otherwise.
+     */
     fun update(transform: (AppSettings) -> AppSettings) {
-        val next = transform(settings).sanitized()
+        val next = transform(settings).reconcilingCamera(settings).sanitized()
         if (next == settings) return
         settings = next
         scheduleSave()
@@ -69,8 +72,32 @@ class SettingsStore(private val preferences: SharedPreferences, private val scop
 
     fun removeSites(ids: Set<String>) = update { s -> s.copy(savedSites = s.savedSites.filter { it.id !in ids }) }
 
+    /** Adds [profile] and makes it the active camera; `false` when the maximum number of profiles is reached. */
+    fun addCameraProfile(profile: CameraProfile): Boolean {
+        if (settings.cameraProfiles.size >= AppSettings.MAXIMUM_CAMERA_PROFILES) return false
+        update { it.copy(cameraProfiles = it.cameraProfiles + profile, activeCameraProfileID = profile.id) }
+        return true
+    }
+
+    /** Replaces the profile that has the identifier of [profile]. */
+    fun updateCameraProfile(profile: CameraProfile) = update { s ->
+        s.copy(cameraProfiles = s.cameraProfiles.map { if (it.id == profile.id) profile else it })
+    }
+
+    /** Makes the profile with [id] the active camera. */
+    fun activateCameraProfile(id: String) = update { s ->
+        if (s.cameraProfiles.any { it.id == id }) s.copy(activeCameraProfileID = id) else s
+    }
+
+    /** Deletes the profile with [id]; `false` (and nothing deleted) when it is the only one. */
+    fun removeCameraProfile(id: String): Boolean {
+        if (settings.cameraProfiles.size <= 1) return false
+        update { s -> s.copy(cameraProfiles = s.cameraProfiles.filter { it.id != id }) }
+        return true
+    }
+
     private fun load(): AppSettings =
-        preferences.getString(STORAGE_KEY, null)?.let(AppSettings::decode) ?: AppSettings()
+        preferences.getString(STORAGE_KEY, null)?.let(AppSettings::decode) ?: AppSettings().sanitized()
 
     private fun scheduleSave() {
         saveJob?.cancel()

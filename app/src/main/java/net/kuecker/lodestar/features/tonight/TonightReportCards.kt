@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import net.kuecker.lodestar.features.horizon.HorizonFormat
 import net.kuecker.lodestar.features.online.TonightCloudCard
 import net.kuecker.lodestar.features.satellites.TonightSatelliteCard
 import net.kuecker.lodestar.features.smallbodies.SmallBodyTonightCard
@@ -41,6 +42,7 @@ import java.time.Instant
 internal fun TonightReportCards(report: TonightReport, onOpenObject: (CelestialObject) -> Unit, onOpenSmallBodies: () -> Unit) {
     TonightTimelineCard(report)
     TonightCloudCard(report.summary.observer.location, report.timeline.range, report.timeZone)
+    TonightSkyQualityCard(report.summary, report.timeline.range)
     TonightSunCard(report.summary, report.timeZone)
     val isSkylineApplied = report.skyline != null
     TonightMoonCard(report.summary, report.timeZone, isSkylineApplied)
@@ -90,7 +92,7 @@ internal fun TonightSkylineNote(text: String, modifier: Modifier = Modifier) {
         )
         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(
-                "Skyline applied",
+                HorizonFormat.applied(LocalAppModel.current.observerContext?.horizonSource),
                 color = palette.secondaryText,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
             )

@@ -6,6 +6,7 @@ import net.kuecker.lodestar.kit.ephemeris.state
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.events.EventDetails
 import net.kuecker.lodestar.kit.events.EventKind
+import net.kuecker.lodestar.kit.events.MeteorCameraAdvice
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.model.ObserverContext
@@ -26,14 +27,14 @@ internal data class EventPlan(
     val moon: EventMoon?,
     /** The radiant of a meteor shower (apparent altitude and azimuth). */
     val radiant: HorizontalCoordinate?,
-    /** A point about 40° from the radiant, the part of the sky to frame, when the radiant is up. */
+    /** The part of the sky to frame, about 40° from the radiant ([MeteorCameraAdvice.bestAim]), when there is one. */
     val meteorFrame: HorizontalCoordinate?,
 )
 
 /** Works out an [EventPlan]. Pure and cheap, but called off the main thread like the rest of the astronomy. */
 internal object EventsPlanner {
     /** How far from the radiant a meteor camera looks. */
-    const val METEOR_OFFSET_DEGREES = 40.0
+    const val METEOR_OFFSET_DEGREES = MeteorCameraAdvice.ringRadius
 
     fun plan(event: AstronomicalEvent, context: ObserverContext): EventPlan {
         val time = event.visibility?.bestTime ?: EventsFormat.displayDate(event)
@@ -46,20 +47,8 @@ internal object EventsPlanner {
         }
         val shower = (event.details as? EventDetails.MeteorShower)?.peak?.shower
         val radiant = shower?.let { frame.horizontal(it.radiant(time), null, true) }
-        return EventPlan(time, moon, radiant, radiant?.let(::meteorFrame))
-    }
-
-    /**
-     * The point [METEOR_OFFSET_DEGREES] from [radiant] along the vertical circle through it towards the zenith, going on
-     * past the zenith to the far side when the radiant is high. `null` when the radiant is below the horizon.
-     */
-    private fun meteorFrame(radiant: HorizontalCoordinate): HorizontalCoordinate? {
-        if (!(radiant.altitude > 0)) return null
-        val raised = radiant.altitude + METEOR_OFFSET_DEGREES
-        return if (raised <= 90.0) {
-            HorizontalCoordinate(radiant.azimuth, raised)
-        } else {
-            HorizontalCoordinate(radiant.azimuth + 180.0, 180.0 - raised)
-        }
+        // The same direction the Camera card gives, so the screen says one thing.
+        val aim = shower?.let { MeteorCameraAdvice.bestAim(it, context.observer, time) }
+        return EventPlan(time, moon, radiant, aim?.let { HorizontalCoordinate(it.azimuth, it.altitude) })
     }
 }

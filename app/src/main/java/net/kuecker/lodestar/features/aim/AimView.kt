@@ -77,7 +77,7 @@ fun AimScreen() {
     // guidance follows the panel being shot at once.
     val mosaicPlan = model.mosaic.plan
     val observer = app.observerContext?.observer
-    LaunchedEffect(mosaicPlan, observer, isActive) {
+    LaunchedEffect(mosaicPlan, observer, isActive, model.previewOffset) {
         if (isActive) model.keepMosaicCurrent(mosaicPlan, observer)
     }
     LaunchedEffect(mosaicPlan, model.mosaic.step) { model.syncMosaic() }
@@ -85,8 +85,15 @@ fun AimScreen() {
     LaunchedEffect(isActive) {
         if (isActive) model.runLoop() else model.stopFeedback()
     }
+    // A preview never outlives the tab or the app being in front: coming back finds the live sky.
+    LaunchedEffect(isActive) {
+        if (!isActive) model.leave()
+    }
     DisposableEffect(model) {
-        onDispose { model.stopFeedback() }
+        onDispose {
+            model.stopFeedback()
+            model.leave()
+        }
     }
 
     Box(Modifier.fillMaxSize().screenBackground(palette)) {
@@ -116,7 +123,9 @@ fun AimScreen() {
             target = model.guidanceTarget,
             cameraDirection = { model.engine.frame()?.pointing?.boresight },
             onDismiss = { sheet = null },
+            date = { model.date },
         )
+        AimSheet.PREVIEW_TIME -> AimPreviewTimeSheet(model, onDismiss = { sheet = null })
         null -> Unit
     }
 }

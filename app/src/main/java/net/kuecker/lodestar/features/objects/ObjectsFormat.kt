@@ -3,8 +3,10 @@ package net.kuecker.lodestar.features.objects
 import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.shared.AppFormat
 import java.text.Normalizer
+import java.text.NumberFormat
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -99,6 +101,26 @@ internal object ObjectsFormat {
         }
     }
 
+    /** Hours with one decimal, such as "3.4 h" ("3.4 hours" when [spoken]); "0 h" below a twentieth of an hour. */
+    fun hours(hours: Double, spoken: Boolean = false): String {
+        val unit = if (spoken) "hours" else "h"
+        if (!hours.isFinite() || hours < 0.05) return "0 $unit"
+        val format = NumberFormat.getNumberInstance().apply {
+            minimumFractionDigits = 1
+            maximumFractionDigits = 1
+        }
+        return "${format.format(hours)} $unit"
+    }
+
+    /**
+     * What a row says of tonight when the list is ordered or filtered by hours: "3.4 h tonight", or "behind skyline"
+     * when the site has a skyline and the object is up in the dark but never clears it.
+     */
+    fun tonightText(tonight: UnobstructedVisibility, spoken: Boolean = false): String = when {
+        tonight.isBehindSkyline -> if (spoken) "behind your skyline tonight" else "behind skyline"
+        else -> "${hours(tonight.hours, spoken)} tonight"
+    }
+
     /** The row's position as a spoken phrase, such as "34° above the horizon, southeast". */
     private fun spokenPosition(position: ObjectSkyPosition, zone: ZoneId): String {
         if (position.isUp) {
@@ -112,10 +134,17 @@ internal object ObjectsFormat {
     }
 
     /** Everything a row shows, as one screen-reader label. */
-    fun spokenSummary(obj: CelestialObject, position: ObjectSkyPosition?, isFavorite: Boolean, zone: ZoneId): String {
+    fun spokenSummary(
+        obj: CelestialObject,
+        position: ObjectSkyPosition?,
+        isFavorite: Boolean,
+        zone: ZoneId,
+        tonight: UnobstructedVisibility? = null,
+    ): String {
         val parts = mutableListOf(SmallBodyText.displayName(obj))
         rowDesignations(obj)?.let(parts::add)
         parts.add(subtitle(obj, position?.magnitude, spoken = true, position = position))
+        if (tonight != null) parts.add(tonightText(tonight, spoken = true))
         if (position != null) parts.add(spokenPosition(position, zone))
         if (isFavorite) parts.add("Favorite")
         return parts.joinToString(", ")

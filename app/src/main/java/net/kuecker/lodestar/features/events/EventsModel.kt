@@ -10,6 +10,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.kit.ephemeris.GreatRedSpot
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.events.EventCalculator
 import net.kuecker.lodestar.kit.events.EventDetails
@@ -25,13 +26,15 @@ import kotlin.math.roundToLong
 
 /**
  * What a calendar was computed for: the place (to 0.05°, about 5 km, so a few steps of the GPS do not start it over),
- * the time zone and the local day. A calendar is good for the whole day; another place, zone or day needs a new one.
+ * the time zone, the local day and the Great Red Spot the transits are worked out for. A calendar is good for the whole
+ * day; another place, zone, day or spot needs a new one.
  */
 internal data class EventsKey(
     val latitudeSteps: Long,
     val longitudeSteps: Long,
     val zone: ZoneId,
     val day: LocalDate,
+    val greatRedSpot: GreatRedSpot = GreatRedSpot.reference,
 )
 
 /** The events of the next twelve months for one [key]. */
@@ -45,23 +48,29 @@ internal object EventsCalculator {
     /** The largest separation, in degrees, at which the Moon and a planet or star, or two planets, are in conjunction. */
     const val CONJUNCTION_THRESHOLD = 3.0
 
-    fun key(context: ObserverContext, now: Instant): EventsKey {
+    fun key(context: ObserverContext, now: Instant, greatRedSpot: GreatRedSpot = GreatRedSpot.reference): EventsKey {
         val location = context.location
         return EventsKey(
             latitudeSteps = (location.latitude / POSITION_STEP).roundToLong(),
             longitudeSteps = (location.longitude / POSITION_STEP).roundToLong(),
             zone = context.timeZone,
             day = now.atZone(context.timeZone).toLocalDate(),
+            greatRedSpot = greatRedSpot,
         )
     }
 
-    /** The next [SPAN_DAYS] days from the start of today, with visibility for the observer in [context]. */
+    /**
+     * The next [SPAN_DAYS] days from the start of today, with visibility for the observer in [context]. The Great Red
+     * Spot transits and the moon events of Jupiter come for the first two days only (the engine's default).
+     */
     fun compute(context: ObserverContext, key: EventsKey): EventsResult {
         val from = key.day.atStartOfDay(key.zone).toInstant()
         val options = EventOptions(
+            kinds = EventKind.calendarKinds,
             timeZone = key.zone,
             planetConjunctionThreshold = CONJUNCTION_THRESHOLD,
             moonConjunctionThreshold = CONJUNCTION_THRESHOLD,
+            greatRedSpot = key.greatRedSpot,
         )
         val events = EventCalculator.events(from, from.plus(SPAN_DAYS, ChronoUnit.DAYS), context.observer, options)
         return EventsResult(key, events)
@@ -86,16 +95,16 @@ internal class EventsModel {
     private val lock = Mutex()
 
     /** The calendar if it answers [context] today, else `null`. */
-    fun current(context: ObserverContext, now: Instant): EventsResult? =
-        result?.takeIf { it.key == EventsCalculator.key(context, now) }
+    fun current(context: ObserverContext, now: Instant, greatRedSpot: GreatRedSpot = GreatRedSpot.reference): EventsResult? =
+        result?.takeIf { it.key == EventsCalculator.key(context, now, greatRedSpot) }
 
     /**
      * Makes sure the calendar for [context] and today is there, working it out on a background thread when it is
      * not. Callers that ask at the same time wait for the one computation. A computation that has started is finished
      * even when its caller leaves (the Tonight card gives way to the calendar), so the next screen finds it done.
      */
-    suspend fun refresh(context: ObserverContext, now: Instant) {
-        val key = EventsCalculator.key(context, now)
+    suspend fun refresh(context: ObserverContext, now: Instant, greatRedSpot: GreatRedSpot = GreatRedSpot.reference) {
+        val key = EventsCalculator.key(context, now, greatRedSpot)
         lock.withLock {
             if (result?.key == key) return
             failure = null
@@ -120,6 +129,7 @@ internal enum class EventsGroup(val title: String) {
     CONJUNCTIONS("Conjunctions"),
     ECLIPSES("Eclipses"),
     PLANETS("Planets"),
+    JUPITER("Jupiter"),
     MOON("Moon"),
     SEASONS("Seasons"),
     ;
@@ -132,6 +142,7 @@ internal enum class EventsGroup(val title: String) {
             CONJUNCTIONS -> EventKind.CONJUNCTION
             ECLIPSES -> EventKind.LUNAR_ECLIPSE
             PLANETS -> EventKind.OPPOSITION
+            JUPITER -> EventKind.GREAT_RED_SPOT_TRANSIT
             MOON -> EventKind.FULL_MOON_SPECIAL
             SEASONS -> EventKind.SEASON
         }
@@ -140,7 +151,10 @@ internal enum class EventsGroup(val title: String) {
         METEOR_SHOWERS -> event.kind == EventKind.METEOR_SHOWER
         CONJUNCTIONS -> event.kind == EventKind.CONJUNCTION
         ECLIPSES -> event.kind == EventKind.LUNAR_ECLIPSE || event.kind == EventKind.SOLAR_ECLIPSE
-        PLANETS -> event.kind == EventKind.OPPOSITION || event.kind == EventKind.GREATEST_ELONGATION
+        PLANETS ->
+            event.kind == EventKind.OPPOSITION || event.kind == EventKind.GREATEST_ELONGATION ||
+                event.kind == EventKind.PLANET_STATION
+        JUPITER -> event.kind == EventKind.GREAT_RED_SPOT_TRANSIT || event.kind == EventKind.JUPITER_MOON_EVENT
         MOON -> event.kind == EventKind.FULL_MOON_SPECIAL || (event.details as? EventDetails.Conjunction)?.conjunction?.involvesMoon == true
         SEASONS -> event.kind == EventKind.SEASON || event.kind == EventKind.EARTH_APSIS
     }

@@ -8,6 +8,7 @@ import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
 import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.mosaic.MosaicOrientation
 import net.kuecker.lodestar.kit.mosaic.MosaicWarning
+import net.kuecker.lodestar.kit.phototools.LensProjection
 import net.kuecker.lodestar.kit.phototools.LensSetup
 import net.kuecker.lodestar.kit.phototools.SensorFormat
 import java.time.Instant
@@ -31,6 +32,16 @@ class MosaicPlanningTest {
         camera: HorizontalCoordinate? = null,
         focalLength: Double = 50.0,
     ) = MosaicPlanningInputs(setup, target, lens(focalLength), observer, camera, date)
+
+    @Test
+    fun aFisheyeLensCannotPlanAMosaic() {
+        val fisheye = LensSetup(SensorFormat.fullFrame, 15.0, 2.8, 4.3, LensProjection.FISHEYE_EQUISOLID)
+        val setup = MosaicSetup(MosaicSource.CUSTOM, customWidth = 40.0, customHeight = 20.0)
+        val outcome = MosaicPlanning.plan(MosaicPlanningInputs(setup, null, fisheye, observer, HorizontalCoordinate(120.0, 40.0), date))
+        val problem = assertIs<MosaicPlanOutcome.Problem>(outcome)
+        assertTrue(problem.message.startsWith("Mosaics need a rectilinear lens"))
+        assertIs<MosaicPlanOutcome.Ready>(MosaicPlanning.plan(inputs(setup, null, HorizontalCoordinate(120.0, 40.0), 50.0)))
+    }
 
     @Test
     fun aTargetWithoutSizeOrPlaceCannotBeFitted() {

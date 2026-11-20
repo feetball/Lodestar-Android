@@ -29,6 +29,7 @@ import net.kuecker.lodestar.kit.phototools.ExposureCalculator
 import net.kuecker.lodestar.kit.phototools.ExposureRule
 import net.kuecker.lodestar.kit.phototools.FieldOfView
 import net.kuecker.lodestar.kit.phototools.LensSetup
+import net.kuecker.lodestar.kit.phototools.TrackedExposure
 import net.kuecker.lodestar.model.ObserverContext
 import java.time.Instant
 import java.time.ZoneId
@@ -36,7 +37,6 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.min
 
 /** The astronomy behind the object detail screen. Pure, so it can run on any thread. */
 internal object ObjectDetailCalculator {
@@ -84,10 +84,11 @@ internal object ObjectDetailCalculator {
             distance = smallBody?.let { ObjectDetailDistance.AstronomicalUnits(it.info.earthDistanceAU) }
         }
         val horizontal = frame.horizontal(obj, true)
+        val equatorial = frame.apparentEquatorial(obj)
         return ObjectDetailCurrent(
             date = date,
             horizontal = horizontal,
-            equatorial = frame.apparentEquatorial(obj),
+            equatorial = equatorial,
             magnitude = frame.currentMagnitude(obj),
             angularSize = frame.currentAngularSize(obj),
             distance = distance,
@@ -98,6 +99,7 @@ internal object ObjectDetailCalculator {
             skylineAltitude = skyline?.altitude(horizontal.azimuth),
             isSmallBody = obj.smallBody != null,
             smallBody = smallBody,
+            meridian = ObjectDetailMeridian.of(obj, observer, date, equatorial, isEvaluable = obj.smallBody == null || smallBody != null),
         )
     }
 
@@ -129,6 +131,11 @@ internal object ObjectDetailCalculator {
             hourTicks = hourTicks(chartRange, context.timeZone),
             bestInDarkness = bestPoint(obj, observer, samples, darkness, events.transit, horizon),
             usesSkyline = horizon != null,
+            unobstructed = if (horizon != null && darkness != null) {
+                ObjectsTonight.visibility(obj, observer, darkness, horizon.profile)
+            } else {
+                null
+            },
         )
     }
 
@@ -136,12 +143,8 @@ internal object ObjectDetailCalculator {
      * The twilight of the night that contains [date]: the one that began at noon yesterday while it is still
      * before sunrise, otherwise the one that begins at noon today.
      */
-    private fun currentTwilight(context: ObserverContext, date: Instant): NightTwilight {
-        val yesterday = date.atZone(context.timeZone).minusDays(1).toInstant()
-        val previous = TwilightCalculator.night(yesterday, context.observer, context.timeZone)
-        if (date < previous.interval.end && date < (previous.sunrise ?: previous.interval.end)) return previous
-        return TwilightCalculator.night(date, context.observer, context.timeZone)
-    }
+    private fun currentTwilight(context: ObserverContext, date: Instant): NightTwilight =
+        ObjectsTonight.twilight(context.observer, context.timeZone, date)
 
     /** The object's apparent altitude at [date] and, with a skyline, whether that is above it. */
     private fun sample(obj: CelestialObject, observer: Observer, date: Instant, horizon: HorizonVisibility?): ObjectDetailAltitudeSample {
@@ -264,36 +267,33 @@ internal object ObjectDetailCalculator {
         val tracksStars = obj.category != ObjectCategory.SUN && obj.category != ObjectCategory.MOON
         fun exposure(rule: ExposureRule) =
             if (tracksStars) ExposureCalculator.maxExposure(rule, lens, declination) else null
-        return ObjectDetailPhotography(frame, framing, npf = exposure(ExposureRule.NPF), rule500 = exposure(ExposureRule.RULE500))
+        return ObjectDetailPhotography(
+            frame,
+            framing,
+            npf = exposure(ExposureRule.NPF),
+            rule500 = exposure(ExposureRule.RULE500),
+            bodySize = bodySize(obj, size, lens),
+        )
+    }
+
+    /** How large the disc of a solar-system body is in the frame, from its apparent diameter now. */
+    private fun bodySize(obj: CelestialObject, size: AngularSize?, lens: LensSetup): ObjectDetailBodySize? {
+        if (obj.position !is ObjectPosition.SolarSystem || size == null) return null
+        val diameter = size.majorArcminutes / 60
+        val pixels = TrackedExposure.pixelSize(diameter, lens) ?: return null
+        return ObjectDetailBodySize(diameter, pixels, assumedPixelPitch = lens.pixelPitchMicrometers == null)
     }
 
     /**
-     * How the Moon affects the object: now while the sky is dark, otherwise at the object's best time tonight.
+     * Where the Moon is relative to the object: now while the sky is dark, otherwise at the object's best time tonight.
      *
-     * The impact is a rule of thumb from the Moon's illuminated fraction and its distance from the object.
+     * [ObjectMoonGeometry.assess] turns it into a level for the user's filter.
      */
     fun moonConditions(obj: CelestialObject, observer: Observer, night: ObjectDetailNight, now: Instant): ObjectDetailMoonConditions? {
         if (obj.category == ObjectCategory.SUN || obj.category == ObjectCategory.MOON) return null
         val isDark = night.darkness?.let { now in it } ?: false
         val date = if (isDark) now else (night.bestInDarkness?.date ?: now)
-        val frame = SkyFrame(date, observer)
-        val moon = frame.horizontal(SolarSystemBody.MOON, false)
-        val separation = frame.horizontal(obj, false).angularSeparation(moon)
-        val illuminatedFraction = frame.state(SolarSystemBody.MOON).illuminatedFraction ?: 0.0
-        val impact = moonImpact(moon.altitude, separation, illuminatedFraction)
-        return ObjectDetailMoonConditions(date, date == now, separation, illuminatedFraction, impact)
-    }
-
-    private fun moonImpact(moonAltitude: Double, separation: Double, illuminatedFraction: Double): ObjectDetailMoonConditions.Impact {
-        if (!(moonAltitude > 0)) return ObjectDetailMoonConditions.Impact.MOON_DOWN
-        // Moonlight scatters across the whole sky but is strongest near the Moon.
-        val proximity = min(max(1 - separation / 120, 0.25), 1.0)
-        val effect = illuminatedFraction * proximity
-        return when {
-            effect >= 0.5 -> ObjectDetailMoonConditions.Impact.SEVERE
-            effect >= 0.2 -> ObjectDetailMoonConditions.Impact.MODERATE
-            else -> ObjectDetailMoonConditions.Impact.MINOR
-        }
+        return ObjectDetailMoonConditions(date, date == now, ObjectMoonGeometry.of(obj, observer, date))
     }
 
     /** The most hour labels the time axis gets. */

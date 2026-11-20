@@ -230,6 +230,13 @@ internal fun JsonObject.requireString(key: String): String {
     return primitive.content
 }
 
+/** The string stored under [key], or null if the key is absent or null; any other JSON type throws. */
+internal fun JsonObject.optionalString(key: String): String? {
+    val element = this[key] ?: return null
+    if (element is JsonNull) return null
+    return requireString(key)
+}
+
 /** The number stored under [key]; a missing key, a string, null or any other JSON type throws. */
 internal fun JsonObject.requireDouble(key: String): Double {
     val element = this[key] ?: throw SerializationException("Missing value for key '$key'.")

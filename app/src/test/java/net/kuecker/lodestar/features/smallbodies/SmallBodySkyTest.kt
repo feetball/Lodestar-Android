@@ -139,7 +139,7 @@ class SmallBodySkyTest {
         assertTrue(snapshot.smallBodies.any { it.id == opposition.id })
         assertTrue(plain.smallBodies.isEmpty())
         // They are not planets and not deep-sky objects.
-        assertEquals(9, snapshot.bodies.size)
+        assertEquals(10, snapshot.bodies.size)
         assertEquals(plain.deepSky.map { it.id }, snapshot.deepSky.map { it.id })
         assertTrue(snapshot.deepSky.none { it.obj.smallBody != null })
         assertTrue(snapshot.bodies.none { it.obj.smallBody != null })

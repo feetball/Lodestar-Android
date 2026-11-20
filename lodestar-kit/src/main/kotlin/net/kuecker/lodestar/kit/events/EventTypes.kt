@@ -15,6 +15,9 @@ private typealias SeasonPayload = Season
 private typealias FullMoonSpecialPayload = FullMoonSpecial
 private typealias LunarEclipsePayload = LunarEclipse
 private typealias SolarEclipsePayload = SolarEclipse
+private typealias GreatRedSpotTransitPayload = GreatRedSpotTransit
+private typealias GalileanMoonEventPayload = GalileanMoonEvent
+private typealias PlanetStationPayload = PlanetStation
 
 /**
  * The kinds of astronomical events the calculator finds.
@@ -60,6 +63,18 @@ enum class EventKind(val rawValue: String) {
     /** A partial, annular, total or hybrid solar eclipse. */
     @SerialName("solarEclipse")
     SOLAR_ECLIPSE("solarEclipse"),
+
+    /** The Great Red Spot crossing Jupiter's central meridian. */
+    @SerialName("greatRedSpotTransit")
+    GREAT_RED_SPOT_TRANSIT("greatRedSpotTransit"),
+
+    /** The start or end of a transit, shadow transit, occultation or eclipse of one of Jupiter's Galilean moons. */
+    @SerialName("jupiterMoonEvent")
+    JUPITER_MOON_EVENT("jupiterMoonEvent"),
+
+    /** A planet from Mercury to Neptune standing still among the stars: retrograde motion begins or ends. */
+    @SerialName("planetStation")
+    PLANET_STATION("planetStation"),
     ;
 
     /** The English name, e.g. "Lunar eclipse". */
@@ -74,11 +89,24 @@ enum class EventKind(val rawValue: String) {
             FULL_MOON_SPECIAL -> "Special full Moon"
             LUNAR_ECLIPSE -> "Lunar eclipse"
             SOLAR_ECLIPSE -> "Solar eclipse"
+            GREAT_RED_SPOT_TRANSIT -> "Great Red Spot transit"
+            JUPITER_MOON_EVENT -> "Jupiter moon event"
+            PLANET_STATION -> "Planet station"
         }
 
     companion object {
-        /** Every kind except [EARTH_APSIS], which is optional. */
-        val defaultKinds: Set<EventKind> = entries.filter { it != EARTH_APSIS }.toSet()
+        /**
+         * The kinds searched unless the options say otherwise: every kind except the Earth's apsides, which are
+         * optional, and the three that arrived with the Jupiter and station events ([GREAT_RED_SPOT_TRANSIT],
+         * [JUPITER_MOON_EVENT], [PLANET_STATION]), which a caller asks for ([calendarKinds]) so that screens that list
+         * "the next event" do not fill up with them.
+         */
+        val defaultKinds: Set<EventKind> = entries
+            .filter { it != EARTH_APSIS && it != GREAT_RED_SPOT_TRANSIT && it != JUPITER_MOON_EVENT && it != PLANET_STATION }
+            .toSet()
+
+        /** Every kind except [EARTH_APSIS]: what an events calendar asks for. */
+        val calendarKinds: Set<EventKind> = entries.filter { it != EARTH_APSIS }.toSet()
 
         /** The kind whose [rawValue] is [raw], or `null` (Swift `init?(rawValue:)`). */
         fun fromRawValue(raw: String): EventKind? = entries.firstOrNull { it.rawValue == raw }
@@ -89,7 +117,7 @@ enum class EventKind(val rawValue: String) {
  * What to search for and how strictly. Built with [invoke], which replaces non-finite values with the
  * defaults and clamps the rest into range; like Swift's initializer, the constructor is not public.
  *
- * @property kinds The kinds of events to include; [EventKind.defaultKinds] (everything except the Earth's apsides).
+ * @property kinds The kinds of events to include; [EventKind.defaultKinds] (the original kinds without the Earth's apsides).
  * @property planetConjunctionThreshold Largest minimum separation in degrees of a planet–planet pair that counts
  * as a conjunction, 0…30, default 3.
  * @property moonConjunctionThreshold Largest minimum geocentric separation in degrees of the Moon from a planet,
@@ -102,6 +130,10 @@ enum class EventKind(val rawValue: String) {
  * @property minimumAltitude The altitude in degrees (0…90, default 10) a target must reach for a viewing window.
  * @property visibleOnly Drops events that the observer cannot see (no viewing window); has no effect without an
  * observer or for events without a visibility (equinoxes, solstices, apsides).
+ * @property jupiterEventDays How many days from the start of the interval the Great Red Spot transits and the moon
+ * events of Jupiter are listed for, 0…30, default 2. They come many a day (about 2.4 transits and 8 moon events), so
+ * a calendar of a year lists only the nearest days; 0 leaves them out.
+ * @property greatRedSpot The Great Red Spot whose transits are listed; [GreatRedSpot.reference] by default.
  */
 @ConsistentCopyVisibility
 data class EventOptions private constructor(
@@ -112,6 +144,8 @@ data class EventOptions private constructor(
     val timeZone: ZoneId?,
     val minimumAltitude: Double,
     val visibleOnly: Boolean,
+    val jupiterEventDays: Double,
+    val greatRedSpot: GreatRedSpot,
 ) {
     companion object {
         /** Creates the options (Swift `init(kinds:planetConjunctionThreshold:…)`), normalizing out-of-range values. */
@@ -123,6 +157,8 @@ data class EventOptions private constructor(
             timeZone: ZoneId? = null,
             minimumAltitude: Double = 10.0,
             visibleOnly: Boolean = false,
+            jupiterEventDays: Double = 2.0,
+            greatRedSpot: GreatRedSpot = GreatRedSpot.reference,
         ): EventOptions = EventOptions(
             kinds = kinds,
             planetConjunctionThreshold = normalized(planetConjunctionThreshold, 3.0, 0.0, 30.0),
@@ -131,6 +167,8 @@ data class EventOptions private constructor(
             timeZone = timeZone,
             minimumAltitude = normalized(minimumAltitude, 10.0, 0.0, 90.0),
             visibleOnly = visibleOnly,
+            jupiterEventDays = normalized(jupiterEventDays, 2.0, 0.0, 30.0),
+            greatRedSpot = greatRedSpot,
         )
 
         private fun normalized(value: Double, fallback: Double, lower: Double, upper: Double): Double =
@@ -327,6 +365,21 @@ sealed interface EventDetails {
     data class SolarEclipse(val eclipse: SolarEclipsePayload) : EventDetails {
         override val kind: EventKind get() = EventKind.SOLAR_ECLIPSE
     }
+
+    /** The Great Red Spot on Jupiter's central meridian (Swift `.greatRedSpotTransit(_)`). */
+    data class GreatRedSpotTransit(val transit: GreatRedSpotTransitPayload) : EventDetails {
+        override val kind: EventKind get() = EventKind.GREAT_RED_SPOT_TRANSIT
+    }
+
+    /** A start or end of a Galilean moon's transit, shadow transit, occultation or eclipse (Swift `.jupiterMoonEvent(_)`). */
+    data class JupiterMoonEvent(val event: GalileanMoonEventPayload) : EventDetails {
+        override val kind: EventKind get() = EventKind.JUPITER_MOON_EVENT
+    }
+
+    /** A planet's station (Swift `.planetStation(_)`). */
+    data class PlanetStation(val station: PlanetStationPayload) : EventDetails {
+        override val kind: EventKind get() = EventKind.PLANET_STATION
+    }
 }
 
 /**
@@ -348,8 +401,9 @@ data class AstronomicalEvent(
     val kind: EventKind get() = details.kind
 
     /**
-     * A short English title for lists, e.g. "Perseids peak", "Venus and Jupiter", "Total lunar eclipse" or
-     * "June solstice". The UI localizes from [details] instead.
+     * A short English title for lists, e.g. "Perseids peak", "Venus and Jupiter", "Total lunar eclipse",
+     * "June solstice", "Great Red Spot transit", "Io's shadow enters the disc" or "Mars stationary: retrograde motion
+     * begins". The UI localizes from [details] instead.
      */
     val title: String
         get() = when (val details = details) {
@@ -364,12 +418,17 @@ data class AstronomicalEvent(
             is EventDetails.FullMoonSpecial -> details.special.categories.joinToString(" and ") { it.displayName }
             is EventDetails.LunarEclipse -> "${details.eclipse.kind.displayName} lunar eclipse"
             is EventDetails.SolarEclipse -> "${details.eclipse.kind.displayName} solar eclipse"
+            is EventDetails.GreatRedSpotTransit -> "Great Red Spot transit"
+            is EventDetails.JupiterMoonEvent -> details.event.title
+            is EventDetails.PlanetStation ->
+                "${details.station.planet.displayName} stationary: ${details.station.kind.displayName}"
         }
 
     /**
      * What to point a camera at, main subject first: the radiant of a meteor shower, the two bodies of a conjunction
      * (the Moon first), the planet of an opposition or an elongation, the Moon for a lunar eclipse or a special
-     * full Moon and the Sun for a solar eclipse. Empty for equinoxes, solstices and apsides.
+     * full Moon, the Sun for a solar eclipse, Jupiter for a Great Red Spot transit or a moon event and the planet of a
+     * station. Empty for equinoxes, solstices and apsides.
      */
     val aimTargets: List<AimTarget>
         get() = when (val details = details) {
@@ -383,6 +442,9 @@ data class AstronomicalEvent(
             is EventDetails.FullMoonSpecial -> listOf(AimTarget.Body(SolarSystemBody.MOON))
             is EventDetails.LunarEclipse -> listOf(AimTarget.Body(SolarSystemBody.MOON))
             is EventDetails.SolarEclipse -> listOf(AimTarget.Body(SolarSystemBody.SUN))
+            is EventDetails.GreatRedSpotTransit -> listOf(AimTarget.Body(SolarSystemBody.JUPITER))
+            is EventDetails.JupiterMoonEvent -> listOf(AimTarget.Body(SolarSystemBody.JUPITER))
+            is EventDetails.PlanetStation -> listOf(AimTarget.Body(details.station.planet))
         }
 
     /**

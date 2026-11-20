@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.features.events
 
+import net.kuecker.lodestar.kit.ephemeris.GreatRedSpot
 import net.kuecker.lodestar.kit.events.EventDetails
 import net.kuecker.lodestar.kit.events.EventKind
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
@@ -45,6 +46,24 @@ class EventsPlanningTest {
         for (kind in listOf(EventKind.METEOR_SHOWER, EventKind.CONJUNCTION, EventKind.SEASON, EventKind.OPPOSITION)) {
             assertTrue(events.any { it.kind == kind }, "no $kind")
         }
+    }
+
+    @Test
+    fun theCalendarListsTheJupiterEventsOfTheFirstDaysAndTheStations() {
+        val events = result.events
+        val limit = result.key.day.atStartOfDay(zone).toInstant().plusSeconds(2 * 86_400)
+        val jupiter = events.filter { it.kind == EventKind.GREAT_RED_SPOT_TRANSIT || it.kind == EventKind.JUPITER_MOON_EVENT }
+        assertTrue(jupiter.isNotEmpty() && jupiter.all { it.date <= limit })
+        assertTrue(events.any { it.kind == EventKind.PLANET_STATION })
+        val transit = events.first { it.kind == EventKind.GREAT_RED_SPOT_TRANSIT }
+        assertTrue(EventsGroup.JUPITER.contains(transit) && !EventsGroup.PLANETS.contains(transit))
+        val station = events.first { it.kind == EventKind.PLANET_STATION }
+        assertTrue(EventsGroup.PLANETS.contains(station) && !EventsGroup.JUPITER.contains(station))
+        // The card on the Tonight screen leaves the dense Jupiter events out.
+        assertTrue(upcomingEvents(events, now).none { it in jupiter })
+        // A different Great Red Spot is another calendar.
+        val other = GreatRedSpot.create(10.0, now, 0.0)
+        assertNotEquals(result.key, EventsCalculator.key(context, now, checkNotNull(other)))
     }
 
     @Test
@@ -131,8 +150,9 @@ class EventsPlanningTest {
         val plan = EventsPlanner.plan(shower, context)
         val radiant = assertNotNull(plan.radiant)
         val frame = assertNotNull(plan.meteorFrame)
-        assertEquals(EventsPlanner.METEOR_OFFSET_DEGREES, radiant.angularSeparation(frame), 0.01)
-        assertTrue(frame.altitude > 0)
+        // The radiant here includes refraction and the frame is the engine's geometric direction: up to 0.1° apart at 10°.
+        assertEquals(EventsPlanner.METEOR_OFFSET_DEGREES, radiant.angularSeparation(frame), 0.15)
+        assertTrue(frame.altitude > 25)
     }
 
     @Test

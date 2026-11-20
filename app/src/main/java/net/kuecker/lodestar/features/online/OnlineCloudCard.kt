@@ -63,7 +63,8 @@ internal object CloudCardText {
 
 /**
  * "Clouds tonight": the hourly cloud cover from dusk to dawn of the night shown, total and the low, medium and high
- * layers, as a compact strip with a summary of the clear spells. Appears only while the Cloud forecast is switched on.
+ * layers, as a compact strip with a summary of the clear spells, and under it the night's dew, wind, fog and temperature
+ * with an hourly table (see [CloudConditions]). Appears only while the Cloud forecast is switched on.
  * [night] is the Tonight screen's own night (sunset to sunrise) at [place].
  */
 @Composable
@@ -117,6 +118,7 @@ private fun CloudForecastContent(forecast: CloudForecast, night: DateInterval, z
         if (slots.any { it.seconds > 3600.0 + 1.0 }) {
             Text(CloudCardText.COARSE, color = palette.tertiaryText, style = MaterialTheme.typography.bodySmall)
         }
+        CloudConditions(slots, timeText)
     }
     Text(
         CloudCardText.footnote(timeText(forecast.issuedAt)),

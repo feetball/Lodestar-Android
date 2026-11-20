@@ -589,6 +589,8 @@ class CatalogCataloguesTests {
         for (id in listOf("sun", "moon", "planet.mars", "planet.neptune", "special.galacticCenter", "special.ncp", "special.scp")) {
             assertEquals(Prominence.SHOWPIECE, obj(id).prominence, id)
         }
+        assertEquals(Prominence.NOTABLE, obj("planet.pluto").prominence, "Pluto is listed but no showpiece")
+        assertTrue(obj("planet.pluto").isListed)
         assertEquals(Prominence.SHOWPIECE, obj("star.hip32349").prominence, "Sirius")
         assertEquals(Prominence.PROMINENT, obj("star.hip11767").prominence, "Polaris, magnitude 2.0")
         for (star in catalog.objects.filter { it.id.startsWith("star.") }) {

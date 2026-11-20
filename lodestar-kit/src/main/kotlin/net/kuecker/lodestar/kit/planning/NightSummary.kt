@@ -24,7 +24,7 @@ import java.time.Instant
  * @property darknessIntervals The times of astronomical darkness during which the Moon is also below the
  * horizon, in time order.
  * @property milkyWayCore When the Galactic Centre can be photographed.
- * @property planets Mercury to Neptune, in that order.
+ * @property planets Mercury to Neptune, then Pluto, in that order.
  */
 data class NightSummary(
     val observer: Observer,
@@ -118,7 +118,8 @@ data class MilkyWayCoreVisibility(
  * A planet is visible while it is at least [minimumAltitude] above the horizon during astronomical
  * darkness; the Moon is ignored because planets are bright. Mercury and Venus stay close to the Sun
  * and are mostly seen in twilight, before or after the dark hours; [riseTransitSet] still shows when
- * they set or rise.
+ * they set or rise. Pluto is the exception to "bright": it is counted as visible like the others, but at
+ * magnitude 14 it takes a telescope or a long lens on a tracker, see [magnitude].
  *
  * @property body The planet.
  * @property riseTransitSet When the planet rises, culminates and sets within the night.

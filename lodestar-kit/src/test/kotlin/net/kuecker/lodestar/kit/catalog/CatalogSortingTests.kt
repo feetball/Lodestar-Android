@@ -109,9 +109,9 @@ class CatalogSortingTests {
         assertEquals(
             listOf(
                 "Sun", "Moon", "Venus", "Jupiter", "Negative", "Mars", "Mercury", "Bright", "Saturn", "Middle", "Twin A",
-                "Twin B", "Uranus", "Dim", "Neptune", "Faint Smudge",
+                "Twin B", "Uranus", "Dim", "Neptune", "Faint Smudge", "Pluto",
             ),
-            names.take(16),
+            names.take(17),
         )
         // Objects without a magnitude come last, ordered by name.
         val tail = sorted.takeLast(5)
@@ -135,14 +135,14 @@ class CatalogSortingTests {
         assertEquals(
             listOf(
                 "sun", "moon", "planet.venus", "planet.jupiter", "planet.mars", "planet.mercury", "planet.saturn",
-                "planet.uranus", "planet.neptune",
+                "planet.uranus", "planet.neptune", "planet.pluto",
             ),
             catalog.sorted(catalog.objects(ObjectGroup.SOLAR_SYSTEM), CatalogSortOrder.MAGNITUDE).map { it.id },
         )
         assertEquals(
             listOf(
-                "planet.jupiter", "planet.mars", "planet.mercury", "moon", "planet.neptune", "planet.saturn", "sun",
-                "planet.uranus", "planet.venus",
+                "planet.jupiter", "planet.mars", "planet.mercury", "moon", "planet.neptune", "planet.pluto",
+                "planet.saturn", "sun", "planet.uranus", "planet.venus",
             ),
             catalog.sorted(catalog.objects(ObjectGroup.SOLAR_SYSTEM), CatalogSortOrder.NAME).map { it.id },
         )

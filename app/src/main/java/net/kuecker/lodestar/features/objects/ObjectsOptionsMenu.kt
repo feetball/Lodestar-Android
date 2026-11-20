@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.NorthEast
 import androidx.compose.material.icons.outlined.Stars
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -32,8 +33,9 @@ import net.kuecker.lodestar.theme.LocalPalette
 
 /**
  * The top-bar menu that groups, orders and filters the Objects list. Its icon is filled when any option differs
- * from the default list; [hasLocation] enables the horizon filter, which needs an observer; [hasSkyline] says the
- * site has a recorded skyline, which the horizon filter then follows; [enabled] is off while a search is showing.
+ * from the default list; [hasLocation] enables the horizon filter and the tonight filter, which need an observer;
+ * [hasSkyline] says the site has a recorded skyline, which the horizon filter then follows and the tonight filter
+ * counts; [enabled] is off while a search is showing.
  */
 @Composable
 internal fun ObjectsOptionsMenu(
@@ -76,8 +78,12 @@ internal fun ObjectsOptionsMenu(
                     option.title,
                     option.icon,
                     isChosen = options.sortOrder == option,
-                    // A catalogue number only orders a catalogue.
-                    enabled = option != ObjectsSortOrder.NUMBER || options.catalogue.isCatalogue,
+                    // A catalogue number only orders a catalogue, and the hours tonight need an observer.
+                    enabled = when (option) {
+                        ObjectsSortOrder.NUMBER -> options.catalogue.isCatalogue
+                        ObjectsSortOrder.HOURS_TONIGHT -> hasLocation
+                        else -> true
+                    },
                 ) {
                     choose(options.copy(sortOrder = option))
                 }
@@ -92,6 +98,15 @@ internal fun ObjectsOptionsMenu(
                 enabled = hasLocation,
             ) {
                 choose(options.copy(showsOnlyAboveHorizon = !options.showsOnlyAboveHorizon))
+            }
+            MenuOption(
+                "Visible ≥ 1 h Tonight",
+                Icons.Outlined.Visibility,
+                isChosen = options.showsOnlyVisibleTonight,
+                isToggle = true,
+                enabled = hasLocation,
+            ) {
+                choose(options.copy(showsOnlyVisibleTonight = !options.showsOnlyVisibleTonight))
             }
             MenuOption(
                 "Popular Objects Only",

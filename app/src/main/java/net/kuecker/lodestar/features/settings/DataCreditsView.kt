@@ -129,11 +129,14 @@ internal data class DataCredit(
                 notice = "A work of the US Government. Valid from 2025 to 2030.",
             ),
             DataCredit(
-                id = "ephemeris", name = "VSOP87 and lunar theory", usedFor = "Planets and Moon",
+                id = "ephemeris", name = "VSOP87 and Meeus theories", usedFor = "Planets, Pluto and Moon",
                 author = "Bretagnon & Francou (IMCCE); Jean Meeus",
                 license = "Published scientific theories", licenseURL = null, sourceURL = null,
-                notice = "VSOP87 planetary theory (Astronomy & Astrophysics 202, 309, 1988) and the lunar theory of " +
-                    "Meeus, Astronomical Algorithms, 2nd ed. Planetary magnitudes follow Mallama & Hilton (2018).",
+                notice = "VSOP87 planetary theory (Astronomy & Astrophysics 202, 309, 1988), and the lunar theory and the " +
+                    "series for Pluto (valid from 1885 to 2099) of Meeus, Astronomical Algorithms, 2nd ed., chapters 47 " +
+                    "and 37. Planetary magnitudes follow Mallama & Hilton (2018). Pluto's magnitude, for Pluto and " +
+                    "Charon together, uses the phase coefficient of Binzel & Mulholland (Astronomical Journal 89, 1759, " +
+                    "1984).",
             ),
             DataCredit(
                 id = "imo", name = "IMO Meteor Shower Calendar 2026", usedFor = "Meteor showers",
@@ -233,7 +236,7 @@ private const val CREDIT_LINE =
         "143, 23, 2000). Constellation figures " +
         "and Milky Way outlines: d3-celestial by Olaf Frohn (BSD-3-Clause), the latter after Jose R. Vieira's " +
         "Milky Way Outline Catalog. Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey " +
-        "(public domain). Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); lunar theory after J. Meeus. " +
+        "(public domain). Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); Pluto and lunar theory after J. Meeus. " +
         "Night lights: NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP). " +
         "Maps: tiles and styles by OpenFreeMap, © OpenMapTiles, data © OpenStreetMap contributors (ODbL), drawn " +
         "with MapLibre Native (BSD-2-Clause). Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital " +

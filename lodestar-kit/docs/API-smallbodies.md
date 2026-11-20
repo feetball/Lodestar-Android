@@ -43,7 +43,7 @@ let magnitude = frame.currentMagnitude(of: vesta)
 let events = RiseSetCalculator.riseTransitSet(for: vesta, observer: observer, within: DateInterval(start: Date(), duration: 86_400))
 ```
 
-`Catalog.loadBundled()` is **unchanged** (9 solar-system objects, 11 452 objects in all): a catalog has small bodies only after
+`Catalog.loadBundled()` is **unchanged** (10 solar-system objects, 11 453 objects in all): a catalog has small bodies only after
 `withSmallBodies`/`addingSmallBodies`, so existing code and tests see no new objects until the app opts in.
 
 ## Model
@@ -127,7 +127,7 @@ SOHO sungrazers (`H` is meaningless for them) from outshining everything. It is 
 ## Catalog behaviour
 
 * **Where they are.** `objects` = bundled objects (unchanged, same order) + the small bodies, brightest estimate first (then name, id); `listedObjects` likewise.
-  `objects(group: SOLAR_SYSTEM)` = the 9 bodies + the *listed* small bodies, sorted by name; the other groups are the bundled lists. `smallBodies` is the
+  `objects(group: SOLAR_SYSTEM)` = the 10 bodies (Sun, Moon, planets, Pluto) + the *listed* small bodies, sorted by name; the other groups are the bundled lists. `smallBodies` is the
   small-body part of `objects`. The faint ones (obscure) are in `objects`, `objectWithID`, `search` and `sorted`, but not in `listedObjects`/`objects(group)`.
 * **Replace and add.** `withSmallBodies(list)` makes the small bodies exactly `list`: bodies with the same id count once, the **last one wins** (so
   `bundled + downloaded` lets fresh elements replace the bundled ones), and at most `maximumSmallBodyCount` distinct bodies are taken (the first
@@ -207,7 +207,7 @@ catalog is for search, the target picker, the detail screen and the aim screen. 
 | Android `ObjectDetailCalculator.current` / iOS `ObjectDetailCalculator.current(of:)`: `if position is SolarSystem` (distance, illuminated fraction) | silent | add a branch for small bodies: `frame.state(body)` gives `distanceAU`, `heliocentricDistanceAU`, `elongation`, `phaseAngle`, `apparentMagnitude`; no distance/illumination for a body without a state (`null`) |
 | Android `ObjectsPositionModel` / iOS `ObjectsPositionModel`: `if (obj.isSolarSystem) frame.currentMagnitude(obj)` | works | now true for comets and asteroids; show the magnitude as an estimate ("≈ 6.4") and "no brightness data" for `null` |
 | `TonightCalculator`, `SkySnapshot` deep-sky filters (`as? Fixed` / `case .fixed`, `isDeepSky`, group tests) | skip small bodies | intended: small bodies are not deep-sky targets; add them to Tonight with `NightPlanner.visibility({ frame -> frame.horizontal(obj, false) }, summary)` (one object, ≈ 1 ms) |
-| Anything keyed on `ObjectGroup.SOLAR_SYSTEM` lists (Objects tab "Solar System" section) | grows | the section now holds up to ~100–150 listed small bodies after the 9 bodies; split by `category` (planets / comets / asteroids) if a single section is too long |
+| Anything keyed on `ObjectGroup.SOLAR_SYSTEM` lists (Objects tab "Solar System" section) | grows | the section now holds up to ~100–150 listed small bodies after the 10 bodies; split by `category` (planets / comets / asteroids) if a single section is too long |
 | Mosaic: `MosaicRegion.fitting(obj)` | typed error | throws `MosaicError.ObjectNotFixed(id)` for a comet/asteroid, as for a planet (they move; no mosaic of them); the Mosaic screen should not offer them |
 | Aim target picker, favourites, search UI | works | objects are ordinary `CelestialObject`s; the identifier is the key |
 

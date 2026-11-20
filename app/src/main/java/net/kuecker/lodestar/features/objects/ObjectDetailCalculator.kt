@@ -37,7 +37,6 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.min
 
 /** The astronomy behind the object detail screen. Pure, so it can run on any thread. */
 internal object ObjectDetailCalculator {
@@ -286,32 +285,15 @@ internal object ObjectDetailCalculator {
     }
 
     /**
-     * How the Moon affects the object: now while the sky is dark, otherwise at the object's best time tonight.
+     * Where the Moon is relative to the object: now while the sky is dark, otherwise at the object's best time tonight.
      *
-     * The impact is a rule of thumb from the Moon's illuminated fraction and its distance from the object.
+     * [ObjectMoonGeometry.assess] turns it into a level for the user's filter.
      */
     fun moonConditions(obj: CelestialObject, observer: Observer, night: ObjectDetailNight, now: Instant): ObjectDetailMoonConditions? {
         if (obj.category == ObjectCategory.SUN || obj.category == ObjectCategory.MOON) return null
         val isDark = night.darkness?.let { now in it } ?: false
         val date = if (isDark) now else (night.bestInDarkness?.date ?: now)
-        val frame = SkyFrame(date, observer)
-        val moon = frame.horizontal(SolarSystemBody.MOON, false)
-        val separation = frame.horizontal(obj, false).angularSeparation(moon)
-        val illuminatedFraction = frame.state(SolarSystemBody.MOON).illuminatedFraction ?: 0.0
-        val impact = moonImpact(moon.altitude, separation, illuminatedFraction)
-        return ObjectDetailMoonConditions(date, date == now, separation, illuminatedFraction, impact)
-    }
-
-    private fun moonImpact(moonAltitude: Double, separation: Double, illuminatedFraction: Double): ObjectDetailMoonConditions.Impact {
-        if (!(moonAltitude > 0)) return ObjectDetailMoonConditions.Impact.MOON_DOWN
-        // Moonlight scatters across the whole sky but is strongest near the Moon.
-        val proximity = min(max(1 - separation / 120, 0.25), 1.0)
-        val effect = illuminatedFraction * proximity
-        return when {
-            effect >= 0.5 -> ObjectDetailMoonConditions.Impact.SEVERE
-            effect >= 0.2 -> ObjectDetailMoonConditions.Impact.MODERATE
-            else -> ObjectDetailMoonConditions.Impact.MINOR
-        }
+        return ObjectDetailMoonConditions(date, date == now, ObjectMoonGeometry.of(obj, observer, date))
     }
 
     /** The most hour labels the time axis gets. */

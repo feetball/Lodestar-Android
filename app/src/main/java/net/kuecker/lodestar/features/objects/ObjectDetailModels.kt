@@ -155,18 +155,20 @@ internal data class ObjectDetailNight(
         ).sortedBy { it.date }
 }
 
-/** How much the Moon is likely to disturb a shot of the object. */
+/**
+ * Where the Moon is relative to the object. How much it disturbs a shot depends on the user's filter, so the level
+ * is assessed where it is shown ([ObjectMoonGeometry.assess]), not stored here.
+ */
 internal data class ObjectDetailMoonConditions(
     /** The instant the conditions were evaluated for. */
     val date: Instant,
     /** Whether [date] is the present moment (otherwise it is the object's best time tonight). */
     val isNow: Boolean,
-    /** Angular distance between the object and the Moon, in degrees. */
-    val separation: Double,
-    val illuminatedFraction: Double,
-    val impact: Impact,
+    val geometry: ObjectMoonGeometry,
 ) {
-    enum class Impact { MOON_DOWN, MINOR, MODERATE, SEVERE }
+    /** Angular distance between the object and the Moon, in degrees. */
+    val separation: Double get() = geometry.separation
+    val illuminatedFraction: Double get() = geometry.illuminatedFraction
 }
 
 /** Everything the detail screen computes for an object and an observer. */

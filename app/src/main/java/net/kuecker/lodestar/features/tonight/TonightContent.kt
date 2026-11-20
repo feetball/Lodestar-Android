@@ -36,6 +36,7 @@ import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.foundation.timeIntervalSince
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.model.ObserverContext
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.LocalAppModel
@@ -112,8 +113,10 @@ internal fun TonightContent(
 
     // Works the night out off the main thread; another observer, another night or a catalog that has just arrived
     // starts a new computation.
-    LaunchedEffect(context, choice, catalog) {
-        keepReportFresh(app, TonightNightKey(context, choice), catalog) { latestReport = it }
+    // A new filter ranks the targets afresh.
+    val filter = app.settings.imagingFilter
+    LaunchedEffect(context, choice, catalog, filter) {
+        keepReportFresh(app, TonightNightKey(context, choice), catalog, filter) { latestReport = it }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -189,9 +192,15 @@ private fun isSameDay(first: Instant, second: Instant, zone: ZoneId): Boolean =
  * Works the night out on a background thread and hands each result to [publish] on the calling (main) thread. For
  * "tonight" it keeps going: once the night is over the next one becomes tonight.
  */
-private suspend fun keepReportFresh(app: AppModel, key: TonightNightKey, catalog: Catalog?, publish: (TonightReport) -> Unit) {
+private suspend fun keepReportFresh(
+    app: AppModel,
+    key: TonightNightKey,
+    catalog: Catalog?,
+    filter: ImagingFilter,
+    publish: (TonightReport) -> Unit,
+) {
     while (true) {
-        val input = TonightInput(key, app.clock.now, catalog)
+        val input = TonightInput(key, app.clock.now, catalog, filter)
         val computed = withContext(Dispatchers.Default) { TonightCalculator.report(input) }
         currentCoroutineContext().ensureActive()
         publish(computed)

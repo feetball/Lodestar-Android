@@ -1,9 +1,11 @@
 package net.kuecker.lodestar.features.tonight
 
+import net.kuecker.lodestar.features.objects.ObjectMoonAssessment
 import net.kuecker.lodestar.features.smallbodies.SmallBodyListEntry
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.kit.planning.NightSummary
 import net.kuecker.lodestar.model.ObserverContext
 import java.time.Instant
@@ -28,6 +30,8 @@ internal class TonightInput(
     val now: Instant,
     /** The sky catalog, or `null` while it is still loading. */
     val catalog: Catalog?,
+    /** The filter in front of the sensor, which relaxes the Moon's weight for emission nebulae. */
+    val imagingFilter: ImagingFilter = ImagingFilter.NONE,
 )
 
 /** A deep-sky object ranked for the night. */
@@ -43,6 +47,8 @@ internal data class TonightTarget(
     val hoursAboveMinimum: Double,
     /** The line under the name in place of the catalog description: a comet's or asteroid's magnitude estimate and elongation. */
     val note: String? = null,
+    /** What the Moon does to the target at [peakTime], with the user's filter; `null` for comets and asteroids. */
+    val moon: ObjectMoonAssessment? = null,
     /**
      * With a recorded skyline, the hours of darkness the object is above it and at least
      * [TonightCalculator.minimumTargetAltitude] high (the same number as [hoursAboveMinimum], named for the skyline);

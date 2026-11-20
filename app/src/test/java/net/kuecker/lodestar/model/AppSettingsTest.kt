@@ -1,10 +1,12 @@
 package net.kuecker.lodestar.model
 
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.planning.ImagingFilter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class AppSettingsTest {
     @Test
@@ -13,6 +15,7 @@ class AppSettingsTest {
         val settings = AppSettings(
             hasCompletedOnboarding = true, locationSource = LocationSource.Site(site.id), savedSites = listOf(site),
             headingSource = HeadingSource.GYRO_LOCK, focalLength = 14.0, pixelPitch = 3.76,
+            imagingFilter = ImagingFilter.DUAL_NARROWBAND,
             polarErrorDegrees = 2.5, exposureISO = 1600,
             nightMode = NightModeSetting.ON, coordinateStyle = CoordinateStyle.DECIMAL,
             favoriteObjectIDs = listOf("dso.M31"), recentObjectIDs = listOf("planet.mars", "moon"),
@@ -30,6 +33,23 @@ class AppSettingsTest {
         assertEquals(4.0, decoded.aperture)
         assertEquals(NightModeSetting.AUTOMATIC, decoded.nightMode)
         assertEquals(false, decoded.keepScreenAwake)
+    }
+
+    @Test
+    fun theImagingFilterDefaultsToNoneAndAnUnknownOneFallsBack() {
+        assertEquals(ImagingFilter.NONE, AppSettings().imagingFilter)
+        // Settings stored before the filter existed have no key.
+        assertEquals(ImagingFilter.NONE, AppSettings.decode("""{"focalLength":50}""").imagingFilter)
+        assertEquals(ImagingFilter.NONE, AppSettings.decode("""{"imagingFilter":"polarising"}""").imagingFilter)
+        assertEquals(ImagingFilter.NONE, AppSettings.decode("""{"imagingFilter":3}""").imagingFilter)
+        for (filter in ImagingFilter.entries) {
+            val stored = AppSettings.encode(AppSettings(imagingFilter = filter))
+            assertTrue(stored.contains("\"imagingFilter\":\"${filter.rawValue}\""), stored)
+            assertEquals(filter, AppSettings.decode(stored).imagingFilter)
+        }
+        // A bad filter does not cost the other settings.
+        val decoded = AppSettings.decode("""{"imagingFilter":"x","aperture":4.0}""")
+        assertEquals(4.0, decoded.aperture)
     }
 
     @Test

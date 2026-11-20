@@ -19,7 +19,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
 - **Objects** — 9,000+ stars and 690+ galaxies, nebulae and clusters (all 110 Messier objects), the planets, the
   Moon and the Milky Way core; search, group, sort (also by the hours an object is visible tonight above your
   recorded skyline) and filter (visible for at least an hour tonight), favourites, custom RA/Dec targets; hour
-  angle and time to the meridian transit, rise/set, altitude chart, framing and longest exposure for each object.
+  angle and time to the meridian transit, rise/set, altitude chart, framing, longest exposure and filter-aware Moon
+  advice for each object (a light-pollution or narrowband filter set in Settings relaxes the Moon warning for
+  emission nebulae; Tonight's best targets weigh the Moon the same way).
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
   targets ranked by the hours they stay clear of your skyline, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
 - **Events calendar** — meteor showers (with hourly rates, the radiant's altitude from your site, the best camera

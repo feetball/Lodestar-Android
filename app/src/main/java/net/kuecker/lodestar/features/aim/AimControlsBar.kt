@@ -11,12 +11,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material.icons.outlined.CenterFocusStrong
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Replay
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.VideocamOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -44,7 +46,7 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * The buttons of the screen: target, align, mosaic, camera, night mode and zoom, in a row or, in a wide HUD, in a
+ * The buttons of the screen: target, align, mosaic, time, camera, night mode and zoom, in a row or, in a wide HUD, in a
  * column (`axis` = vertical).
  */
 @Composable
@@ -80,7 +82,12 @@ internal fun AimControlsBar(
             AimControl(
                 title = "Align", icon = Icons.Outlined.CenterFocusStrong, isOn = isAligned, minHeight = buttonHeight,
                 label = "Align on a star", value = if (isAligned) "Aligned" else "Not aligned",
-                modifier = slot, onClick = { onSheet(AimSheet.ALIGNMENT) },
+                modifier = slot,
+                // Aligning compares the sky with the phone's sensors now: the live sky is the one to align on.
+                onClick = {
+                    model.endPreview()
+                    onSheet(AimSheet.ALIGNMENT)
+                },
             )
         },
         { slot ->
@@ -89,6 +96,17 @@ internal fun AimControlsBar(
                 isOn = mosaic.isActive, minHeight = buttonHeight,
                 label = "Mosaic planner", value = if (mosaic.isActive) mosaic.progressText else "Off",
                 modifier = slot, onClick = { onSheet(AimSheet.MOSAIC) },
+            )
+        },
+        { slot ->
+            val moment = model.previewMoment()
+            AimControl(
+                title = "Time", icon = if (moment != null) Icons.Filled.Schedule else Icons.Outlined.Schedule,
+                isOn = moment != null, minHeight = buttonHeight,
+                label = "Time preview",
+                value = moment?.let { "Previewing ${it.day?.plus(" ") ?: ""}${it.time}" } ?: if (model.isTimeBarOpen) "Open" else "Live",
+                hint = "Shows or hides the time bar, to preview the sky at another time.",
+                modifier = slot, onClick = model::toggleTimeBar,
             )
         },
         { slot ->
@@ -120,13 +138,13 @@ internal fun AimControlsBar(
         if (showsMount) { slot -> MountAimButton(buttonHeight, slot) } else null,
     )
     if (axis == Orientation.Horizontal) {
-        // Closer together when the Mount button makes it seven.
-        val spacing = if (buttons.size > 6) 4.dp else 8.dp
+        // Closer together as buttons join: the Time button makes seven, the Mount button eight.
+        val spacing = if (buttons.size > 7) 2.dp else if (buttons.size > 6) 4.dp else 8.dp
         Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
             for (button in buttons) button(Modifier.weight(1f))
         }
     } else {
-        // Six or seven buttons would be taller than a phone clamped sideways: two columns.
+        // Seven or eight buttons would be taller than a phone clamped sideways: two columns.
         Column(modifier.width(WIDE_COLUMN_WIDTH), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (pair in buttons.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

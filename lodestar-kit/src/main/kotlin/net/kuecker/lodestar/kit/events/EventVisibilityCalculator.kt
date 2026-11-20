@@ -68,12 +68,35 @@ internal class EventVisibilityCalculator(
                 night(event.date, DarknessLevel.SUNSET) { it.horizontal(SolarSystemBody.MOON, false) }
             is EventDetails.LunarEclipse -> lunarEclipse(details.eclipse)
             is EventDetails.SolarEclipse -> solarEclipse(details.eclipse)
+            is EventDetails.GreatRedSpotTransit -> jupiterPhenomenon(event.date, details.transit.wellPlaced)
+            is EventDetails.JupiterMoonEvent -> {
+                val margin = GalileanMoons.accuracyMinutes * 60
+                jupiterPhenomenon(
+                    event.date,
+                    DateInterval(event.date.addingTimeInterval(-margin), event.date.addingTimeInterval(margin)),
+                )
+            }
+            is EventDetails.PlanetStation -> planet(event.date, details.station.planet)
             is EventDetails.EarthApsis -> null
             is EventDetails.Season -> null
         }
 
     private fun planet(date: Instant, body: SolarSystemBody): EventVisibility =
         night(date, DarknessLevel.CIVIL, fixed(ConjunctionTarget.Body(body), JulianDate(date)))
+
+    /**
+     * Jupiter's visibility for a phenomenon that lasts a short while around [date]: the viewing window of the night
+     * cut down to [span], so that the event counts as observable only when Jupiter is up and the sky dark while it
+     * happens (these events come all day, and the night's window alone would call them all visible).
+     */
+    private fun jupiterPhenomenon(date: Instant, span: DateInterval): EventVisibility {
+        val visibility = planet(date, SolarSystemBody.JUPITER)
+        val window = visibility.bestWindow ?: return visibility
+        val shared = window.intersection(span)
+            ?: return visibility.copy(bestWindow = null, bestTime = null)
+        val best = if (date in shared) date else if (date < shared.start) shared.start else shared.end
+        return visibility.copy(bestWindow = shared, bestTime = best)
+    }
 
     private fun conjunction(date: Instant, conjunction: Conjunction): EventVisibility {
         val jd = JulianDate(date)

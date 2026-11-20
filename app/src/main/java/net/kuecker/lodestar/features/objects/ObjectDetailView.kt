@@ -110,6 +110,7 @@ private fun ObjectDetailContent(obj: CelestialObject, onBack: () -> Unit) {
             if (context != null) {
                 ObjectDetailNowCard(snapshot?.current, app.settings.coordinateStyle)
                 ObjectDetailTonightCard(obj, snapshot?.night, snapshot?.current?.date, context.timeZone)
+                if (obj.id == JUPITER_ID) JupiterMoonsCard(snapshot?.current?.date, context)
             } else {
                 NeedsLocationView(Modifier.fillMaxWidth().card(palette).heightIn(min = 300.dp))
             }
@@ -120,6 +121,9 @@ private fun ObjectDetailContent(obj: CelestialObject, onBack: () -> Unit) {
         }
     }
 }
+
+/** The catalog identifier of Jupiter, whose screen carries the "Moons Tonight" card. */
+private const val JUPITER_ID = "planet.jupiter"
 
 /** How often the object's position and the night's data are refreshed while the screen is open. */
 private const val REFRESH_INTERVAL_MS = 30_000L

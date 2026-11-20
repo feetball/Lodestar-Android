@@ -243,6 +243,10 @@ object ConjunctionFinder {
         return vectors
     }
 
+    /**
+     * The VSOP87 series of one of the conjunction planets. The Sun, the Moon and Pluto (which has no VSOP87 series)
+     * are never passed; they map to the Earth's only to keep the `when` exhaustive.
+     */
     private fun theory(body: SolarSystemBody): PlanetaryTheory.Planet =
         when (body) {
             SolarSystemBody.MERCURY -> PlanetaryTheory.Planet.MERCURY
@@ -252,7 +256,7 @@ object ConjunctionFinder {
             SolarSystemBody.SATURN -> PlanetaryTheory.Planet.SATURN
             SolarSystemBody.URANUS -> PlanetaryTheory.Planet.URANUS
             SolarSystemBody.NEPTUNE -> PlanetaryTheory.Planet.NEPTUNE
-            SolarSystemBody.SUN, SolarSystemBody.MOON -> PlanetaryTheory.Planet.EARTH
+            SolarSystemBody.SUN, SolarSystemBody.MOON, SolarSystemBody.PLUTO -> PlanetaryTheory.Planet.EARTH
         }
 
     /**

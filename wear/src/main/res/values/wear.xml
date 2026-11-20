@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lets the phone find the watches that have the Aim page (AimWristMessage.CAPABILITY in lodestar-kit). -->
+    <string-array name="android_wear_capabilities">
+        <item>lodestar_wear_aim</item>
+    </string-array>
+</resources>

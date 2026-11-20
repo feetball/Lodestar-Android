@@ -5,7 +5,10 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.math.min
 
-/** One stretch of the night with its cloud cover in percent: the time from a forecast time to the next one, cut to the night. */
+/**
+ * One stretch of the night with its cloud cover in percent and the weather of its forecast time (see [CloudHour]): the
+ * time from a forecast time to the next one, cut to the night.
+ */
 class CloudSlot(
     val start: Instant,
     val end: Instant,
@@ -13,10 +16,95 @@ class CloudSlot(
     val low: Double,
     val medium: Double,
     val high: Double,
+    val temperature: Double? = null,
+    val dewPoint: Double? = null,
+    val humidity: Double? = null,
+    val windSpeed: Double? = null,
+    val windGust: Double? = null,
+    val windFromDirection: Double? = null,
+    val fog: Double? = null,
 ) {
     /** The length in seconds. */
     val seconds: Double get() = Duration.between(start, end).toMillis() / 1000.0
+
+    /** Air temperature minus dew point in °C, never below 0; `null` when either is missing. */
+    val dewPointSpread: Double? get() = ForecastNight.dewPointSpread(temperature, dewPoint)
 }
+
+/**
+ * Lens fogging: the dew-point spread (air temperature minus dew point) is below [ForecastNight.dewSpreadBelow] °C.
+ *
+ * @property from The start of the first slot of the night with such a spread.
+ * @property minimumSpread The smallest spread of the night in °C.
+ */
+class DewWarning(val from: Instant, val minimumSpread: Double) {
+    /** The spread gets below [ForecastNight.dewVeryLikelyBelow] °C. */
+    val isVeryLikely: Boolean get() = minimumSpread < ForecastNight.dewVeryLikelyBelow
+}
+
+/** How much the wind matters for a long exposure, by the strongest sustained wind of the night. */
+enum class WindLevel(val rawValue: String) {
+    /** Under [ForecastNight.windBreezyFrom] m/s. */
+    CALM("calm"),
+
+    /** From [ForecastNight.windBreezyFrom] m/s: long exposures may shake. */
+    BREEZY("breezy"),
+
+    /** From [ForecastNight.windWindyFrom] m/s: weigh the tripod down. */
+    WINDY("windy"),
+
+    /** From [ForecastNight.windStrongFrom] m/s. */
+    STRONG("strong"),
+}
+
+/**
+ * The wind of the night.
+ *
+ * @property maximum The strongest sustained wind in m/s.
+ * @property gust The strongest gust in m/s, when the forecast has gusts for the night.
+ * @property fromDirection Where the strongest wind blows from, in degrees clockwise from north, when known.
+ */
+class WindSummary(val maximum: Double, val gust: Double?, val fromDirection: Double?) {
+    /** The level of [maximum]. */
+    val level: WindLevel
+        get() = when {
+            maximum >= ForecastNight.windStrongFrom -> WindLevel.STRONG
+            maximum >= ForecastNight.windWindyFrom -> WindLevel.WINDY
+            maximum >= ForecastNight.windBreezyFrom -> WindLevel.BREEZY
+            else -> WindLevel.CALM
+        }
+}
+
+/**
+ * Fog likely during the night: the forecast times with a fog area fraction of at least [ForecastNight.fogFrom] percent.
+ *
+ * @property from The start of the first such slot.
+ * @property seconds The time of the night they cover together.
+ */
+class FogSummary(val from: Instant, val seconds: Double)
+
+/** The air temperature range of the night in °C. */
+class TemperatureRange(val minimum: Double, val maximum: Double)
+
+/** One row of the night's hourly table: the forecast of one slot ([time] is the start of the slot). */
+class NightHour(
+    val time: Instant,
+    val cloud: Double,
+    val temperature: Double?,
+    val dewPointSpread: Double?,
+    val windSpeed: Double?,
+    val windGust: Double?,
+    val humidity: Double?,
+)
+
+/** What the forecast says about the night besides the clouds. Every part is `null` (or empty) where the forecast has no data. */
+class NightConditions(
+    val dew: DewWarning?,
+    val wind: WindSummary?,
+    val fog: FogSummary?,
+    val temperature: TemperatureRange?,
+    val hourly: List<NightHour>,
+)
 
 /** What the night's cloud forecast says, in numbers and in words. Pure. */
 object ForecastNight {
@@ -28,6 +116,24 @@ object ForecastNight {
 
     /** The shortest clear stretch worth naming, in seconds (shorter nights name half their length). */
     const val minimumClearSpellSeconds = 2 * 3600.0
+
+    /** The dew-point spread (°C) below which dew forms on a lens. */
+    const val dewSpreadBelow = 2.0
+
+    /** A spread (°C) below this makes lens fogging very likely. */
+    const val dewVeryLikelyBelow = 1.0
+
+    /** The sustained wind (m/s) from which long exposures may shake. */
+    const val windBreezyFrom = 5.0
+
+    /** The sustained wind (m/s) from which the tripod needs weight. */
+    const val windWindyFrom = 8.0
+
+    /** The sustained wind (m/s) that counts as strong. */
+    const val windStrongFrom = 12.0
+
+    /** A fog area fraction (percent) from which a slot counts as foggy. */
+    const val fogFrom = 50.0
 
     private val hour: Duration = Duration.ofHours(1)
 
@@ -46,7 +152,13 @@ object ForecastNight {
             val start = maxOf(entry.time, nightStart)
             val end = minOf(next, nightEnd)
             if (!end.isAfter(start)) continue
-            slots.add(CloudSlot(start, end, entry.total, entry.low, entry.medium, entry.high))
+            slots.add(
+                CloudSlot(
+                    start, end, entry.total, entry.low, entry.medium, entry.high,
+                    entry.temperature, entry.dewPoint, entry.humidity, entry.windSpeed, entry.windGust,
+                    entry.windFromDirection, entry.fog,
+                ),
+            )
         }
         return slots
     }
@@ -57,6 +169,83 @@ object ForecastNight {
         if (seconds <= 0) return 0.0
         return slots.sumOf { it.total * it.seconds } / seconds
     }
+
+    /** Air temperature minus dew point in °C, never below 0 (a dew point above the air is rounding); `null` when either is `null`. */
+    fun dewPointSpread(temperature: Double?, dewPoint: Double?): Double? =
+        if (temperature != null && dewPoint != null) maxOf(temperature - dewPoint, 0.0) else null
+
+    /**
+     * Lens fogging in [slots]: from the first slot whose dew-point spread is below [dewSpreadBelow] °C, with the smallest
+     * spread of the night. `null` when the spread stays at [dewSpreadBelow] °C or more, or the forecast has no dew point.
+     */
+    fun dew(slots: List<CloudSlot>): DewWarning? {
+        var from: Instant? = null
+        var minimum = Double.POSITIVE_INFINITY
+        for (slot in slots) {
+            val spread = slot.dewPointSpread ?: continue
+            if (spread < dewSpreadBelow && from == null) from = slot.start
+            if (spread < minimum) minimum = spread
+        }
+        val start = from ?: return null
+        return DewWarning(start, minimum)
+    }
+
+    /**
+     * The wind in [slots]: the strongest sustained wind (with where it blows from) and the strongest gust. `null` when
+     * the forecast has no wind speed for the night; the gust is `null` when it has no gusts.
+     */
+    fun wind(slots: List<CloudSlot>): WindSummary? {
+        var maximum: Double? = null
+        var direction: Double? = null
+        var gust: Double? = null
+        for (slot in slots) {
+            val speed = slot.windSpeed
+            if (speed != null && (maximum == null || speed > maximum)) {
+                maximum = speed
+                direction = slot.windFromDirection
+            }
+            val slotGust = slot.windGust
+            if (slotGust != null && (gust == null || slotGust > gust)) gust = slotGust
+        }
+        val strongest = maximum ?: return null
+        return WindSummary(strongest, gust, direction)
+    }
+
+    /** The fog in [slots]: the slots with a fog area fraction of at least [fogFrom] percent. `null` when there are none. */
+    fun fog(slots: List<CloudSlot>): FogSummary? {
+        var from: Instant? = null
+        var seconds = 0.0
+        for (slot in slots) {
+            val fog = slot.fog ?: continue
+            if (fog < fogFrom) continue
+            if (from == null) from = slot.start
+            seconds += slot.seconds
+        }
+        val start = from ?: return null
+        return FogSummary(start, seconds)
+    }
+
+    /** The lowest and highest air temperature in [slots]. `null` when the forecast has no temperature for the night. */
+    fun temperature(slots: List<CloudSlot>): TemperatureRange? {
+        var minimum: Double? = null
+        var maximum: Double? = null
+        for (slot in slots) {
+            val value = slot.temperature ?: continue
+            if (minimum == null || value < minimum) minimum = value
+            if (maximum == null || value > maximum) maximum = value
+        }
+        if (minimum == null || maximum == null) return null
+        return TemperatureRange(minimum, maximum)
+    }
+
+    /** One row per slot of [slots], for the hourly table. */
+    fun hourly(slots: List<CloudSlot>): List<NightHour> = slots.map {
+        NightHour(it.start, it.total, it.temperature, it.dewPointSpread, it.windSpeed, it.windGust, it.humidity)
+    }
+
+    /** Everything the forecast says about the night in [slots] besides the clouds. */
+    fun conditions(slots: List<CloudSlot>): NightConditions =
+        NightConditions(dew(slots), wind(slots), fog(slots), temperature(slots), hourly(slots))
 
     /** A stretch of clear sky, from [start] to [end]. */
     class ClearSpell(val start: Instant, val end: Instant) {

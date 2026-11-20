@@ -129,11 +129,14 @@ internal data class DataCredit(
                 notice = "A work of the US Government. Valid from 2025 to 2030.",
             ),
             DataCredit(
-                id = "ephemeris", name = "VSOP87 and lunar theory", usedFor = "Planets and Moon",
+                id = "ephemeris", name = "VSOP87 and Meeus theories", usedFor = "Planets, Pluto and Moon",
                 author = "Bretagnon & Francou (IMCCE); Jean Meeus",
                 license = "Published scientific theories", licenseURL = null, sourceURL = null,
-                notice = "VSOP87 planetary theory (Astronomy & Astrophysics 202, 309, 1988) and the lunar theory of " +
-                    "Meeus, Astronomical Algorithms, 2nd ed. Planetary magnitudes follow Mallama & Hilton (2018).",
+                notice = "VSOP87 planetary theory (Astronomy & Astrophysics 202, 309, 1988), and the lunar theory and the " +
+                    "series for Pluto (valid from 1885 to 2099) of Meeus, Astronomical Algorithms, 2nd ed., chapters 47 " +
+                    "and 37. Planetary magnitudes follow Mallama & Hilton (2018). Pluto's magnitude, for Pluto and " +
+                    "Charon together, uses the phase coefficient of Binzel & Mulholland (Astronomical Journal 89, 1759, " +
+                    "1984).",
             ),
             DataCredit(
                 id = "imo", name = "IMO Meteor Shower Calendar 2026", usedFor = "Meteor showers",
@@ -144,6 +147,29 @@ internal data class DataCredit(
                     "the meteor showers are entered by hand from the 2026 Meteor Shower Calendar (IMO INFO 3-25, " +
                     "© International Meteor Organization). The radiant drift rates are least-squares fits to the " +
                     "calendar's radiant tables.",
+            ),
+            DataCredit(
+                id = "grs", name = "Great Red Spot longitude, 2026", usedFor = "Great Red Spot transits",
+                author = "Sky & Telescope, from the JUPOS project",
+                license = "Published data, cited with credit", licenseURL = null,
+                sourceURL = "https://skyandtelescope.org/observing/interactive-sky-watching-tools/" +
+                    "transit-times-of-jupiters-great-red-spot/",
+                notice = "The default longitude of the Great Red Spot in Jupiter's System II, 91° on June 1, 2026 and " +
+                    "drifting 1.75° a month, is the one Sky & Telescope's online tool “Transit Times of Jupiter's " +
+                    "Great Red Spot” assumes, from trends noted by JUPOS. Jupiter's central meridians and the " +
+                    "positions of its four large moons follow Meeus, Astronomical Algorithms, 2nd ed., chapters 43 " +
+                    "and 44. You can enter your own longitude in Settings.",
+            ),
+            DataCredit(
+                id = "black-marble", name = "NASA Black Marble night lights (VIIRS, Suomi NPP)",
+                usedFor = "Sky quality (Bortle estimate, darkest direction, horizon glow)",
+                author = "NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP)",
+                license = "NASA open data, credit requested", licenseURL = null,
+                sourceURL = "https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api",
+                notice = "The 2016 composite of the VIIRS day/night band, from NASA's Global Imagery Browse Services " +
+                    "(layer VIIRS_Black_Marble). Changes for Lodestar: the land's base texture was removed and the light " +
+                    "averaged into 0.1° cells of 16 levels; the app estimates the sky's brightness from them. It is an " +
+                    "estimate from satellite imagery, not a sky measurement. NASA does not endorse Lodestar.",
             ),
             DataCredit(
                 id = "maplibre", name = "MapLibre Native", usedFor = "Drawing the site map",
@@ -198,11 +224,35 @@ internal data class DataCredit(
                     "Norway does not endorse Lodestar.",
             ),
             DataCredit(
+                id = "terrain-tiles", name = "Terrain Tiles (AWS Open Data)",
+                usedFor = "Terrain horizons (optional download)",
+                author = "Mapzen, a Linux Foundation project, and the surveys credited below",
+                license = "Public domain and open licences, see the attribution page",
+                licenseURL = "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+                sourceURL = "https://registry.opendata.aws/terrain-tiles/",
+                notice = "Elevation tiles are downloaded only if you switch on Terrain horizons in Settings ▸ Online Data " +
+                    "and ask a site for its terrain horizon. They are deleted after the calculation; only the skyline " +
+                    "worked out from them is kept. The tile set is hosted on AWS Open Data and managed by Mapzen, a " +
+                    "Linux Foundation project. Its sources require this attribution: ArcticDEM terrain data DEM(s) " +
+                    "were created from DigitalGlobe, Inc., imagery and funded under National Science Foundation " +
+                    "awards 1043681, 1559691, and 1542736; Australia terrain data © Commonwealth of Australia " +
+                    "(Geoscience Australia) 2017; Austria terrain data © offene Daten Österreichs – Digitales " +
+                    "Geländemodell (DGM) Österreich; Canada terrain data contains information licensed under the Open " +
+                    "Government Licence – Canada; Europe terrain data produced using Copernicus data and information " +
+                    "funded by the European Union - EU-DEM layers; Global ETOPO1 terrain data U.S. National Oceanic " +
+                    "and Atmospheric Administration; Mexico terrain data source: INEGI, Continental relief, 2016; New " +
+                    "Zealand terrain data Copyright 2011 Crown copyright (c) Land Information New Zealand and the New " +
+                    "Zealand Government (All rights reserved); Norway terrain data © Kartverket; United Kingdom " +
+                    "terrain data © Environment Agency copyright and/or database right 2015. All rights reserved; " +
+                    "United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the " +
+                    "U.S. Geological Survey.",
+            ),
+            DataCredit(
                 id = "android-libraries", name = "AndroidX and Kotlin", usedFor = "App framework",
                 author = "Google and JetBrains",
                 license = "Apache 2.0", licenseURL = "https://www.apache.org/licenses/LICENSE-2.0",
                 sourceURL = "https://developer.android.com/jetpack/androidx",
-                notice = "Android Jetpack (Compose, Activity, Lifecycle, CameraX, Core), the Kotlin standard library, " +
+                notice = "Android Jetpack (Compose, Activity, Lifecycle, CameraX, Core, ExifInterface), the Kotlin standard library, " +
                     "kotlinx.coroutines, kotlinx.serialization and the Material icons for Compose.",
             ),
         )
@@ -222,10 +272,13 @@ private const val CREDIT_LINE =
         "143, 23, 2000). Constellation figures " +
         "and Milky Way outlines: d3-celestial by Olaf Frohn (BSD-3-Clause), the latter after Jose R. Vieira's " +
         "Milky Way Outline Catalog. Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey " +
-        "(public domain). Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); lunar theory after J. Meeus. " +
+        "(public domain). Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); Pluto and lunar theory after J. Meeus. " +
+        "Night lights: NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP). " +
         "Maps: tiles and styles by OpenFreeMap, © OpenMapTiles, data © OpenStreetMap contributors (ODbL), drawn " +
         "with MapLibre Native (BSD-2-Clause). Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital " +
-        "elements: IAU Minor Planet Center; weather forecast from MET Norway (CC BY 4.0). Software: AndroidX and " +
+        "elements: IAU Minor Planet Center; weather forecast from MET Norway (CC BY 4.0); " +
+        "terrain elevation data from the AWS Open Data Terrain Tiles (SRTM and GMTED2010 courtesy of the " +
+        "U.S. Geological Survey, and the national sources credited under Terrain Tiles)" + ". Software: AndroidX and " +
         "Kotlin (Apache-2.0)."
 
 private val bsdLicense = listOf(

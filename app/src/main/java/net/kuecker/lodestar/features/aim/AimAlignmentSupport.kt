@@ -11,6 +11,7 @@ import net.kuecker.lodestar.kit.foundation.Observer
 import net.kuecker.lodestar.kit.foundation.SkyFrame
 import net.kuecker.lodestar.kit.pointing.AlignmentError
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
+import net.kuecker.lodestar.kit.pointing.AlignmentPointSeparation
 import net.kuecker.lodestar.shared.SkySnapshotBuilder
 import java.time.Instant
 
@@ -29,6 +30,8 @@ internal data class AimAlignmentRow(
     val candidate: AimAlignmentCandidate,
     /** Degrees from the camera's boresight; `null` while the sensors deliver nothing. */
     val separation: Double?,
+    /** The alignment point nearest to the candidate; `null` while there are no points. */
+    val nearest: AlignmentPointSeparation? = null,
 ) {
     val id: String get() = candidate.id
 }

@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -75,6 +76,9 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
     implementation(libs.work.runtime)
+    // The Wear OS data layer: the Aim page on a paired watch (see WearAimLink).
+    implementation(libs.play.services.wearable)
+    implementation(libs.androidx.fragment)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(kotlin("test-junit"))
 }

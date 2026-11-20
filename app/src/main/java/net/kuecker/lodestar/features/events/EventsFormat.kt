@@ -2,22 +2,28 @@ package net.kuecker.lodestar.features.events
 
 import android.text.format.DateFormat
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Adjust
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Brightness1
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.JoinInner
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.ui.graphics.vector.ImageVector
+import net.kuecker.lodestar.features.tonight.TonightFormat
+import net.kuecker.lodestar.kit.ephemeris.GalileanMoons
 import net.kuecker.lodestar.kit.events.AstronomicalEvent
 import net.kuecker.lodestar.kit.events.EclipseContact
 import net.kuecker.lodestar.kit.events.ElongationDirection
 import net.kuecker.lodestar.kit.events.EventDetails
 import net.kuecker.lodestar.kit.events.EventKind
 import net.kuecker.lodestar.kit.events.LocalSolarEclipseKind
+import net.kuecker.lodestar.kit.events.PlanetStationKind
 import net.kuecker.lodestar.kit.events.SeasonKind
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.formatting.formatDuration
@@ -29,6 +35,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** How much of the dark sky the Moon spoils at the peak of a meteor shower, from the Moon's lit fraction. */
 internal enum class MoonInterference(val adjective: String) {
@@ -63,6 +70,9 @@ internal object EventsFormat {
         EventKind.FULL_MOON_SPECIAL -> Icons.Outlined.Brightness1
         EventKind.LUNAR_ECLIPSE -> Icons.Outlined.Contrast
         EventKind.SOLAR_ECLIPSE -> Icons.Outlined.WbSunny
+        EventKind.GREAT_RED_SPOT_TRANSIT -> Icons.Outlined.RadioButtonChecked
+        EventKind.JUPITER_MOON_EVENT -> Icons.Outlined.Adjust
+        EventKind.PLANET_STATION -> Icons.Outlined.PauseCircle
     }
 
     // Dates
@@ -154,6 +164,23 @@ internal object EventsFormat {
                 "${eclipse.kind.displayName} · magnitude ${number(eclipse.umbralMagnitude, 2)} · greatest ${AppFormat.time(eclipse.greatest, zone)}"
             }
             is EventDetails.SolarEclipse -> solarSummary(details, zone)
+            is EventDetails.GreatRedSpotTransit -> {
+                val wellPlaced = TonightFormat.window(details.transit.wellPlaced, zone)
+                "Crosses the central meridian at ${AppFormat.time(event.date, zone)} · well placed $wellPlaced"
+            }
+            is EventDetails.JupiterMoonEvent -> {
+                val altitude = event.visibility?.altitude
+                listOfNotNull(
+                    "At ${AppFormat.time(event.date, zone)} (±${GalileanMoons.accuracyMinutes.roundToInt()} min)",
+                    altitude?.takeIf { it > 0 }?.let { "Jupiter ${radiantHeight(it)}" },
+                ).joinToString(" · ")
+            }
+            is EventDetails.PlanetStation ->
+                if (details.station.kind == PlanetStationKind.RETROGRADE_BEGINS) {
+                    "Starts to move west among the stars"
+                } else {
+                    "Moves east among the stars again"
+                }
         }
     }
 

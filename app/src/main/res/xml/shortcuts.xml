@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="torch"
+        android:enabled="true"
+        android:icon="@drawable/ic_system_torch"
+        android:shortcutShortLabel="@string/shortcut_torch_short"
+        android:shortcutLongLabel="@string/shortcut_torch_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="net.kuecker.lodestar"
+            android:targetClass="net.kuecker.lodestar.app.MainActivity">
+            <extra
+                android:name="net.kuecker.lodestar.system.ACTION"
+                android:value="torch" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="night"
+        android:enabled="true"
+        android:icon="@drawable/ic_system_night"
+        android:shortcutShortLabel="@string/shortcut_night_short"
+        android:shortcutLongLabel="@string/shortcut_night_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="net.kuecker.lodestar"
+            android:targetClass="net.kuecker.lodestar.app.MainActivity">
+            <extra
+                android:name="net.kuecker.lodestar.system.ACTION"
+                android:value="night.toggle" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="aim"
+        android:enabled="true"
+        android:icon="@drawable/ic_system_aim"
+        android:shortcutShortLabel="@string/shortcut_aim_short"
+        android:shortcutLongLabel="@string/shortcut_aim_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="net.kuecker.lodestar"
+            android:targetClass="net.kuecker.lodestar.app.MainActivity">
+            <extra
+                android:name="net.kuecker.lodestar.system.ACTION"
+                android:value="aim" />
+        </intent>
+    </shortcut>
+</shortcuts>

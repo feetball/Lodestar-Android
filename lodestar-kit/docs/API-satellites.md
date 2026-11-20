@@ -15,6 +15,7 @@ download CelesTrak GP data and hand the bytes to `ElementSetParser`; there is no
 | Magnitude model | `SatelliteBrightness.swift` | `SatelliteBrightness.kt` |
 | `Satellite`, `SatelliteLook`, `SatelliteSkyContext` (Aim support) | `Satellite.swift` | `Satellite.kt` |
 | Pass prediction | `SatellitePassFinder.swift` | `SatellitePassFinder.kt` |
+| Transits of the Sun and Moon | `SatelliteTransitFinder.swift` | `SatelliteTransitFinder.kt` |
 | Camera frame, streak risk | `StreakRisk.swift` | `StreakRisk.kt` |
 
 Imports: Swift `import LodestarKit`. Kotlin `import net.kuecker.lodestar.kit.satellites.*`.
@@ -355,6 +356,58 @@ missed), bisection to 0.01 s (rise/set), golden section to 0.05 s (culmination),
 brightest point refined by golden section. Cost (desktop JVM, warm; a Swift release build is about the same): ISS or Starlink 3 days **3 ms**, GPS 6 ms, Molniya 22 ms, geosynchronous < 1 ms;
 creating a finder for 3 days 0.5 ms (hourly Sun nodes) — **100 satellites over 3 days ≈ 0.3–0.4 s** (a phone: ~1 s; run it off the main thread).
 Window limited to 30 days. Failed propagation (decay, > 19 years from epoch) gives no passes.
+
+## SatelliteTransitFinder.swift / SatelliteTransitFinder.kt
+
+When a satellite (the ISS, the Chinese space station) crosses the Sun's or the Moon's disc, from the observer's site or from a
+place within a ground distance of it (the *centreline*).
+
+```swift
+public enum SatelliteTransitFinder {
+    public static let defaultMaxGroundDistanceMeters = 50_000.0, maximumGroundDistanceMeters = 200_000.0
+    public static let minimumBodyAltitude = 3.0, maximumWindowDays = 30.0, daylightSunAltitude = -0.833
+    public static func satelliteSpanMeters(catalogNumber: Int) -> Double       // 25544 (+ modules 36086, 49044) 109 m; 48274, 53239, 54216 55 m; else 50 m
+    public static func transits(satellite: Satellite, body: SolarSystemBody, observer: Observer, from: Date, to: Date,
+                                maxGroundDistanceMeters: Double = 50_000) -> [SatelliteTransit]      // chronological; body .sun or .moon, else []
+}
+public struct SatelliteTransit: Hashable, Sendable {
+    public let catalogNumber: Int, name: String, body: SolarSystemBody
+    public let date: Date                                  // closest approach seen from the site, to 0.01 s (the same moment holds on the centreline)
+    public let minimumSeparation: Double                   // ° centre to centre at the site
+    public let isFromSite: Bool                            // minimumSeparation < bodyAngularRadius + satelliteAngularSize / 2
+    public let bodyAngularRadius, satelliteAngularSize, satelliteRangeKilometers, angularSpeed: Double   // °, °, km, °/s relative to the body
+    public let bodyAltitude, bodyAzimuth, sunAltitude: Double                                    // geometric °
+    public let isDaylight: Bool                            // Sun above -0.833°
+    public let isNight: Bool                               // Sun below -6°
+    public let siteDurationSeconds: Double                 // centre inside the disc as seen from the site (0 if never)
+    public let centrelineDurationSeconds: Double           // disc diameter / angular speed at the centreline (the longest crossing)
+    public let centreline: SatelliteTransitCentreline?     // nil when farther than the ground distance
+}
+public struct SatelliteTransitCentreline: Hashable, Sendable {
+    public let location: GeographicLocation                // same elevation as the observer
+    public let distanceMeters: Double, bearing: Double     // ground distance; ° from north through east
+    public let separation: Double                          // residual at `date`, < 0.01°
+}
+```
+Kotlin: `SatelliteTransitFinder.transits(satellite, body, observer, from, to, maxGroundDistanceMeters = 50_000.0)`, `satelliteSpanMeters(catalogNumber)`;
+`data class SatelliteTransit` and `SatelliteTransitCentreline` with the same members (`Instant`, `GeographicLocation`).
+
+- **Method.** `SatellitePassFinder` with a 3° threshold gives the passes (it does not filter by darkness, so daylight passes are included); the body must be
+  above 3°. The separation between the satellite and the body's centre, both topocentric, is sampled every 2 s over each pass, every local minimum is refined
+  to 0.01 s by a golden-section search. The body comes from the engine's ephemeris (Sun: `SatelliteSunTrack`; Moon: the same TEME rotation) interpolated from hourly
+  nodes (cubic Lagrange, error ≈ 0.1 m for the Moon), with parallax. Angles are geometric (no refraction), the satellite without aberration (< 0.01°).
+- **Transit from the site** when the separation is smaller than the body's angular radius plus half the satellite's angular size (span from `satelliteSpanMeters`).
+- **Centreline.** The separation offset `(Δaz·cos alt, Δalt)`, in the body's tangent plane (gnomonic, no singularity at the zenith), is evaluated at the transit moment for observers displaced
+  ±1 km north and east; the 2×2 system for the ground displacement that zeroes it is solved and repeated twice more from the new place (three Newton steps).
+  Displacements use the ellipsoid's local grid, the elevation stays the observer's. A transit that is not from the site is kept only when its centreline is within
+  `maxGroundDistanceMeters` (distance and bearing from the site's tangent plane). Residual at the end below 0.01°, otherwise no centreline.
+- **Duration.** `siteDurationSeconds = 2·√(r² − s²) / ω` (0 when s ≥ r); `centrelineDurationSeconds = 2·r / ω` at the centreline. `ω` is the speed of the
+  satellite relative to the body, by a central difference of ±0.5 s; the satellite's own size is not added.
+- **Cost.** Passes × about 100 samples (2 µs) plus about 100 evaluations per candidate: a 14-day ISS search of the Sun and the Moon takes ≈ 30 ms on a desktop, well under a second on a phone.
+  The window is limited to 30 days. Run it off the main thread.
+- **Accuracy.** SGP4 and the element set: an ISS element set a day old is good to about 1 s and a few km of centreline position; refresh before the day.
+
+---------------------------------------------------------------------------------------------------------
 
 ## StreakRisk.swift / StreakRisk.kt
 

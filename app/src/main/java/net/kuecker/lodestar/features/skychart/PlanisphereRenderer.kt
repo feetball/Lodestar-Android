@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
+import net.kuecker.lodestar.features.skyquality.HorizonGlowRing
 import net.kuecker.lodestar.features.smallbodies.SmallBodyChartPainter
 import net.kuecker.lodestar.kit.catalog.ObjectGroup
 import net.kuecker.lodestar.kit.foundation.Vector3
@@ -137,6 +138,7 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
             drawSelection(selectedDirection)
         }
 
+        drawHorizonGlow()
         drawCircle(palette.horizonLine, viewport.radius, center, style = Stroke(1.5f * dp))
         drawTargetRimIndicator()
         drawAltitudeLabels()
@@ -243,6 +245,25 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
             }
         }
         drawPath(deepSkyMarkers, palette.deepSkyMarker, style = Stroke(1f * dp))
+    }
+
+    // Horizon glow
+
+    /**
+     * The thin ring of artificial light just inside the horizon circle: one short stroke per segment of the ring, stronger
+     * toward the azimuths where the lights are. Nothing without a ring, and no allocation per frame.
+     */
+    private fun DrawScope.drawHorizonGlow() {
+        val ring = layers.horizonGlow ?: return
+        val width = GLOW_WIDTH * dp
+        val step = 360.0 / HorizonGlowRing.SEGMENTS
+        for (index in 0 until HorizonGlowRing.SEGMENTS) {
+            val glow = ring.glow[index]
+            if (glow <= 0f) continue
+            val start = viewport.rimPoint(index * step - step * 0.55, -width / 2)
+            val end = viewport.rimPoint(index * step + step * 0.55, -width / 2)
+            drawLine(palette.warning.copy(alpha = GLOW_MINIMUM_OPACITY + GLOW_OPACITY_RANGE * glow), start, end, strokeWidth = width)
+        }
     }
 
     // Recorded skyline
@@ -589,6 +610,11 @@ internal class PlanisphereRenderer(private val text: PlanisphereTextCache) {
 
         /** The opacity of the ground below the recorded skyline: stars, lines and objects behind it nearly vanish. */
         const val GROUND_OPACITY = 0.85f
+
+        /** The thickness (dp) of the horizon glow ring and the opacity it has where the glow is faint and where it is full. */
+        const val GLOW_WIDTH = 3f
+        const val GLOW_MINIMUM_OPACITY = 0.1f
+        const val GLOW_OPACITY_RANGE = 0.75f
 
         /** The roles panels play in the shooting order, for the strokes of the mosaic. */
         const val MOSAIC_PENDING = 0

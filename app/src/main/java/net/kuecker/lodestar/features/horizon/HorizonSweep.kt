@@ -68,6 +68,9 @@ internal class HorizonSweep(private val base: HorizonProfile?) {
     /** Whether anything has been recorded. */
     val hasRecording: Boolean get() = recorder.recordedBinCount > 0
 
+    /** For each whole degree of azimuth, whether it holds a sample now (unlike [state], not up to a tenth of a second old). */
+    val recordedMask: List<Boolean> get() = recorder.recordedMask
+
     /**
      * Adds the direction of the phone's back camera in [sample] (once per sample). [headingOffset] is the compass
      * correction of the star alignment, [quality] the compass quality for the recorder (see [quality]).

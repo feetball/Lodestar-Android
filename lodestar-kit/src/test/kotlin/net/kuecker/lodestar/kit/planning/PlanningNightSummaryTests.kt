@@ -349,7 +349,7 @@ class PlanningNightSummaryTests {
         assertNull(core.maxAltitude)
         assertNull(core.bestAzimuth)
         assertEquals(RiseTransitSet.Circumstance.ALWAYS_DOWN, core.riseTransitSet.circumstance, "Sagittarius A* never rises at 69.65° N")
-        assertEquals(7, summary.planets.size)
+        assertEquals(8, summary.planets.size)
         for (planet in summary.planets) {
             assertNull(planet.maxAltitudeDuringDarkness, planet.body.displayName)
             assertFalse(planet.visibleDuringDarkness, planet.body.displayName)
@@ -592,7 +592,7 @@ class PlanningNightSummaryTests {
             val pole = PlanningTestSupport.Site("pole $latitude", latitude, 0.0)
             val summary = PlanningTestSupport.summary(pole, 2026, 12, 21)
             assertEquals(24.0 * 3_600, summary.night.duration, 1e-6)
-            assertEquals(7, summary.planets.size)
+            assertEquals(8, summary.planets.size)
             assertTrue(summary.astronomicalDarkHours == 0.0 || summary.astronomicalDarkHours == 24.0, "all or nothing at a pole")
             assertEquals(latitude > 0, summary.hasAstronomicalDarkness)
             assertTrue(summary.milkyWayCore.visibleIntervals.isEmpty() || latitude < 0)

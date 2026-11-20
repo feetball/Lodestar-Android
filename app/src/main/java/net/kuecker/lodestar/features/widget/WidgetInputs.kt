@@ -15,6 +15,7 @@ import net.kuecker.lodestar.model.AppSettings
 import net.kuecker.lodestar.model.LocationSource
 import net.kuecker.lodestar.model.NightModeSetting
 import net.kuecker.lodestar.model.ObserverContext
+import net.kuecker.lodestar.model.SavedSite
 import net.kuecker.lodestar.model.SettingsStore
 import java.time.DateTimeException
 import java.time.ZoneId
@@ -70,10 +71,16 @@ internal object WidgetInputsResolver {
     const val DEVICE_NAME = "Current Location"
 
     /**
-     * The inputs for [settings]. A saved site is used as it is; the device location is [liveDevice] while the app
-     * has one and [lastDevice] (the last one it stored) otherwise.
+     * The inputs for [settings]. A saved site is used as it is, with the skyline [skylineOf] says applies there (by
+     * default the recorded one); the device location is [liveDevice] while the app has one and [lastDevice] (the last
+     * one it stored) otherwise.
      */
-    fun resolve(settings: AppSettings, liveDevice: GeographicLocation?, lastDevice: GeographicLocation?): WidgetInputs {
+    fun resolve(
+        settings: AppSettings,
+        liveDevice: GeographicLocation?,
+        lastDevice: GeographicLocation?,
+        skylineOf: (SavedSite) -> HorizonProfile? = { it.horizon },
+    ): WidgetInputs {
         val place = when (val source = settings.locationSource) {
             LocationSource.Device -> (liveDevice ?: lastDevice)?.let { location ->
                 WidgetPlace(
@@ -88,7 +95,7 @@ internal object WidgetInputsResolver {
                     latitude = site.latitude, longitude = site.longitude, elevation = site.elevation,
                     siteID = site.id, timeZoneID = site.timeZoneIdentifier,
                     temperatureCelsius = settings.temperatureCelsius, pressureMillibars = settings.pressureMillibars,
-                    horizon = site.horizon,
+                    horizon = skylineOf(site),
                 )
             }
         }

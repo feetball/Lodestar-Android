@@ -100,7 +100,7 @@ class SatelliteLibrary private constructor(
     fun without(feed: OnlineFeed): SatelliteLibrary = when (feed) {
         OnlineFeed.SATELLITE_PASSES -> SatelliteLibrary(null, null, starlink, generation + 1)
         OnlineFeed.STARLINK -> SatelliteLibrary(stations, visual, null, generation + 1)
-        OnlineFeed.COMETS, OnlineFeed.CLOUDS -> this
+        OnlineFeed.COMETS, OnlineFeed.CLOUDS, OnlineFeed.TERRAIN -> this
     }
 
     companion object {

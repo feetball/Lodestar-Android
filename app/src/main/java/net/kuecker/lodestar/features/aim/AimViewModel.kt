@@ -16,6 +16,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.app.AppModel
 import net.kuecker.lodestar.features.mosaic.MosaicSession
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.features.satellites.SatelliteAimSession
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.foundation.AstroMath
@@ -44,10 +45,12 @@ import kotlin.math.abs
  * observer) }`, refreshes where the panels stand, and `LaunchedEffect(plan, step) { model.syncMosaic() }` leads
  * guidance to the panel being shot at once. Only low-rate
  * values are Compose state ([configuration], [skyContent], [riseInfo], [hudRotation], [virtualFieldOfView],
- * [alignmentTarget], [mosaicPointings]); what changes with every sensor sample is not published: the overlay and the readouts call
+ * [alignmentTarget], [mosaicPointings], [previewOffset]); what changes with every sensor sample is not published: the overlay and the readouts call
  * `engine.frame()` when they draw (or in a per-frame loop of their own), so the composition is not invalidated 60
  * times a second. [SkyOverlayView] publishes the display rotation in [screenAxes]. Pinch gestures call
- * [updatePinch]/[endPinch] while [cameraGeometry] is `null`. Main thread only.
+ * [updatePinch]/[endPinch] while [cameraGeometry] is `null`. With a [previewOffset] the sky, the target and the guidance
+ * are worked out for a later (or earlier) moment while the phone's pointing stays live; the screen ends the preview
+ * ([endPreview]) when the tab or the app goes away. Main thread only.
  */
 class AimViewModel(val app: AppModel, private val preferences: SharedPreferences? = null) {
     private companion object {
@@ -59,6 +62,9 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
 
         /** Milliseconds between the recalculations of where the panels of a mosaic stand in the sky. */
         const val MOSAIC_REFRESH_INTERVAL_MS = 1_000L
+
+        /** A sky built for an instant this many milliseconds away from the preview's counts as built for it. */
+        const val SKY_FRESH_MS = 30_000L
         const val LOOP_INTERVAL_MS = 33L
 
         /**
@@ -101,6 +107,17 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     var alignmentTarget: CelestialObject? by mutableStateOf(null)
 
     /**
+     * How far from now the sky is previewed, in seconds: 0 is live, positive looks ahead, negative back, within
+     * ±48 hours ([AimPreview.LIMIT_SECONDS]). Change it with [stepPreview], [previewAt] and [endPreview].
+     */
+    var previewOffset: Double by mutableDoubleStateOf(0.0)
+        private set
+
+    /** Whether the time bar above the controls is showing. */
+    var isTimeBarOpen: Boolean by mutableStateOf(false)
+        private set
+
+    /**
      * The screen's right and up in device coordinates. Phones stay in portrait (the default); on large screens the
      * display can rotate. [SkyOverlayView] keeps it current; [runLoop] needs it for the HUD rotation, and anything
      * that expresses a direction on the screen from device or mount axes (the guidance arrow) can use it too.
@@ -127,10 +144,45 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
 
     private var hasHUDRotation = false
     private var pinchStartFieldOfView: Double? = null
+    /**
+     * Whether the last frame was on target; null when the on-target state starts afresh (another target, panel or
+     * satellite, or no guidance). Spoken guidance starts a new session at the same moments.
+     */
     private var wasOnTarget: Boolean? = null
+        set(value) {
+            field = value
+            if (value == null) app.spokenGuidance.reset()
+        }
     private var panelKey: Int? = null
 
     // Derived state
+
+    /** Whether the sky is shown for another moment than now. */
+    val isPreviewing: Boolean get() = previewOffset != 0.0
+
+    /**
+     * The instant the sky, the target, the planets and the guidance are worked out for: the app clock moved by the
+     * [previewOffset]. Reads the app clock, so a composition that asks for it follows the clock's seconds.
+     */
+    val date: Instant get() = AimPreview.date(app.clock.now, previewOffset)
+
+    /**
+     * Whether the Sun is up at the previewed moment, or `null` without a preview and while the sky is still being rebuilt
+     * for the moment that was just chosen.
+     */
+    val isDaylightAtPreview: Boolean?
+        get() {
+            if (!isSkyBuiltForPreview) return null
+            return skyContent?.sun?.let { AimPreview.isDaylight(it.horizontal.altitude) }
+        }
+
+    /** Whether there is a preview and [skyContent] has been rebuilt for the moment it shows. */
+    val isSkyBuiltForPreview: Boolean
+        get() {
+            if (!isPreviewing) return false
+            val built = skyContent?.snapshot?.date ?: return false
+            return abs(built.toEpochMilli() - date.toEpochMilli()) <= SKY_FRESH_MS
+        }
 
     /** The object guidance leads to: the alignment sheet's choice, else the app's target. */
     val guidanceTarget: CelestialObject? get() = alignmentTarget ?: app.target
@@ -146,7 +198,7 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     fun skyInputs(configuration: AimConfiguration): AimSkyInputs? {
         val context = app.observerContext ?: return null
         if (app.catalog.loadState != CatalogService.LoadState.Loaded) return null
-        return AimSkyInputs(context.observer, configuration.skyOptions, guidanceTarget, context.horizon)
+        return AimSkyInputs(context.observer, configuration.skyOptions, guidanceTarget, context.horizon, previewOffset)
     }
 
     // Configuration
@@ -173,6 +225,8 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     fun syncSatellite() {
         val source = satellite.source
         if (source != null && source.observer != app.observerContext?.observer) satellite.stop()
+        // A satellite moves too fast to look ahead at: choosing one ends the preview.
+        if (satellite.source != null) endPreview()
         engine.setSatellite(satellite.source, ::satelliteNow)
         wasOnTarget = null
     }
@@ -197,7 +251,7 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
         if (inputs == null) return
         val catalog = app.catalog.catalog ?: return
         while (currentCoroutineContext().isActive) {
-            val date = app.clock.now
+            val date = AimPreview.date(app.clock.now, inputs.previewOffset)
             val content = withContext(Dispatchers.Default) { AimSkyContent.build(catalog, inputs, date) }
             skyContent = content
             engine.update(content.snapshot.target)
@@ -205,7 +259,7 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
         }
     }
 
-    /** Keeps [riseInfo] (when the target next rises) current while there is a target. */
+    /** Keeps [riseInfo] (when the target next rises, counted from the previewed moment) current while there is a target. */
     suspend fun keepRiseInfoCurrent(inputs: AimSkyInputs?) {
         val target = inputs?.target
         if (inputs == null || target == null) {
@@ -214,7 +268,7 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
         }
         val observer = inputs.observer
         while (currentCoroutineContext().isActive) {
-            val date = app.clock.now
+            val date = AimPreview.date(app.clock.now, inputs.previewOffset)
             val info = withContext(Dispatchers.Default) { AimRiseInfo.compute(target, observer, date) }
             riseInfo = info
             delay(RISE_REFRESH_INTERVAL_MS)
@@ -223,8 +277,9 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
 
     /**
      * Works out where the panels of [plan] stand in the sky now and then once a second until cancelled (equatorial
-     * panels drift with the sky), and leads guidance to the current one. Restart it (`LaunchedEffect` keyed on the plan
-     * and the observer) whenever they change; without a plan or an observer it ends the mosaic guidance and returns.
+     * panels drift with the sky), and leads guidance to the current one, at the previewed moment while there is a
+     * preview. Restart it (`LaunchedEffect` keyed on the plan, the observer and the [previewOffset]) whenever they
+     * change; without a plan or an observer it ends the mosaic guidance and returns.
      */
     suspend fun keepMosaicCurrent(plan: MosaicPlan?, observer: Observer?) {
         if (plan == null || observer == null) {
@@ -233,7 +288,7 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
             return
         }
         while (currentCoroutineContext().isActive) {
-            val date = app.clock.now
+            val date = this.date
             mosaicPointings = withContext(Dispatchers.Default) { AimMosaicPointings.make(plan, SkyFrame(date, observer)) }
             syncMosaic()
             delay(MOSAIC_REFRESH_INTERVAL_MS)
@@ -255,8 +310,8 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     }
 
     /**
-     * Runs the aiming logic about 30 times a second until cancelled: the HUD rotation, the audio ticks and the
-     * haptics for reaching and leaving the target.
+     * Runs the aiming logic about 30 times a second until cancelled: the HUD rotation, the audio ticks, the spoken
+     * guidance, the Wear OS watch and the haptics for reaching and leaving the target.
      */
     suspend fun runLoop() {
         while (currentCoroutineContext().isActive) {
@@ -274,6 +329,8 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
             return
         }
         app.feedback.guidanceTick(guidance.separation)
+        app.spokenGuidance.update(guidance)
+        if (app.settings.aimOnWatch) app.wearAim.send(guidance, watchTargetName(), app.isNightModeActive)
         val isOnTarget = guidance.state == GuidanceState.ON_TARGET
         val previously = wasOnTarget
         if (previously != null && previously != isOnTarget) {
@@ -293,9 +350,56 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
         if (rotation != hudRotation) hudRotation = rotation
     }
 
-    /** Silences the guidance audio; call when the screen goes away. */
+    /** Silences the guidance audio and the spoken guidance; call when the screen goes away. */
     fun stopFeedback() {
         app.feedback.stopGuidanceAudio()
+        app.spokenGuidance.stop()
+        app.wearAim.reset()
+        wasOnTarget = null
+    }
+
+    /** What the watch shows as the target: the mosaic's progress, the satellite or the object the guidance leads to. */
+    private fun watchTargetName(): String = when {
+        mosaic.plan != null -> mosaic.progressText
+        satellite.source != null -> satellite.source?.title.orEmpty()
+        else -> guidanceTarget?.let(SmallBodyText::displayName).orEmpty()
+    }
+
+    // Time preview
+
+    /** Shows or hides the time bar. Hiding it does not end a preview; the chip at the top does that. */
+    fun toggleTimeBar() {
+        isTimeBarOpen = !isTimeBarOpen
+    }
+
+    /** Moves the previewed moment by [step], from now when the sky is live; a step back to now ends the preview. */
+    internal fun stepPreview(step: AimPreview.Step) {
+        changePreviewOffset(previewOffset + step.seconds)
+    }
+
+    /** Shows the sky at [date] (held within 48 hours of now). */
+    fun previewAt(date: Instant) {
+        changePreviewOffset(AimPreview.offset(date, app.clock.now))
+    }
+
+    /** Back to the live sky. */
+    fun endPreview() {
+        changePreviewOffset(0.0)
+    }
+
+    /** Back to the live sky and out of the time bar: the Aim tab went away, so nothing stale is left on return. */
+    fun leave() {
+        endPreview()
+        isTimeBarOpen = false
+    }
+
+    private fun changePreviewOffset(seconds: Double) {
+        val offset = AimPreview.normalized(seconds)
+        if (offset == previewOffset) return
+        // Looking ahead needs a sky that stands still for the moment: a followed satellite is dropped.
+        if (offset != 0.0 && satellite.source != null) satellite.stop()
+        previewOffset = offset
+        // The target jumps with the clock: reaching or losing it because of that is not worth a buzz.
         wasOnTarget = null
     }
 

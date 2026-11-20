@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A four-pointed star: the Lodestar. Drawn inside the adaptive icon's safe zone (the middle 66 of 108). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F2F4FF"
+        android:pathData="M54,24 L60,48 L84,54 L60,60 L54,84 L48,60 L24,54 L48,48 Z" />
+</vector>

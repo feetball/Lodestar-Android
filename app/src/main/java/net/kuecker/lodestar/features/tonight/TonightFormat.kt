@@ -116,7 +116,7 @@ internal object TonightFormat {
         return if (folded(first) == folded(obj.name)) null else first
     }
 
-    /** Type, constellation, magnitude and size on one line: "Galaxy · Andromeda · mag 3.4 · 178′ × 70′". */
+    /** Type, constellation, magnitude and size on one line: "Galaxy · Andromeda · mag 3.4 · 2° 58′ × 1° 10′". */
     fun description(obj: CelestialObject): String {
         val parts = arrayListOf(obj.category.displayName)
         obj.constellationName?.let(parts::add)

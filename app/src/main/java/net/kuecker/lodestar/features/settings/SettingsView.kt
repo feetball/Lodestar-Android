@@ -39,6 +39,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.features.alignmentfinder.AlignmentFinderScreen
 import net.kuecker.lodestar.features.mount.MountControlScreen
 import net.kuecker.lodestar.features.mount.SettingsMountControlSection
 import net.kuecker.lodestar.features.online.SettingsOnlineDataSection
@@ -67,6 +68,7 @@ internal sealed interface SettingsRoute {
     data object ExposureCalculator : SettingsRoute
     data object TrailsTimeLapse : SettingsRoute
     data object PolarAlignment : SettingsRoute
+    data object AlignmentFinder : SettingsRoute
     data object SensorDiagnostics : SettingsRoute
     data object SessionLog : SettingsRoute
 }
@@ -90,6 +92,7 @@ fun SettingsScreen() {
             SettingsRoute.ExposureCalculator -> ExposureCalculatorScreen(onBack = back)
             SettingsRoute.TrailsTimeLapse -> TrailsTimeLapseScreen(onBack = back)
             SettingsRoute.PolarAlignment -> PolarAlignmentScreen(onBack = back)
+            SettingsRoute.AlignmentFinder -> AlignmentFinderScreen(onBack = back)
             SettingsRoute.SensorDiagnostics -> SensorDiagnosticsScreen(onBack = back)
             SettingsRoute.SessionLog -> SessionLogScreen(onBack = back)
         }
@@ -116,6 +119,7 @@ private fun SettingsRoot(onOpen: (SettingsRoute) -> Unit) {
             SettingsFeedbackSection()
             SettingsSkyDisplaySection()
             SettingsAtmosphereSection()
+            SettingsJupiterSection()
             SettingsOnlineDataSection()
             SettingsToolsSection(onOpen)
             SettingsSessionLogSection(onOpen)

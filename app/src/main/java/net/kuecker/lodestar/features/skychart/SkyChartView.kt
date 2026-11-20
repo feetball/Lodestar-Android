@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.app.AppModel
 import net.kuecker.lodestar.features.mosaic.MosaicSession
+import net.kuecker.lodestar.features.skyquality.rememberHorizonGlowRing
 import net.kuecker.lodestar.features.objects.ObjectDetailScreen
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.Prominence
@@ -192,6 +193,7 @@ private fun ChartArea(
     val content = model.content
     val loadState = app.catalog.loadState
     val settings = app.settings
+    val glowRing by rememberHorizonGlowRing(app.observerContext?.observer?.location?.takeIf { settings.showHorizonGlow })
     when {
         content != null -> SkyChartSurface(
             model = model,
@@ -204,6 +206,7 @@ private fun ChartArea(
                 starNames = preferences.showsStarNames,
                 altitudeGrid = preferences.showsAltitudeGrid,
                 cameraView = preferences.showsCameraView,
+                horizonGlow = glowRing.takeIf { settings.showHorizonGlow },
             ),
             rotatesToHeading = preferences.rotatesToHeading,
             mosaic = mosaic,

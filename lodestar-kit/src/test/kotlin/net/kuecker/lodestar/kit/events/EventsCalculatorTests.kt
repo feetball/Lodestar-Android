@@ -150,7 +150,7 @@ class EventsCalculatorTests {
         assertEquals(
             listOf(
                 "meteorShower", "conjunction", "opposition", "greatestElongation", "earthApsis", "season",
-                "fullMoonSpecial", "lunarEclipse", "solarEclipse",
+                "fullMoonSpecial", "lunarEclipse", "solarEclipse", "greatRedSpotTransit", "jupiterMoonEvent", "planetStation",
             ),
             EventKind.entries.map { it.rawValue },
         )
@@ -161,7 +161,8 @@ class EventsCalculatorTests {
             assertTrue(kind.displayName.isNotEmpty())
         }
         assertNull(EventKind.fromRawValue("eclipse"))
-        assertEquals(EventKind.entries.size - 1, EventKind.defaultKinds.size)
+        assertEquals(EventKind.entries.size - 4, EventKind.defaultKinds.size)
+        assertEquals(EventKind.entries.size - 1, EventKind.calendarKinds.size)
         assertEquals("\"P1\"", Json.encodeToString(EclipseContact.serializer(), EclipseContact.P1))
         assertEquals(EclipseContact.MAXIMUM, EclipseContact.fromRawValue("maximum"))
         assertEquals("\"total\"", Json.encodeToString(LunarEclipseKind.serializer(), LunarEclipseKind.TOTAL))
@@ -379,6 +380,9 @@ class EventsCalculatorTests {
                 is EventDetails.FullMoonSpecial, is EventDetails.LunarEclipse -> assertEquals(listOf<AimTarget>(AimTarget.Body(SolarSystemBody.MOON)), targets)
                 is EventDetails.SolarEclipse -> assertEquals(listOf<AimTarget>(AimTarget.Body(SolarSystemBody.SUN)), targets)
                 is EventDetails.Season, is EventDetails.EarthApsis -> assertTrue(targets.isEmpty())
+                is EventDetails.GreatRedSpotTransit, is EventDetails.JupiterMoonEvent ->
+                    assertEquals(listOf<AimTarget>(AimTarget.Body(SolarSystemBody.JUPITER)), targets)
+                is EventDetails.PlanetStation -> assertEquals(listOf<AimTarget>(AimTarget.Body(details.station.planet)), targets)
             }
         }
     }

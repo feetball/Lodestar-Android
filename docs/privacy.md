@@ -19,6 +19,10 @@ anything else from the app.
   processed on your phone only and is never recorded, stored or sent anywhere.
 - **Motion sensors.** The gyroscope, accelerometer and compass are read on your phone to tell where your camera
   points.
+- **Spoken guidance and the watch.** If you turn on spoken guidance, the aiming instructions are read aloud by the
+  text-to-speech engine of your phone, which may be provided by Google. If you use the Wear OS watch app, the phone
+  sends the pan and tilt to make, the distance and the name of the target to your paired watch over the connection
+  Wear OS keeps between them; nothing else is sent and the watch app stores nothing.
 - **Saved sites and settings** are stored only on your phone. If Android backup is turned on for your Google
   account, your settings and saved sites are included in that backup, like those of any app; nothing else from
   Lodestar is backed up.

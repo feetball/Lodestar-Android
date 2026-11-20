@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,7 +24,7 @@ import net.kuecker.lodestar.kit.wrist.AimWristMessage
 class MainActivity : ComponentActivity() {
     private val tracker = WearAimTracker()
     private var received by mutableStateOf<WearAimTracker.Received?>(null)
-    private val vibrator: Vibrator? by lazy { getSystemService(VibratorManager::class.java)?.defaultVibrator }
+    private val vibrator: Vibrator? by lazy { getSystemService(Vibrator::class.java) }
 
     private val listener = MessageClient.OnMessageReceivedListener { event ->
         if (event.path != AimWristMessage.PATH) return@OnMessageReceivedListener

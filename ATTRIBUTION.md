@@ -134,8 +134,10 @@ The cloud forecast is downloaded at run time from **MET Norway** (the Norwegian 
 `complete` (<https://api.met.no/weatherapi/locationforecast/2.0/documentation>), only when the user switches on *Cloud forecast*
 in Settings ▸ Online Data. MET Norway licenses its data under the **Creative Commons Attribution 4.0 International** licence
 (<https://creativecommons.org/licenses/by/4.0/>) and the Norwegian Licence for Open Government Data 2.0. Credit:
-*"Weather forecast from MET Norway"* (the card also shows *"Forecast: MET Norway"*). Lodestar shows the forecast's cloud-cover
-values unchanged; the clear-spell sentence is its own summary and does not imply endorsement by MET Norway. The request carries
+*"Weather forecast from MET Norway"* (the card also shows *"Forecast: MET Norway"*). Lodestar shows the forecast's cloud-cover,
+temperature, dew-point and wind values as forecast (rounded for display, and converted to °F and mph where the region uses
+them); the clear-spell sentence and the dew, wind and fog warnings are its own summaries of them and do not imply endorsement
+by MET Norway. The unit tests contain a small extract of one real answer (`app/src/test/resources`). The request carries
 the location rounded to 0.1° (at most four decimals are allowed), an identifying User-Agent, honours `Expires` and
 `If-Modified-Since`, and is made only while the app is in use.
 

@@ -45,8 +45,8 @@ same astronomy engine ported line for line from Swift to Kotlin.
   an always-available Stop, with altitude limits, a meridian countdown that warns before the mount has to flip,
   and a built-in simulated mount to try it without hardware.
 - **Optional online data** — all off until switched on in Settings: ISS and bright-satellite passes (follow one in
-  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast (MET
-  Norway, location rounded to about 10 km).
+  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast with dew,
+  wind, fog and temperature (MET Norway, location rounded to about 10 km).
 - **Home-screen widgets** — Tonight at a glance (dark hours, the Moon, the Milky Way core, the next event) in
   two resizable sizes, worked out on the device; a tap opens Tonight.
 - **Offline and private** — catalogs and ephemerides are on the device; nothing is collected. The optional online

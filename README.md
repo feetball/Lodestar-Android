@@ -11,11 +11,12 @@ same astronomy engine ported line for line from Swift to Kotlin.
 
 - **Guided aiming** — a live finder (camera view or virtual sky) with the target marker, an arrow pointing the
   shortest way, "Pan right 23.4° / Tilt up 12.1°" read-outs for pan-tilt heads, an on-target state with haptics,
-  optional audio ticks, a level gauge, and the outline of *your* camera's frame. Keep a **camera profile** for each
-  body and lens, start from a smart-telescope preset (Seestar, Dwarf, Vespera) or read a profile from a photo's
-  EXIF data, and switch with one tap; a **fisheye** lens gets a curved or circular frame. A time bar previews the sky
-  at a later (or earlier) time, up to 48 hours either way, so you can frame the Milky Way core or a planet for 2 am
-  at 9 pm and lock the head; the phone's pointing stays live.
+  optional audio ticks, optional spoken guidance ("Pan right 12, tilt up 3 … Almost there … On target") for when
+  the phone is above eye level, a level gauge, and the outline of *your* camera's frame. Keep a **camera profile**
+  for each body and lens, start from a smart-telescope preset (Seestar, Dwarf, Vespera) or read a profile from a
+  photo's EXIF data, and switch with one tap; a **fisheye** lens gets a curved or circular frame. A time bar previews
+  the sky at a later (or earlier) time, up to 48 hours either way, so you can frame the Milky Way core or a planet
+  for 2 am at 9 pm and lock the head; the phone's pointing stays live.
 - **Star alignment** and **Gyro Lock** — centre a bright star once to correct the compass and the bracket (syncing
   waits until the phone is held still, stars too close to each other are flagged, and an alignment that is hours old
   gets a warning chip); keep the heading on the gyroscope, safe from the camera body's magnetism.
@@ -70,6 +71,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
   Aim, Red torch and Night mode, and "Aim at" shortcuts for the first favourites; a countdown notification (a system
   chronometer to the rise, then to the peak) for the satellite pass you follow in Aim; and a full-screen red torch with
   a brightness bar, white light behind a confirmation and a double tap to close.
+- **Wear OS** — an Aim page for a paired watch: while the phone's Aim screen leads to a target, the watch shows the
+  arrow, the pan and tilt in degrees, the distance and the target, taps your wrist on target, and goes red when the
+  phone is in night mode. It needs the phone app, has no network access and stores nothing.
 - **Offline and private** — catalogs and ephemerides are on the device; nothing is collected. The optional online
   data downloads from CelesTrak, the Minor Planet Center, MET Norway and AWS Open Data only when you turn it on, and
   a GoTo mount is reached over the local network only.
@@ -83,6 +87,7 @@ android/
                     twilight, Moon phases, catalog + search, aiming math, alignment solver, WMM2025, exposure
                     tools, planning, events, skyline, mosaics, satellites (SGP4), comets and asteroids, GoTo mount
                     protocols. 1,779 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
+  wear/             Wear OS app (Compose; one Aim page fed by the phone over the Wear data layer), same applicationId.
   app/              Android app (Jetpack Compose, Material 3, CameraX, MapLibre, Glance widgets).
     app/            AppModel (state + service orchestration), activity, root screen
     model/ services/ theme/ shared/   settings, sensors/location/camera, night palette, shared views

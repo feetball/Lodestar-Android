@@ -27,6 +27,13 @@
     <uses-feature android:name="android.hardware.location.network" android:required="false" />
     <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
 
+    <!-- Spoken guidance binds to the phone's text-to-speech engine, which Android 11 hides from apps unless they ask. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:name=".app.LodestarApplication"
         android:allowBackup="true"

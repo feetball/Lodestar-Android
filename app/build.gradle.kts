@@ -76,6 +76,9 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
     implementation(libs.work.runtime)
+    // The Wear OS data layer: the Aim page on a paired watch (see WearAimLink).
+    implementation(libs.play.services.wearable)
+    implementation(libs.androidx.fragment)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(kotlin("test-junit"))
 }

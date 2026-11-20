@@ -21,6 +21,7 @@ class AppSettingsTest {
             imagingFilter = ImagingFilter.DUAL_NARROWBAND,
             polarErrorDegrees = 2.5, exposureISO = 1600,
             nightMode = NightModeSetting.ON, coordinateStyle = CoordinateStyle.DECIMAL,
+            spokenGuidance = true, spokenGuidanceRate = SpokenGuidanceRate.SLOW, aimOnWatch = false,
             favoriteObjectIDs = listOf("dso.M31"), recentObjectIDs = listOf("planet.mars", "moon"),
         ).sanitized()
         assertEquals(settings, AppSettings.decode(AppSettings.encode(settings)))
@@ -54,6 +55,22 @@ class AppSettingsTest {
         assertEquals(4.0, decoded.aperture)
         assertEquals(NightModeSetting.AUTOMATIC, decoded.nightMode)
         assertEquals(false, decoded.keepScreenAwake)
+    }
+
+    @Test
+    fun spokenGuidanceIsOffAndTheWatchOnUntilChosen() {
+        val settings = AppSettings()
+        assertEquals(false, settings.spokenGuidance)
+        assertEquals(SpokenGuidanceRate.NORMAL, settings.spokenGuidanceRate)
+        assertEquals(true, settings.aimOnWatch)
+        // Settings stored before these existed decode to the defaults, and a damaged rate does not lose the others.
+        val old = AppSettings.decode("""{"keepScreenAwake":false}""")
+        assertEquals(false, old.spokenGuidance)
+        assertEquals(true, old.aimOnWatch)
+        val damaged = AppSettings.decode("""{"spokenGuidance":true,"spokenGuidanceRate":"fast","aimOnWatch":"yes"}""")
+        assertEquals(true, damaged.spokenGuidance)
+        assertEquals(SpokenGuidanceRate.NORMAL, damaged.spokenGuidanceRate)
+        assertEquals(true, damaged.aimOnWatch)
     }
 
     @Test

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.Composable
 import net.kuecker.lodestar.model.CoordinateStyle
+import net.kuecker.lodestar.model.SpokenGuidanceRate
 import net.kuecker.lodestar.shared.AppFormat
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.SettingsCaption
@@ -20,7 +21,9 @@ import net.kuecker.lodestar.shared.SettingsSection
 import net.kuecker.lodestar.shared.SettingsSliderRow
 import net.kuecker.lodestar.shared.SettingsToggleRow
 
-/** Settings ▸ Feedback: haptics, audio cues and keeping the screen awake while aiming. */
+private val speechRateOptions = SpokenGuidanceRate.entries.map { SettingsMenuOption(it.title, it) }
+
+/** Settings ▸ Feedback: haptics, audio cues, spoken guidance, the watch and keeping the screen awake while aiming. */
 @Composable
 internal fun SettingsFeedbackSection() {
     val app = LocalAppModel.current
@@ -40,6 +43,33 @@ internal fun SettingsFeedbackSection() {
             onCheckedChange = { enabled -> store.update { it.copy(audioCuesEnabled = enabled) } },
             caption = "Ticks that speed up and rise in pitch as the camera nears the target, and a chime on target. " +
                 "Their volume follows the phone's volume settings.",
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = "Spoken guidance",
+            checked = settings.spokenGuidance,
+            onCheckedChange = { enabled -> store.update { it.copy(spokenGuidance = enabled) } },
+            caption = "Says the pan and tilt to make, such as \u201CPan right 12, tilt up 3\u201D, and when you are on " +
+                "target. It uses the phone's text-to-speech voice and the media volume.",
+        )
+        if (settings.spokenGuidance) {
+            SettingsDivider()
+            SettingsRow {
+                SettingsSegmentedPicker(
+                    title = "Speech rate",
+                    selection = settings.spokenGuidanceRate,
+                    options = speechRateOptions,
+                    onSelect = { rate -> store.update { it.copy(spokenGuidanceRate = rate) } },
+                )
+            }
+        }
+        SettingsDivider()
+        SettingsToggleRow(
+            title = "Show aiming on the watch",
+            checked = settings.aimOnWatch,
+            onCheckedChange = { enabled -> store.update { it.copy(aimOnWatch = enabled) } },
+            caption = "Mirrors the arrow, pan and tilt on a paired Wear OS watch while the Aim screen is open and " +
+                "Lodestar is open on the watch.",
         )
         SettingsDivider()
         SettingsToggleRow(

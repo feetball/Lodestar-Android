@@ -12,6 +12,8 @@ camerax = "1.6.2"
 maplibre = "13.7.1"
 glance = "1.2.0"
 work = "2.12.0"
+playServicesWearable = "19.0.0"
+fragment = "1.8.9"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -38,6 +40,9 @@ camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = 
 camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glance" }
+# Play services ask for fragment 1.0.0, which lint rejects for registerForActivityResult (it wants 1.3.0 or newer).
+androidx-fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
+play-services-wearable = { module = "com.google.android.gms:play-services-wearable", version.ref = "playServicesWearable" }
 work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 # The OpenGL ES build: the default artifact is the Vulkan renderer, which makes Play require Vulkan.
 maplibre-android = { module = "org.maplibre.gl:android-sdk-opengl", version.ref = "maplibre" }

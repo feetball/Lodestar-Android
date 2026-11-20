@@ -16,6 +16,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.app.AppModel
 import net.kuecker.lodestar.features.mosaic.MosaicSession
+import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.features.satellites.SatelliteAimSession
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.foundation.AstroMath
@@ -143,7 +144,15 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
 
     private var hasHUDRotation = false
     private var pinchStartFieldOfView: Double? = null
+    /**
+     * Whether the last frame was on target; null when the on-target state starts afresh (another target, panel or
+     * satellite, or no guidance). Spoken guidance starts a new session at the same moments.
+     */
     private var wasOnTarget: Boolean? = null
+        set(value) {
+            field = value
+            if (value == null) app.spokenGuidance.reset()
+        }
     private var panelKey: Int? = null
 
     // Derived state
@@ -301,8 +310,8 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
     }
 
     /**
-     * Runs the aiming logic about 30 times a second until cancelled: the HUD rotation, the audio ticks and the
-     * haptics for reaching and leaving the target.
+     * Runs the aiming logic about 30 times a second until cancelled: the HUD rotation, the audio ticks, the spoken
+     * guidance, the Wear OS watch and the haptics for reaching and leaving the target.
      */
     suspend fun runLoop() {
         while (currentCoroutineContext().isActive) {
@@ -320,6 +329,8 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
             return
         }
         app.feedback.guidanceTick(guidance.separation)
+        app.spokenGuidance.update(guidance)
+        if (app.settings.aimOnWatch) app.wearAim.send(guidance, watchTargetName(), app.isNightModeActive)
         val isOnTarget = guidance.state == GuidanceState.ON_TARGET
         val previously = wasOnTarget
         if (previously != null && previously != isOnTarget) {
@@ -339,10 +350,19 @@ class AimViewModel(val app: AppModel, private val preferences: SharedPreferences
         if (rotation != hudRotation) hudRotation = rotation
     }
 
-    /** Silences the guidance audio; call when the screen goes away. */
+    /** Silences the guidance audio and the spoken guidance; call when the screen goes away. */
     fun stopFeedback() {
         app.feedback.stopGuidanceAudio()
+        app.spokenGuidance.stop()
+        app.wearAim.reset()
         wasOnTarget = null
+    }
+
+    /** What the watch shows as the target: the mosaic's progress, the satellite or the object the guidance leads to. */
+    private fun watchTargetName(): String = when {
+        mosaic.plan != null -> mosaic.progressText
+        satellite.source != null -> satellite.source?.title.orEmpty()
+        else -> guidanceTarget?.let(SmallBodyText::displayName).orEmpty()
     }
 
     // Time preview

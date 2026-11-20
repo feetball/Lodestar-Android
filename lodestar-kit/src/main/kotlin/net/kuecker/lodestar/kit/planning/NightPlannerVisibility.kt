@@ -2,6 +2,8 @@ package net.kuecker.lodestar.kit.planning
 
 import net.kuecker.lodestar.kit.ephemeris.*
 import net.kuecker.lodestar.kit.foundation.*
+import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.kit.horizon.visibilityOverHorizon
 
 // MARK: One target at a time
 
@@ -18,16 +20,25 @@ import net.kuecker.lodestar.kit.foundation.*
  * @param summary The night, from [summary].
  * @param darkness Which dark intervals of the night to count.
  * @param minimumAltitude The altitude in degrees from which the target is usable.
+ * @param horizon The site's skyline, or `null` (the default) for a flat horizon. With a skyline the target
+ * counts only while it is above the skyline as well: [TargetVisibility.intervalsAboveMinimum] (also
+ * [TargetVisibility.unobstructedIntervals]) are the dark stretches above both, and rise and set are clearing
+ * and sinking behind the skyline (see the `horizon` package). The cost is a few hundred position evaluations.
  */
 fun NightPlanner.visibility(
     position: (SkyFrame) -> HorizontalCoordinate,
     summary: NightSummary,
     darkness: DarknessKind = DarknessKind.ASTRONOMICAL,
     minimumAltitude: Double = NightPlanner.defaultMinimumAltitude,
+    horizon: HorizonProfile? = null,
 ): TargetVisibility =
-    visibilityOfPosition(
-        position, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude,
-    )
+    if (horizon != null) {
+        visibilityOverHorizon(
+            position, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude, horizon,
+        )
+    } else {
+        visibilityOfPosition(position, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude)
+    }
 
 /**
  * How well a target, described by a position function, can be observed during [interval], which
@@ -40,8 +51,13 @@ fun NightPlanner.visibility(
     observer: Observer,
     interval: DateInterval,
     minimumAltitude: Double = NightPlanner.defaultMinimumAltitude,
+    horizon: HorizonProfile? = null,
 ): TargetVisibility =
-    visibilityOfPosition(position, observer, interval, listOf(interval), minimumAltitude)
+    if (horizon != null) {
+        visibilityOverHorizon(position, observer, interval, listOf(interval), minimumAltitude, horizon)
+    } else {
+        visibilityOfPosition(position, observer, interval, listOf(interval), minimumAltitude)
+    }
 
 /**
  * How well the Sun, the Moon or a planet can be observed during the dark hours of a night.
@@ -53,14 +69,20 @@ fun NightPlanner.visibility(
  * @param summary The night, from [summary].
  * @param darkness Which dark intervals of the night to count.
  * @param minimumAltitude The altitude in degrees from which the body is usable.
+ * @param horizon The site's skyline, or `null` for a flat horizon; see the position-function overload.
  */
 fun NightPlanner.visibility(
     body: SolarSystemBody,
     summary: NightSummary,
     darkness: DarknessKind = DarknessKind.ASTRONOMICAL,
     minimumAltitude: Double = NightPlanner.defaultMinimumAltitude,
+    horizon: HorizonProfile? = null,
 ): TargetVisibility =
-    visibilityOfBody(body, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude)
+    if (horizon != null) {
+        visibilityOverHorizon(body, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude, horizon)
+    } else {
+        visibilityOfBody(body, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude)
+    }
 
 /**
  * How well the Sun, the Moon or a planet can be observed during [interval], which stands for both
@@ -71,8 +93,13 @@ fun NightPlanner.visibility(
     observer: Observer,
     interval: DateInterval,
     minimumAltitude: Double = NightPlanner.defaultMinimumAltitude,
+    horizon: HorizonProfile? = null,
 ): TargetVisibility =
-    visibilityOfBody(body, observer, interval, listOf(interval), minimumAltitude)
+    if (horizon != null) {
+        visibilityOverHorizon(body, observer, interval, listOf(interval), minimumAltitude, horizon)
+    } else {
+        visibilityOfBody(body, observer, interval, listOf(interval), minimumAltitude)
+    }
 
 // MARK: Many fixed targets
 
@@ -95,6 +122,9 @@ fun NightPlanner.visibility(
  * @param summary The night, from [summary].
  * @param darkness Which dark intervals of the night to count.
  * @param minimumAltitude The altitude in degrees from which a target is usable.
+ * @param horizon The site's skyline, or `null` for a flat horizon; see the position-function overload. With a
+ * skyline a thousand targets take about a quarter of a second (11,000 about 3 s on a desktop JVM), three to four
+ * times what they cost without one; for the hours alone of a whole catalog, [unobstructedVisibility] is cheaper.
  * @return One [TargetVisibility] per target, in the order given.
  */
 fun NightPlanner.visibility(
@@ -103,10 +133,17 @@ fun NightPlanner.visibility(
     summary: NightSummary,
     darkness: DarknessKind = DarknessKind.ASTRONOMICAL,
     minimumAltitude: Double = NightPlanner.defaultMinimumAltitude,
+    horizon: HorizonProfile? = null,
 ): List<TargetVisibility> =
-    visibilityOfFixed(
-        targets, properMotions, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude,
-    )
+    if (horizon != null) {
+        visibilityOverHorizon(
+            targets, properMotions, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude, horizon,
+        )
+    } else {
+        visibilityOfFixed(
+            targets, properMotions, summary.observer, summary.night, summary.darkness(darkness), minimumAltitude,
+        )
+    }
 
 /**
  * How well each of many fixed targets can be observed during [interval], which stands for both
@@ -118,8 +155,13 @@ fun NightPlanner.visibility(
     observer: Observer,
     interval: DateInterval,
     minimumAltitude: Double = NightPlanner.defaultMinimumAltitude,
+    horizon: HorizonProfile? = null,
 ): List<TargetVisibility> =
-    visibilityOfFixed(targets, properMotions, observer, interval, listOf(interval), minimumAltitude)
+    if (horizon != null) {
+        visibilityOverHorizon(targets, properMotions, observer, interval, listOf(interval), minimumAltitude, horizon)
+    } else {
+        visibilityOfFixed(targets, properMotions, observer, interval, listOf(interval), minimumAltitude)
+    }
 
 // MARK: Implementation
 

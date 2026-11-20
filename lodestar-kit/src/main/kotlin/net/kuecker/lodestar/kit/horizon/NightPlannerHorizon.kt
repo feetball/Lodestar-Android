@@ -96,7 +96,9 @@ fun NightPlanner.visibility(
 
 // MARK: Implementation
 
-private fun visibilityOverHorizon(
+// `NightPlanner.visibility(..., horizon = null)` in the `planning` package calls these when a skyline is given.
+
+internal fun visibilityOverHorizon(
     position: (SkyFrame) -> HorizontalCoordinate,
     observer: Observer,
     night: DateInterval,
@@ -108,7 +110,7 @@ private fun visibilityOverHorizon(
         HorizonFunctionTrack { SkyFrame(it, observer).let(position) }, night, darkness, 0.0, minimumAltitude,
     )
 
-private fun visibilityOverHorizon(
+internal fun visibilityOverHorizon(
     body: SolarSystemBody,
     observer: Observer,
     night: DateInterval,
@@ -126,7 +128,7 @@ private fun visibilityOverHorizon(
     )
 }
 
-private fun visibilityOverHorizon(
+internal fun visibilityOverHorizon(
     targets: List<EquatorialCoordinate>,
     properMotions: List<ProperMotion?>,
     observer: Observer,

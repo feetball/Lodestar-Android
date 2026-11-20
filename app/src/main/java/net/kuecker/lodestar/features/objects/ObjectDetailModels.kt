@@ -9,6 +9,7 @@ import net.kuecker.lodestar.kit.ephemeris.RiseTransitSet
 import net.kuecker.lodestar.kit.foundation.DateInterval
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.kit.phototools.ExposureEstimate
 import net.kuecker.lodestar.kit.phototools.FrameSize
 import net.kuecker.lodestar.model.ObserverContext
@@ -136,6 +137,11 @@ internal data class ObjectDetailNight(
     val bestInDarkness: ObjectDetailPeak?,
     /** `true` when the events, the curve and the best point respect the site's recorded skyline. */
     val usesSkyline: Boolean = false,
+    /**
+     * With a recorded skyline, the stretches of the dark in which the object is above it and at least
+     * [ObjectsTonight.MINIMUM_ALTITUDE] high; `null` without a skyline or without darkness.
+     */
+    val unobstructed: UnobstructedVisibility? = null,
 ) {
     /** When this night is over and "tonight" means the next one. */
     val expiry: Instant get() = twilight.sunrise ?: interval.end

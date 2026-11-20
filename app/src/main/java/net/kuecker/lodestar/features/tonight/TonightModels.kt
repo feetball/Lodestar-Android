@@ -43,6 +43,12 @@ internal data class TonightTarget(
     val hoursAboveMinimum: Double,
     /** The line under the name in place of the catalog description: a comet's or asteroid's magnitude estimate and elongation. */
     val note: String? = null,
+    /**
+     * With a recorded skyline, the hours of darkness the object is above it and at least
+     * [TonightCalculator.minimumTargetAltitude] high (the same number as [hoursAboveMinimum], named for the skyline);
+     * `null` for an open horizon.
+     */
+    val unobstructedHours: Double? = null,
 ) {
     val id: String get() = obj.id
 }

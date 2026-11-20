@@ -116,7 +116,7 @@ fun ObjectsScreen() {
     val stack = rememberRetained("objects.nav") { NavStack<ObjectsRoute>(ObjectsRoute.Browse) }
     val browse = rememberRetained("objects.browse") { ObjectsBrowseState() }
     val options = rememberObjectsOptions()
-    ObjectsBackgroundWork(browse, options.options.catalogue)
+    ObjectsBackgroundWork(browse, options.options.catalogue, options.options.needsTonightHours)
     NavStackHost(stack, Modifier.fillMaxSize()) { route ->
         when (route) {
             ObjectsRoute.Browse -> ObjectsBrowse(browse, options) { stack.push(ObjectsRoute.Detail(it)) }
@@ -134,10 +134,11 @@ private const val SEARCH_DEBOUNCE_MS = 150L
 /**
  * The work behind the Objects tab, which keeps running while an object's detail is open: loading the catalog,
  * indexing it, searching it as the query changes, and keeping the sky positions of the listed objects, and of the
- * chosen [catalogueFilter]'s, fresh. A recorded skyline decides what is up.
+ * chosen [catalogueFilter]'s, fresh. A recorded skyline decides what is up. With [wantsTonight] (the list is ordered
+ * or filtered by hours tonight) it also works out tonight's hours above the skyline for them.
  */
 @Composable
-private fun ObjectsBackgroundWork(browse: ObjectsBrowseState, catalogueFilter: ObjectsCatalogueFilter) {
+private fun ObjectsBackgroundWork(browse: ObjectsBrowseState, catalogueFilter: ObjectsCatalogueFilter, wantsTonight: Boolean) {
     val app = LocalAppModel.current
     val catalog = app.catalog.catalog
     val settings = app.settings
@@ -188,14 +189,15 @@ private fun ObjectsBackgroundWork(browse: ObjectsBrowseState, catalogueFilter: O
             .distinctBy { it.id }
     }
     val extraIDs = remember(extraObjects) { extraObjects.map { it.id } }
-    LaunchedEffect(observer, skyline, catalog, extraIDs, isForeground) {
+    val zone = observerContext?.timeZone
+    LaunchedEffect(observer, skyline, zone, catalog, extraIDs, isForeground, wantsTonight) {
         if (!isForeground) return@LaunchedEffect
-        if (observer == null) {
+        if (observer == null || zone == null) {
             browse.positions.clear()
             return@LaunchedEffect
         }
         val listed = catalog?.listedObjects ?: emptyList()
-        browse.positions.keepFresh(observer, skyline, app.clock) { listed + extraObjects }
+        browse.positions.keepFresh(observer, skyline, zone, app.clock, wantsTonight) { listed + extraObjects }
     }
 }
 
@@ -353,7 +355,10 @@ private fun ObjectsList(
     val isShowingResults = outcome.query.isNotEmpty()
     val positions = browse.positions
     val positionMap = positions.positions
-    val sections = remember(outcome, options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap) {
+    val tonightMap = positions.tonight
+    // The rows say how many hours tonight only while the list is ordered or filtered by them.
+    val showsTonight = options.needsTonightHours
+    val sections = remember(outcome, options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap, tonightMap) {
         if (outcome.query.isNotEmpty()) {
             if (outcome.objects.isEmpty()) {
                 emptyList()
@@ -362,7 +367,7 @@ private fun ObjectsList(
             }
         } else {
             ObjectsListBuilder.sections(
-                options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap,
+                options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap, tonightMap,
             )
         }
     }
@@ -415,6 +420,7 @@ private fun ObjectsList(
                         position = positions.position(obj.id),
                         isFavorite = obj.id in favorites,
                         showsProminence = options.catalogue.isCatalogue,
+                        tonight = if (showsTonight) tonightMap[obj.id] else null,
                         zone = zone,
                         shape = rowShape(isFirst = itemIndex == 0, isLast = itemIndex == lastIndex),
                         showsDivider = itemIndex != lastIndex,
@@ -461,6 +467,7 @@ private fun ObjectsList(
                                     showsOnlyAboveHorizon = false,
                                     hidesFaintObjects = false,
                                     showsOnlyPopular = false,
+                                    showsOnlyVisibleTonight = false,
                                 ),
                             )
                         },

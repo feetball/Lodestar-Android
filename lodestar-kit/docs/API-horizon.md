@@ -404,7 +404,13 @@ Parameters and behaviour
 ## NightPlanner+Horizon.swift / NightPlannerHorizon.kt — the Tonight planner with a skyline
 
 The same calls as `NightPlanner.visibility(…)` plus a required last parameter `horizon: HorizonProfile`; the answer is the same
-`TargetVisibility`, so a screen switches by adding the argument.
+`TargetVisibility`, so a screen switches by adding the argument. Since the unobstructed-hours work the plain calls take the same
+argument as an optional `horizon: HorizonProfile? = nil` (a skyline runs the code below, `nil` the plain planner), so a screen with
+an optional skyline passes it straight through; a call that already passes a non-optional `horizon` resolves to the overloads
+below and gives the same answer. `TargetVisibility.unobstructedIntervals` / `unobstructedHours` name the skyline-aware stretches
+(they equal `intervalsAboveMinimum` / `hoursAboveMinimum`, with or without a skyline), and `isBehindSkyline` says that the target
+reaches `minimumAltitude` in the dark but is never above the skyline then. For the hours of a whole catalog use the cheaper
+`NightPlanner.unobstructedVisibility` (see `API-planning.md`).
 
 ```swift
 extension NightPlanner {
@@ -558,6 +564,8 @@ Calls without a site profile: pass `.flat` or keep the existing calls — flat r
 | rise/transit/set or windows for one object, one night | ~0.1 ms (Moon ~0.2 ms) |
 | `visibleWindows(ofFixed:)` 700 objects, one night | 60–240 ms JVM, ≈ 50 ms Swift release (< 1 s required) |
 | `NightPlanner.visibility(ofFixed: … horizon:)` 700 targets | 0.25–0.55 s JVM, ≈ 0.3 s Swift release, ≈ 2× the plain call |
+| `NightPlanner.visibility(ofFixed: … horizon:)` 11,000 targets | ≈ 3 s JVM (plain call ≈ 0.9 s) |
+| `NightPlanner.unobstructedVisibility(ofFixed: … horizon:)` 11,000 targets | ≈ 0.8 s JVM with a skyline, ≈ 0.04 s without |
 
 Run the planner calls off the main thread (they are pure). Do not call the per-object functions in a per-frame loop; use the
 mask for per-frame questions and the batch functions for lists.

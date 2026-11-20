@@ -14,6 +14,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import net.kuecker.lodestar.kit.ephemeris.GreatRedSpot
 import net.kuecker.lodestar.kit.foundation.Atmosphere
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
@@ -21,6 +22,7 @@ import net.kuecker.lodestar.kit.phototools.SensorFormat
 import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.kit.pointing.MountProfile
 import java.time.DateTimeException
+import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
 
@@ -139,6 +141,30 @@ data class SavedSite private constructor(
     }
 }
 
+/**
+ * The Great Red Spot's System II longitude as the user read it ([longitude], degrees [0, 360)) on the day [asOf].
+ * The kit moves it on from there with the spot's usual drift. Absent, the kit's dated default applies.
+ */
+data class GreatRedSpotSetting(val longitude: Double, val asOf: Instant) {
+    /** The spot this describes, or `null` when the values are not usable. */
+    val spot: GreatRedSpot? get() = GreatRedSpot.create(longitude, asOf)
+
+    internal fun toJson(): JsonObject = buildJsonObject {
+        put("longitude", JsonPrimitive(longitude))
+        put("asOf", JsonPrimitive(asOf.toString()))
+    }
+
+    companion object {
+        /** Reads the stored object; `null` when anything is missing or out of range. */
+        internal fun fromJson(element: JsonElement?): GreatRedSpotSetting? {
+            val o = element as? JsonObject ?: return null
+            val longitude = o["longitude"]?.jsonPrimitive?.doubleOrNull ?: return null
+            val asOf = runCatching { Instant.parse(o["asOf"]?.jsonPrimitive?.content ?: return null) }.getOrNull() ?: return null
+            return GreatRedSpotSetting(longitude, asOf).takeIf { it.spot != null }
+        }
+    }
+}
+
 @Serializable
 enum class NightModeSetting(val title: String) {
     @SerialName("off") OFF("Off"),
@@ -231,8 +257,15 @@ data class AppSettings(
     // Objects
     val favoriteObjectIDs: List<String> = emptyList(),
     val recentObjectIDs: List<String> = emptyList(),
+
+    // Jupiter
+    /** The Great Red Spot's longitude the user entered, or `null` for the kit's dated default. */
+    val greatRedSpot: GreatRedSpotSetting? = null,
 ) {
     val atmosphere: Atmosphere get() = Atmosphere(pressureMillibars, temperatureCelsius)
+
+    /** The Great Red Spot to compute with: the user's longitude, else [GreatRedSpot.reference]. */
+    val greatRedSpotOrDefault: GreatRedSpot get() = greatRedSpot?.spot ?: GreatRedSpot.reference
 
     /**
      * The camera and lens in use: the stored profile with [activeCameraProfileID], else the first one, else a profile
@@ -307,6 +340,7 @@ data class AppSettings(
             savedSites = savedSites.take(MAXIMUM_SAVED_SITES),
             favoriteObjectIDs = favoriteObjectIDs.take(MAXIMUM_FAVORITES),
             recentObjectIDs = recentObjectIDs.take(MAXIMUM_RECENTS),
+            greatRedSpot = greatRedSpot?.takeIf { it.spot != null },
         )
     }
 
@@ -366,6 +400,7 @@ data class AppSettings(
                 put("pressureMillibars", JsonPrimitive(s.pressureMillibars))
                 put("favoriteObjectIDs", JsonArray(s.favoriteObjectIDs.map(::JsonPrimitive)))
                 put("recentObjectIDs", JsonArray(s.recentObjectIDs.map(::JsonPrimitive)))
+                s.greatRedSpot?.let { put("greatRedSpot", it.toJson()) }
             }
             return o.toString()
         }
@@ -419,6 +454,7 @@ data class AppSettings(
                 pressureMillibars = value("pressureMillibars", Double.serializer(), d.pressureMillibars),
                 favoriteObjectIDs = value("favoriteObjectIDs", strings, d.favoriteObjectIDs),
                 recentObjectIDs = value("recentObjectIDs", strings, d.recentObjectIDs),
+                greatRedSpot = GreatRedSpotSetting.fromJson(o["greatRedSpot"]) ?: d.greatRedSpot,
             ).sanitized()
         }
     }

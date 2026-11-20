@@ -1,18 +1,21 @@
 package net.kuecker.lodestar.kit.events
 
+import net.kuecker.lodestar.kit.ephemeris.*
 import net.kuecker.lodestar.kit.foundation.*
 import java.time.Instant
 
 /**
  * The astronomical events calendar: meteor shower maxima, conjunctions, oppositions, greatest elongations, the
- * Earth's apsides, equinoxes and solstices, special full Moons and lunar and solar eclipses, computed offline from the
- * kit's ephemerides.
+ * Earth's apsides, equinoxes and solstices, special full Moons, lunar and solar eclipses, the stations of the planets
+ * and, for the first days of the interval, the Great Red Spot's transits and the Galilean moons' phenomena, computed
+ * offline from the kit's ephemerides.
  *
  * Every search is bounded: intervals longer than [maximumSpanDays] (about ten years) are cut short, dates outside the
  * years 1 to 4001 give nothing, and the work grows with the length of the interval. Cost of one year on a desktop JVM
  * once warm: about 0.1 s without an observer and 0.2 s with one (the conjunctions take half of it; the visibility of an event
  * a fraction of a millisecond); the first call of a process needs about 1 s for class loading and the planetary series.
- * Nothing is cached between calls. Run it on a background thread and keep the result.
+ * The stations add about 30 ms a year; the Great Red Spot and moon events of [EventOptions.jupiterEventDays] days about
+ * 1 ms a day. Nothing is cached between calls. Run it on a background thread and keep the result.
  */
 object EventCalculator {
     /** The longest interval, in days, that [events] searches; longer intervals are cut at this length. */
@@ -50,6 +53,19 @@ object EventCalculator {
             if (EventKind.FULL_MOON_SPECIAL in kinds) found.addAll(FullMoonSpecialFinder.events(from, end, zone, phases))
             if (EventKind.LUNAR_ECLIPSE in kinds) found.addAll(LunarEclipseFinder.events(from, end, phases))
             if (EventKind.SOLAR_ECLIPSE in kinds) found.addAll(SolarEclipseFinder.events(from, end, observer, phases))
+        }
+
+        if (EventKind.PLANET_STATION in kinds) found.addAll(PlanetStations.events(from, end))
+        val jupiterEnd = minOf(end, from.addingTimeInterval(options.jupiterEventDays * JulianDate.secondsPerDay))
+        if (options.jupiterEventDays > 0 && EventKind.GREAT_RED_SPOT_TRANSIT in kinds) {
+            for (transit in options.greatRedSpot.transits(from, jupiterEnd)) {
+                found.add(AstronomicalEvent(transit.date, EventDetails.GreatRedSpotTransit(transit), null))
+            }
+        }
+        if (options.jupiterEventDays > 0 && EventKind.JUPITER_MOON_EVENT in kinds) {
+            for (moonEvent in GalileanMoons.events(from, jupiterEnd)) {
+                found.add(AstronomicalEvent(moonEvent.date, EventDetails.JupiterMoonEvent(moonEvent), null))
+            }
         }
 
         val calculator = if (observer != null) EventVisibilityCalculator(observer, options, zone) else null

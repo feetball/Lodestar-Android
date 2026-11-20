@@ -101,12 +101,13 @@ private fun EventsCalendarContent(context: ObserverContext, onOpenEvent: (Astron
     val listState = rememberRetained("events.calendar.list") { LazyListState(0, 0) }
     val now = rememberPeriodicNow(60_000L)
     val today = Snapshot.withoutReadObservation { app.clock.now }
-    val key = remember(context, now) { EventsCalculator.key(context, today) }
+    val greatRedSpot = app.settings.greatRedSpotOrDefault
+    val key = remember(context, now, greatRedSpot) { EventsCalculator.key(context, today, greatRedSpot) }
     val zone = context.timeZone
     val transits = rememberEventsTransits(context.observer)
     var openTransit by remember { mutableStateOf<EventsTransit?>(null) }
 
-    LaunchedEffect(key) { model.refresh(context, app.clock.now) }
+    LaunchedEffect(key) { model.refresh(context, app.clock.now, greatRedSpot) }
 
     val result = model.result?.takeIf { it.key == key }
     val shown = remember(result, filter.groups, filter.isVisibleOnly) {
@@ -138,7 +139,7 @@ private fun EventsCalendarContent(context: ObserverContext, onOpenEvent: (Astron
                 ) {
                     LodestarButton(
                         "Try Again",
-                        onClick = { scope.launch { model.refresh(context, app.clock.now) } },
+                        onClick = { scope.launch { model.refresh(context, app.clock.now, greatRedSpot) } },
                         icon = Icons.Outlined.Refresh,
                     )
                 }

@@ -109,6 +109,16 @@ The meteor shower table (peak solar longitudes, activity periods, ZHR, radiant p
 hand-entered from the **IMO Meteor Shower Calendar 2026** (© International Meteor Organization), whose source is cited
 in the code. Radiant drift rates are least-squares fits to the calendar's radiant tables.
 
+### Jupiter's physical ephemeris, Galilean moons and Great Red Spot — `ephemeris/JupiterPhysical`, `ephemeris/GalileanMoons`, `ephemeris/GreatRedSpot`
+
+The rotation elements, central meridians and position angle of Jupiter follow Jean Meeus, *Astronomical Algorithms*,
+2nd ed. (Willmann-Bell, 1998), chapter 43, and the positions of the four Galilean moons its chapter 44 (the low-accuracy
+method); the formulas are cross-checked against the MIT-licensed `soniakeys/meeus`. The Great Red Spot's System II
+longitude (91° on 2026 June 1, drifting 1.75° a month) is the one assumed by **Sky & Telescope**'s online tool "Transit
+Times of Jupiter's Great Red Spot", which takes it from trends noted by the JUPOS project (the BAA Jupiter Section's and
+ALPO-Japan's measurements are consistent with it). The user can replace it in Settings. The stations of the planets are
+computed from the VSOP87 positions and compared with JPL's DE440s.
+
 ### Satellite data and SGP4
 
 Satellite orbital elements are downloaded at run time from **CelesTrak** (Dr. T. S. Kelso, <https://celestrak.org>), only when

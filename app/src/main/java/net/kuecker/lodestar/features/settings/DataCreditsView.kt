@@ -149,6 +149,18 @@ internal data class DataCredit(
                     "calendar's radiant tables.",
             ),
             DataCredit(
+                id = "grs", name = "Great Red Spot longitude, 2026", usedFor = "Great Red Spot transits",
+                author = "Sky & Telescope, from the JUPOS project",
+                license = "Published data, cited with credit", licenseURL = null,
+                sourceURL = "https://skyandtelescope.org/observing/interactive-sky-watching-tools/" +
+                    "transit-times-of-jupiters-great-red-spot/",
+                notice = "The default longitude of the Great Red Spot in Jupiter's System II, 91° on June 1, 2026 and " +
+                    "drifting 1.75° a month, is the one Sky & Telescope's online tool “Transit Times of Jupiter's " +
+                    "Great Red Spot” assumes, from trends noted by JUPOS. Jupiter's central meridians and the " +
+                    "positions of its four large moons follow Meeus, Astronomical Algorithms, 2nd ed., chapters 43 " +
+                    "and 44. You can enter your own longitude in Settings.",
+            ),
+            DataCredit(
                 id = "black-marble", name = "NASA Black Marble night lights (VIIRS, Suomi NPP)",
                 usedFor = "Sky quality (Bortle estimate, darkest direction, horizon glow)",
                 author = "NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP)",

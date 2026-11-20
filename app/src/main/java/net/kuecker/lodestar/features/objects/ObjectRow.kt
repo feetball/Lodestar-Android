@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,11 +47,13 @@ internal fun ObjectRow(
     isFavorite: Boolean = false,
     zone: ZoneId = ZoneId.systemDefault(),
     showsProminence: Boolean = false,
+    isImaged: Boolean = false,
 ) {
     val isLargeText = LocalDensity.current.fontScale >= LARGE_TEXT_SCALE
-    val summary = remember(obj, position, isFavorite, zone, showsProminence) {
+    val summary = remember(obj, position, isFavorite, zone, showsProminence, isImaged) {
         val spoken = ObjectsFormat.spokenSummary(obj, position, isFavorite, zone)
-        if (showsProminence) "$spoken, ${obj.prominence.displayName}" else spoken
+        val named = if (showsProminence) "$spoken, ${obj.prominence.displayName}" else spoken
+        if (isImaged) "$named, imaged" else named
     }
     // The width of the row caps the position, so the names keep the rest even beside a long "Clears skyline tomorrow".
     BoxWithConstraints(modifier) {
@@ -63,11 +66,11 @@ internal fun ObjectRow(
             ObjectIcon(obj.category)
             if (isLargeText) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Names(obj, position, isFavorite, showsProminence, subtitleLines = 2)
+                    Names(obj, position, isFavorite, isImaged, showsProminence, subtitleLines = 2)
                     SkyPosition(position, zone, isAlignedToEnd = false)
                 }
             } else {
-                Names(obj, position, isFavorite, showsProminence, subtitleLines = 2, modifier = Modifier.weight(1f))
+                Names(obj, position, isFavorite, isImaged, showsProminence, subtitleLines = 2, modifier = Modifier.weight(1f))
                 SkyPosition(
                     position,
                     zone,
@@ -89,6 +92,7 @@ private fun Names(
     obj: CelestialObject,
     position: ObjectSkyPosition?,
     isFavorite: Boolean,
+    isImaged: Boolean,
     showsProminence: Boolean,
     subtitleLines: Int,
     modifier: Modifier = Modifier,
@@ -116,6 +120,14 @@ private fun Names(
             if (isFavorite) {
                 Icon(
                     Icons.Filled.Star,
+                    contentDescription = null,
+                    tint = palette.accent,
+                    modifier = Modifier.padding(bottom = 4.dp).size(12.dp),
+                )
+            }
+            if (isImaged) {
+                Icon(
+                    Icons.Filled.CheckCircle,
                     contentDescription = null,
                     tint = palette.accent,
                     modifier = Modifier.padding(bottom = 4.dp).size(12.dp),

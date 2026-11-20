@@ -44,10 +44,15 @@ import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
+import net.kuecker.lodestar.kit.mosaic.MosaicFrameKind
 import net.kuecker.lodestar.kit.mosaic.MosaicOrientation
 import net.kuecker.lodestar.kit.mosaic.MosaicPlan
 import net.kuecker.lodestar.kit.mosaic.MosaicPlanner
 import net.kuecker.lodestar.kit.phototools.LensSetup
+import net.kuecker.lodestar.features.sessionlog.InterchangeFile
+import net.kuecker.lodestar.features.sessionlog.InterchangeFileKind
+import net.kuecker.lodestar.features.sessionlog.rememberInterchangeExporter
+import net.kuecker.lodestar.kit.interchange.MosaicPanelCodec
 import net.kuecker.lodestar.shared.InfoRow
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.LocalSheetDismiss
@@ -122,6 +127,7 @@ private fun MosaicPlanContent(
         }
     }
     val ready = outcome as? MosaicPlanOutcome.Ready
+    val saveFile = rememberInterchangeExporter()
 
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 12.dp),
@@ -229,6 +235,31 @@ private fun MosaicPlanContent(
                 enabled = ready != null,
                 icon = Icons.Outlined.GridView,
             )
+            if (ready != null) {
+                if (ready.plan.kind == MosaicFrameKind.EQUATORIAL) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LodestarButton(
+                            text = "Export CSV\u2026",
+                            onClick = { saveFile(MosaicPanelFiles.file(ready, asText = false)) },
+                            kind = LodestarButtonKind.SECONDARY,
+                            modifier = Modifier.weight(1f),
+                        )
+                        LodestarButton(
+                            text = "Export Text List\u2026",
+                            onClick = { saveFile(MosaicPanelFiles.file(ready, asText = true)) },
+                            kind = LodestarButtonKind.SECONDARY,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                } else {
+                    Text(
+                        "A plan in azimuth and altitude has no right ascension and declination to export.",
+                        color = palette.secondaryText,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+            }
             if (!session.isActive) {
                 Text(
                     "While a mosaic runs, the Aim screen guides to one panel after the other.",
@@ -424,3 +455,17 @@ private fun lensText(setup: LensSetup): String {
 }
 
 private fun Double.roundToStep(step: Double): Double = (this / step).roundToInt() * step
+
+/** The panels of a plan as files for a planetarium or an ASIAIR. */
+private object MosaicPanelFiles {
+    /** The panels of [ready] as a CSV table or, with [asText], as a text list; the plan must be equatorial. */
+    fun file(ready: MosaicPlanOutcome.Ready, asText: Boolean): InterchangeFile {
+        val records = MosaicPanelCodec.records(ready.plan)
+        val name = ready.title.replace('/', '-').replace(':', '-').ifEmpty { "Mosaic" } + " Panels"
+        return if (asText) {
+            InterchangeFile(MosaicPanelCodec.text(records, ready.title), InterchangeFileKind.TEXT, "$name.txt")
+        } else {
+            InterchangeFile(MosaicPanelCodec.csv(records), InterchangeFileKind.CSV, "$name.csv")
+        }
+    }
+}

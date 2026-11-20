@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import net.kuecker.lodestar.features.sessionlog.SessionLogObjectCard
 import net.kuecker.lodestar.features.smallbodies.SmallBodyTailCard
 import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
@@ -114,6 +115,7 @@ private fun ObjectDetailContent(obj: CelestialObject, onBack: () -> Unit) {
             }
             SmallBodyTailCard(snapshot?.current?.smallBody)
             ObjectDetailPhotographyCard(obj, snapshot, app.lensSetup, context?.timeZone ?: ZoneId.systemDefault())
+            SessionLogObjectCard(obj)
             if (hasAboutContent(obj)) ObjectDetailAboutCard(obj)
         }
     }

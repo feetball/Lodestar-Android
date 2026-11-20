@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.mount.MountControlScreen
 import net.kuecker.lodestar.features.mount.SettingsMountControlSection
 import net.kuecker.lodestar.features.online.SettingsOnlineDataSection
+import net.kuecker.lodestar.features.sessionlog.SessionLogScreen
+import net.kuecker.lodestar.features.sessionlog.SettingsSessionLogSection
 import net.kuecker.lodestar.features.tools.ExposureCalculatorScreen
 import net.kuecker.lodestar.features.tools.PolarAlignmentScreen
 import net.kuecker.lodestar.features.tools.SensorDiagnosticsScreen
@@ -66,6 +68,7 @@ internal sealed interface SettingsRoute {
     data object TrailsTimeLapse : SettingsRoute
     data object PolarAlignment : SettingsRoute
     data object SensorDiagnostics : SettingsRoute
+    data object SessionLog : SettingsRoute
 }
 
 /**
@@ -88,6 +91,7 @@ fun SettingsScreen() {
             SettingsRoute.TrailsTimeLapse -> TrailsTimeLapseScreen(onBack = back)
             SettingsRoute.PolarAlignment -> PolarAlignmentScreen(onBack = back)
             SettingsRoute.SensorDiagnostics -> SensorDiagnosticsScreen(onBack = back)
+            SettingsRoute.SessionLog -> SessionLogScreen(onBack = back)
         }
     }
 }
@@ -114,6 +118,7 @@ private fun SettingsRoot(onOpen: (SettingsRoute) -> Unit) {
             SettingsAtmosphereSection()
             SettingsOnlineDataSection()
             SettingsToolsSection(onOpen)
+            SettingsSessionLogSection(onOpen)
             SettingsAboutSection(onOpen)
             Spacer(Modifier.height(24.dp))
         }

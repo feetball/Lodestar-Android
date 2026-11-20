@@ -137,6 +137,7 @@ internal object ObjectsListBuilder {
         favoriteIDs: List<String>,
         recentIDs: List<String>,
         positions: Map<String, ObjectSkyPosition>,
+        imagedIDs: Set<String> = emptySet(),
     ): List<ObjectsListSection> {
         val catalogue = options.catalogue
         // Catalogue number only orders a catalogue; name order is the pool's own order for "All".
@@ -153,13 +154,13 @@ internal object ObjectsListBuilder {
         fun resolved(ids: List<String>): List<CelestialObject> {
             val seen = HashSet<String>()
             return ids.mapNotNull { id -> if (seen.add(id)) catalog.objectWithID(id) else null }
-                .filter { passes(it, effective, positions) }
+                .filter { passes(it, effective, positions, imagedIDs) }
         }
 
         val sections = mutableListOf<ObjectsListSection>()
         val favorites = ordered(resolved(favoriteIDs), effective, index, positions)
         // A favorite comet that dropped out of the orbit data stays, as "no current orbit", unless a filter is on.
-        val lostFavorites = if (effective.showsOnlyAboveHorizon || effective.showsOnlyPopular || catalogue.isCatalogue) {
+        val lostFavorites = if (effective.showsOnlyAboveHorizon || effective.showsOnlyPopular || effective.showsOnlyImaged || catalogue.isCatalogue) {
             emptyList()
         } else {
             SmallBodyFavorites.withoutOrbit(favoriteIDs, catalog)
@@ -174,7 +175,7 @@ internal object ObjectsListBuilder {
         // The pool is in name order (All) or catalogue order, and filtering and grouping keep that order, so a list
         // sorted the same way needs no sorting.
         val poolOrder = if (catalogue.isCatalogue) ObjectsSortOrder.NUMBER else ObjectsSortOrder.NAME
-        val visible = index.pool(catalogue).filter { passes(it, effective, positions) }
+        val visible = index.pool(catalogue).filter { passes(it, effective, positions, imagedIDs) }
         when (effective.grouping) {
             ObjectsGrouping.NONE -> {
                 val all = ordered(visible, effective, index, positions, presorted = poolOrder)
@@ -222,7 +223,13 @@ internal object ObjectsListBuilder {
 
     // Filtering
 
-    private fun passes(obj: CelestialObject, options: ObjectsListOptions, positions: Map<String, ObjectSkyPosition>): Boolean {
+    private fun passes(
+        obj: CelestialObject,
+        options: ObjectsListOptions,
+        positions: Map<String, ObjectSkyPosition>,
+        imagedIDs: Set<String>,
+    ): Boolean {
+        if (options.showsOnlyImaged && obj.id !in imagedIDs) return false
         if (options.catalogue.isCatalogue && options.catalogue.numberKey(obj) == null) return false
         if (options.showsOnlyPopular && obj.prominence > Prominence.PROMINENT) return false
         if (options.showsOnlyAboveHorizon && positions[obj.id]?.isUp != true) return false

@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.NorthEast
 import androidx.compose.material.icons.outlined.Stars
@@ -28,6 +31,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import net.kuecker.lodestar.kit.interchange.ObservingListFormat
 import net.kuecker.lodestar.theme.LocalPalette
 
 /**
@@ -42,6 +46,9 @@ internal fun ObjectsOptionsMenu(
     hasLocation: Boolean,
     hasSkyline: Boolean,
     enabled: Boolean,
+    hasFavorites: Boolean,
+    onImport: () -> Unit,
+    onExportFavorites: (ObservingListFormat) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalPalette.current
@@ -109,6 +116,28 @@ internal fun ObjectsOptionsMenu(
             ) {
                 choose(options.copy(hidesFaintObjects = !options.hidesFaintObjects))
             }
+            MenuOption(
+                "Imaged Only",
+                Icons.Outlined.CheckCircle,
+                isChosen = options.showsOnlyImaged,
+                isToggle = true,
+            ) {
+                choose(options.copy(showsOnlyImaged = !options.showsOnlyImaged))
+            }
+            HorizontalDivider(color = palette.stroke)
+            MenuSectionTitle("Lists")
+            MenuAction("Import List\u2026", Icons.Outlined.FileDownload) {
+                isExpanded = false
+                onImport()
+            }
+            MenuAction("Export Favorites as CSV\u2026", Icons.Outlined.FileUpload, enabled = hasFavorites) {
+                isExpanded = false
+                onExportFavorites(ObservingListFormat.GENERIC_CSV)
+            }
+            MenuAction("Export Favorites as SkySafari List\u2026", Icons.Outlined.FileUpload, enabled = hasFavorites) {
+                isExpanded = false
+                onExportFavorites(ObservingListFormat.SKY_SAFARI)
+            }
         }
     }
 }
@@ -120,6 +149,24 @@ private fun MenuSectionTitle(title: String) {
         color = LocalPalette.current.secondaryText,
         style = MaterialTheme.typography.labelMedium,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).semantics { heading() },
+    )
+}
+
+/** An action of the menu (not a choice): an icon and a title. */
+@Composable
+private fun MenuAction(title: String, icon: ImageVector, enabled: Boolean = true, onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    DropdownMenuItem(
+        text = { Text(title) },
+        onClick = onClick,
+        leadingIcon = { Icon(icon, contentDescription = null) },
+        enabled = enabled,
+        colors = MenuDefaults.itemColors(
+            textColor = palette.primaryText,
+            leadingIconColor = palette.secondaryText,
+            disabledTextColor = palette.tertiaryText,
+            disabledLeadingIconColor = palette.tertiaryText,
+        ),
     )
 }
 

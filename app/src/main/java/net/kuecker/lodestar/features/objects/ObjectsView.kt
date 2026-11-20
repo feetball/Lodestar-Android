@@ -27,6 +27,16 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
+import net.kuecker.lodestar.features.sessionlog.ObservingListFiles
+import net.kuecker.lodestar.features.sessionlog.rememberInterchangeExporter
+import net.kuecker.lodestar.features.sessionlog.rememberListPicker
+import net.kuecker.lodestar.kit.interchange.InterchangeError
+import net.kuecker.lodestar.kit.interchange.ObservingListImport
+import java.io.IOException
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -226,10 +236,25 @@ private fun ObjectsBrowse(browse: ObjectsBrowseState, options: ObjectsOptionsSta
     val app = LocalAppModel.current
     val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var isShowingCustomTarget by rememberSaveable { mutableStateOf(false) }
+    var importedList by remember { mutableStateOf<ObservingListImport?>(null) }
+    var importProblem by remember { mutableStateOf<String?>(null) }
     val catalog = app.catalog.catalog
     val indexed = browse.indexed?.takeIf { it.catalog === catalog }
     val loadState = app.catalog.loadState
+    val saveFile = rememberInterchangeExporter()
+    val pickList = rememberListPicker { uri ->
+        scope.launch {
+            try {
+                importedList = ObservingListFiles.read(context, uri)
+            } catch (error: InterchangeError) {
+                importProblem = ObservingListFiles.message(error)
+            } catch (error: IOException) {
+                importProblem = ObservingListFiles.message(error)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().imePadding()) {
         ObjectsTopBar("Objects") {
@@ -242,6 +267,13 @@ private fun ObjectsBrowse(browse: ObjectsBrowseState, options: ObjectsOptionsSta
                 hasLocation = app.observerContext != null,
                 hasSkyline = app.observerContext?.skyline != null,
                 enabled = browse.trimmedQuery.isEmpty(),
+                hasFavorites = app.settings.favoriteObjectIDs.isNotEmpty(),
+                onImport = pickList,
+                onExportFavorites = { format ->
+                    if (catalog != null) {
+                        saveFile(ObjectsListFile.file(ObjectsListFile.entries(app.settings.favoriteObjectIDs, catalog), format))
+                    }
+                },
             )
         }
         ObjectsSearchField(browse.query, onQueryChange = { browse.query = it })
@@ -274,6 +306,23 @@ private fun ObjectsBrowse(browse: ObjectsBrowseState, options: ObjectsOptionsSta
         }
     }
     if (isShowingCustomTarget) CustomTargetSheet(onDismiss = { isShowingCustomTarget = false })
+    importedList?.let { list -> ObjectsImportSheet(list, onDismiss = { importedList = null }) }
+    importProblem?.let { problem ->
+        AlertDialog(
+            onDismissRequest = { importProblem = null },
+            containerColor = palette.surfaceRaised,
+            titleContentColor = palette.primaryText,
+            textContentColor = palette.secondaryText,
+            title = { Text("Could Not Import the List") },
+            text = { Text(problem) },
+            confirmButton = {
+                TextButton(
+                    onClick = { importProblem = null },
+                    colors = ButtonDefaults.textButtonColors(contentColor = palette.accent),
+                ) { Text("OK") }
+            },
+        )
+    }
 }
 
 /** The search field under the top bar, always visible (the iOS drawer search bar). */
@@ -353,7 +402,8 @@ private fun ObjectsList(
     val isShowingResults = outcome.query.isNotEmpty()
     val positions = browse.positions
     val positionMap = positions.positions
-    val sections = remember(outcome, options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap) {
+    val imaged = app.sessionLog.imagedTargetIDs
+    val sections = remember(outcome, options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap, imaged) {
         if (outcome.query.isNotEmpty()) {
             if (outcome.objects.isEmpty()) {
                 emptyList()
@@ -362,7 +412,7 @@ private fun ObjectsList(
             }
         } else {
             ObjectsListBuilder.sections(
-                options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap,
+                options, catalog, index, settings.favoriteObjectIDs, settings.recentObjectIDs, positionMap, imaged,
             )
         }
     }
@@ -414,6 +464,7 @@ private fun ObjectsList(
                         obj = obj,
                         position = positions.position(obj.id),
                         isFavorite = obj.id in favorites,
+                        isImaged = obj.id in imaged,
                         showsProminence = options.catalogue.isCatalogue,
                         zone = zone,
                         shape = rowShape(isFirst = itemIndex == 0, isLast = itemIndex == lastIndex),
@@ -461,6 +512,7 @@ private fun ObjectsList(
                                     showsOnlyAboveHorizon = false,
                                     hidesFaintObjects = false,
                                     showsOnlyPopular = false,
+                                    showsOnlyImaged = false,
                                 ),
                             )
                         },

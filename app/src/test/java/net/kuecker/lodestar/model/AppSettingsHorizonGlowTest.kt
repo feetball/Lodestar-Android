@@ -14,9 +14,10 @@ class AppSettingsHorizonGlowTest {
 
     @Test
     fun horizonGlowIsKeptAcrossARoundTripAndADamagedValueTakesTheDefault() {
-        val off = AppSettings(showHorizonGlow = false)
+        // Decoding sanitises, which turns the single camera into the first camera profile; so do the expected values.
+        val off = AppSettings(showHorizonGlow = false).sanitized()
         assertEquals(off, AppSettings.decode(AppSettings.encode(off)))
-        assertEquals(AppSettings(), AppSettings.decode(AppSettings.encode(AppSettings())))
+        assertEquals(AppSettings().sanitized(), AppSettings.decode(AppSettings.encode(AppSettings())))
         assertTrue(AppSettings.decode("""{"showHorizonGlow":"sometimes"}""").showHorizonGlow)
     }
 }

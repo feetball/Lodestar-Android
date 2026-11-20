@@ -2,7 +2,7 @@
 
 Kotlin package `net.kuecker.lodestar.kit.events` (`lodestar-kit`), Swift folder `Sources/LodestarKit/Events` (`LodestarKit`).
 Both implementations have the same types, members, constants, algorithms and evaluation order; every test exists in both
-(90 per language, `Events*Tests`). Everything is computed offline from the kit's ephemerides (`Ephemeris`: VSOP87 planets, Meeus
+(115 per language, `Events*Tests`). Everything is computed offline from the kit's ephemerides (`Ephemeris`: VSOP87 planets, Meeus
 Moon; `MoonPhaseCalculator`, `TwilightCalculator`, `SkyFrame`), with no network access and no global state.
 
 Naming map (as in the other API documents): Swift `struct` ↔ Kotlin immutable `data class`; Swift `enum` without payload ↔ `enum class`
@@ -222,6 +222,70 @@ is when the Sun's apparent ecliptic longitude (J2000.0 equinox) equals `peakSola
 reproduces the maxima in the IMO text to a few minutes (Lyrids 19:45 UT vs 19h 40m, Leonids 23:51 vs 23h 45m, Perseids 02:09 vs 02–04h).
 The radiant drift is extrapolated linearly for at most the length of the activity period on either side of the maximum.
 
+## Meteor camera advice
+
+`MeteorShowerCameraAdvice.kt` (Swift `MeteorShowerCameraAdvice.swift`): where to point a fixed camera at a shower, how many meteors to expect in the frame,
+and when the radiant is highest in the dark. Pure functions, no state, any thread; `bestAim` is one sky frame, the Moon and 36 directions, `bestTimeTonight`
+one sky frame per ten minutes of darkness (timings below).
+
+```kotlin
+data class MeteorAimAdvice(
+    val azimuth: Double,                  // the view, degrees from north through east, [0, 360)
+    val altitude: Double,                 // geometric, degrees, above 25
+    val separationFromRadiant: Double,    // degrees (40)
+    val aimPoint: EquatorialCoordinate,   // the view as a J2000 place: make a custom target of it
+    val moonNote: String?,                // null when the Moon was not considered
+    val reason: String)
+object MeteorCameraAdvice {
+    const val ringRadius = 40.0; ringStep = 10.0; minimumAltitude = 25.0; preferredAltitude = 55.0; maximumAltitude = 85.0
+    const val lowestRadiantAltitude = -10.0; moonInfluenceRadius = 40.0
+    const val eyeLimitingMagnitude = 6.5; cameraLimitingMagnitude = 2.0; timeStep = 600.0; maximumTimeSteps = 1_000
+    fun bestAim(shower: MeteorShower, observer: Observer, date: Instant, moonConsidered: Boolean = true): MeteorAimAdvice?
+    fun observedHourlyRate(shower: MeteorShower, radiantAltitude: Double, limitingMagnitude: Double = 6.5): Double
+    fun frameSolidAngle(setup: LensSetup): Double                                      // steradians
+    fun expectedInFrame(observedHourlyRate: Double, shower: MeteorShower, setup: LensSetup): Double   // meteors an hour
+    fun meanMinutesPerMeteor(observedHourlyRate: Double, shower: MeteorShower, setup: LensSetup): Double?
+    fun bestTimeTonight(shower: MeteorShower, summary: NightSummary): Instant?
+}
+```
+```swift
+public struct MeteorAimAdvice: Sendable, Hashable { azimuth, altitude, separationFromRadiant, aimPoint, moonNote: String?, reason }
+public enum MeteorCameraAdvice {
+    public static func bestAim(shower: MeteorShower, observer: Observer, at date: Date, moonConsidered: Bool = true) -> MeteorAimAdvice?
+    public static func observedHourlyRate(shower: MeteorShower, radiantAltitude: Double, limitingMagnitude: Double = 6.5) -> Double
+    public static func frameSolidAngle(of setup: LensSetup) -> Double
+    public static func expectedInFrame(observedHourlyRate: Double, shower: MeteorShower, setup: LensSetup) -> Double
+    public static func meanMinutesPerMeteor(observedHourlyRate: Double, shower: MeteorShower, setup: LensSetup) -> Double?
+    public static func bestTimeTonight(shower: MeteorShower, summary: NightSummary) -> Date?
+}
+```
+The constants are `public static let` in Swift. `MeteorCameraMoon`, `MeteorCameraChoice`, `choose(radiant:moon:)`, `altitudePreference` and `moonNote` are internal (Kotlin
+`internal`) and exist for the tests.
+
+* **Direction.** Meteors are shortest near the radiant (they come almost straight at the observer) and longest well away from it, so the camera looks 30–60° from the
+  radiant. `bestAim` takes the geometric horizontal place of `shower.radiant(date)`, samples the ring 40° from it at 36 position angles (0°, 10°, … 350°; 0° is the
+  vertical circle through the radiant towards the zenith, turning right-handed about the radiant; a radiant at the zenith or nadir uses north instead), drops views at or
+  below 25° and scores the rest: `score = max(0, 1 − |altitude − 55°| / 30°) − moonPenalty`, so the preference is 1 at 55°, 0 at 25° and 85°. The Moon penalty applies only when
+  the Moon (topocentric, geometric) is above the horizon: `illuminatedFraction · clamp((40° − separation) / 40°, 0, 1)`, so a full Moon in the view costs a whole point and one
+  40° away or further costs nothing. A direction replaces the best one only if it scores more than 1e-9 higher, so in a symmetric sky (the ring is mirrored about the meridian)
+  the smaller position angle wins in both languages. `nil` when the radiant is lower than −10° (or not a number). Altitudes are geometric; at 25° and above refraction is under
+  2′. `aimPoint` is `SkyFrame.j2000(horizontal, refracted: false)`: a J2000 place that stays among the stars while the view's azimuth and altitude move with the night.
+  `moonNote` is `nil` without the Moon, "The Moon is below the horizon." when it is down, else "The Moon is 52° up, 71° from this view, 100% lit." plus " It is close enough
+  to wash out the fainter meteors." when it is less than 40° from the view and at least 25 % lit. `reason` is one fixed sentence ("…turned away from the Moon." when the
+  Moon moved the pick, else "…high enough to clear the horizon haze.").
+* **Count.** `observedHourlyRate = ZHR · sin(altitude) · r^(lm − 6.5)`, the IMO definition `ZHR = HR · r^(6.5 − lm) / sin h` read backwards (Rendtel and Arlt, eds., *Handbook for
+  Meteor Observers*, IMO; the correction for a partly obstructed field is 1); it is 0 for a radiant at or below the horizon. `expectedInFrame = observedHourlyRate ·
+  (frameSolidAngle / 2π) · r^(−(6.5 − 2.0))`: the frame's share of the sky above the horizon times the camera's handicap. The frame is the rectangular pyramid of
+  `setup.fieldOfView` (landscape), `4 · asin(sin(w/2) · sin(h/2))`: 1.0866 sr for 24 mm on full frame (73.7° × 53.1°), 17.3 % of the sky above. The camera limit
+  `cameraLimitingMagnitude = 2.0` is an assumption: a fast, wide lens records meteors to about +2 for a bright Perseid-class shower; a longer exposure, a higher ISO or a darker
+  sky go deeper. Worked example (tested): Perseids, ZHR 100, r 2.2, radiant 60° up, 24 mm full frame: `100 · sin 60° · 0.17294 · 2.2^−4.5 = 0.4311` an hour, one meteor every
+  139 minutes. It assumes the whole frame is above the horizon, so it overstates a frame that includes the ground, and it ignores trailing loss and the shower's profile
+  through the night. `meanMinutesPerMeteor` is 60 divided by it, `nil` when none is expected. Unusable inputs (NaN, negative, a population index ≤ 0) give 0.
+* **Best time.** `bestTimeTonight` samples the radiant's geometric altitude every 10 minutes from the start of each astronomical-darkness interval of the `NightSummary`
+  (`summary.astronomicalDarknessIntervals`, the Moon is not considered) and at each interval's end, at most 1 000 steps of one interval, and returns the earliest of the
+  highest, `nil` without darkness (high-latitude summers). When the radiant is still climbing at dawn that is the end of the dark. Compute the advice for that instant:
+  `bestAim(shower, observer, bestTime)`, `observedHourlyRate(shower, altitude of the radiant then)`, `expectedInFrame(…)`.
+
 ## Conjunctions
 
 ```kotlin
@@ -381,6 +445,8 @@ degrades slowly with distance from the present: for years beyond ~2035 add the �
 | Call | Cost |
 | --- | --- |
 | `MeteorShowerFinder` one year | 3 ms |
+| `MeteorCameraAdvice.bestAim` | 0.1 ms (one frame, the Moon, 36 directions) |
+| `MeteorCameraAdvice.bestTimeTonight` (a 6.7-hour dark: 41 frames) | 1.8 ms (+ 7 ms for the `NightPlanner.summary` it takes) |
 | `ConjunctionFinder` one year (default thresholds, ~105 events) | 55–75 ms (+ 30 ms with an observer: topocentric notes) |
 | `OppositionFinder`, `GreatestElongationFinder` one year | 6 ms each |
 | `SeasonFinder`, `EarthApsisFinder` | < 1 ms |
@@ -408,7 +474,7 @@ Nothing is cached between calls (only within one `events(…)` call: the new/ful
   Spica, Antares, Aldebaran, the Pleiades: J2000); `AimTarget.Radiant(shower)` → the radiant for the frame's date (`MeteorShower.radiant(date)` is the
   J2000 `EquatorialCoordinate` to give to the kit's pointing/guidance code for a fixed star-like target, drifted by the date). For a conjunction the UI can also aim at each
   body separately via `conjunction.first.aimTarget` / `second.aimTarget`. Re-resolve every frame (the frame's date drives the Moon and the radiant drift). For a meteor shower
-  the usual advice is to frame 40–60° away from the radiant rather than at it; the radiant is for the overlay and the pointing aid.
+  the usual advice is to frame 40–60° away from the radiant rather than at it (`MeteorCameraAdvice.bestAim` picks the place: make `aimPoint` a custom target); the radiant is for the overlay and the pointing aid.
 * **Eclipses.** Lunar: draw the contact timeline from `LunarEclipse.contacts` with `visibility.contacts` (altitude per contact; negative = below the horizon). Solar:
   show `local.kind` first ("Total eclipse here: 3m 52s at 12:42 CDT", "Partial, 91 % obscured, maximum 18:13", "No eclipse visible here"); `c1…c4` are geometric, so grey the
   contacts whose `visibility.contacts[…].altitude` is below 0; `SolarEclipse.isCentral` and `kind` describe the eclipse globally ("a total eclipse crosses Spain").
@@ -422,6 +488,7 @@ Nothing is cached between calls (only within one `events(…)` call: the new/ful
 * IMO *Meteor Shower Calendar 2026* (© International Meteor Organization 2025): shower parameters (facts: names, activity dates, λ☉, radiant, V∞, r, ZHR, Table 6 positions)
   hand-entered with the citation in `MeteorShower`; the IMO site was down when this was written, so the source is the Wayback Machine copy (sha256 in the source comment).
   No licence text accompanies the calendar: keep the credit line "Meteor shower data: International Meteor Organization" and ask the IMO before redistributing the table itself.
+* The camera advice adds no data: the ZHR definition it inverts is the IMO's (formula, no table), the camera limiting magnitude is an assumption stated in the code.
 * NASA/GSFC Eclipse Web Site (F. Espenak, J. Meeus; public domain with credit) and the U.S. Naval Observatory data services (US Government, public domain) and JPL Horizons (public):
   used only as test references (values quoted in the tests), nothing is shipped.
 * Reference star places: Hipparcos (ESA 1997, new reduction) through the kit's own `stars.json`; the Pleiades centre from SIMBAD (M 45).

@@ -131,8 +131,9 @@ class EventsPlanningTest {
         val plan = EventsPlanner.plan(shower, context)
         val radiant = assertNotNull(plan.radiant)
         val frame = assertNotNull(plan.meteorFrame)
-        assertEquals(EventsPlanner.METEOR_OFFSET_DEGREES, radiant.angularSeparation(frame), 0.01)
-        assertTrue(frame.altitude > 0)
+        // The radiant here includes refraction and the frame is the engine's geometric direction: up to 0.1° apart at 10°.
+        assertEquals(EventsPlanner.METEOR_OFFSET_DEGREES, radiant.angularSeparation(frame), 0.15)
+        assertTrue(frame.altitude > 25)
     }
 
     @Test

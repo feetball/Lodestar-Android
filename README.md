@@ -22,7 +22,8 @@ same astronomy engine ported line for line from Swift to Kotlin.
   angle and time to the meridian transit, rise/set, altitude chart, framing and longest exposure for each object.
 - **Sky chart** with time travel, **Tonight** planning (darkness windows, Moon, Milky Way core, planets, best
   targets ranked by the hours they stay clear of your skyline, polar-scope clock), **night mode** (pure red, automatic after sunset, screen dimming, red camera view).
-- **Events calendar** — meteor showers (with hourly rates and the radiant's altitude from your site), lunar and
+- **Events calendar** — meteor showers (with hourly rates, the radiant's altitude from your site, the best camera
+  direction, away from the radiant and the Moon, and how many meteors to expect in your lens's frame), lunar and
   solar eclipses, conjunctions, oppositions and elongations, supermoons, equinoxes and solstices, each with when
   and where to look and a button to aim at it.
 - **Photo planners** — a mosaic planner for panoramas such as the Milky Way arch (panels, overlap and shooting

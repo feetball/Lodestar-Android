@@ -34,8 +34,11 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,6 +104,8 @@ private fun EventsCalendarContent(context: ObserverContext, onOpenEvent: (Astron
     val greatRedSpot = app.settings.greatRedSpotOrDefault
     val key = remember(context, now, greatRedSpot) { EventsCalculator.key(context, today, greatRedSpot) }
     val zone = context.timeZone
+    val transits = rememberEventsTransits(context.observer)
+    var openTransit by remember { mutableStateOf<EventsTransit?>(null) }
 
     LaunchedEffect(key) { model.refresh(context, app.clock.now, greatRedSpot) }
 
@@ -115,7 +120,11 @@ private fun EventsCalendarContent(context: ObserverContext, onOpenEvent: (Astron
         EventsVisibleOnlyRow(filter)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
-                months != null && months.isNotEmpty() -> EventsMonthList(months, context, now, listState, onOpenEvent)
+                months != null && months.isNotEmpty() -> EventsMonthList(
+                    months, context, now, listState, onOpenEvent,
+                    transits = if (filter.groups.isEmpty()) transits else null,
+                    onOpenTransit = { openTransit = it },
+                )
                 months != null -> EmptyStateView(
                     title = "No Events",
                     icon = Icons.Outlined.EventBusy,
@@ -138,6 +147,7 @@ private fun EventsCalendarContent(context: ObserverContext, onOpenEvent: (Astron
             }
         }
     }
+    openTransit?.let { EventsTransitSheet(it, context, onDismiss = { openTransit = null }) }
 }
 
 // Filters
@@ -244,6 +254,8 @@ private fun EventsMonthList(
     now: Instant,
     listState: LazyListState,
     onOpenEvent: (AstronomicalEvent) -> Unit,
+    transits: EventsTransitModel?,
+    onOpenTransit: (EventsTransit) -> Unit,
 ) {
     val palette = LocalPalette.current
     LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
@@ -254,6 +266,9 @@ private fun EventsMonthList(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
             )
+        }
+        if (transits != null) {
+            item(key = "transits") { EventsTransitSection(context, transits, now, onOpenTransit) }
         }
         for (month in months) {
             stickyHeader(key = "month/${month.month}") { EventsMonthHeader(month.title, month.events.size) }

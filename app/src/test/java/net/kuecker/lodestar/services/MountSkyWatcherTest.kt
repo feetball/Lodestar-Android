@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.services
 
+import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -281,10 +282,17 @@ class MountSkyWatcherTest {
             session = MountSession(SimulatedSkyWatcherFactory(SkyWatcherMountMode.ALT_AZIMUTH, errors), observerProvider = observer),
             preferences = MountPreferences(MapMountStore()),
             observerProvider = observer,
-            demoFactory = { demo -> MountDemoLinkFactory(demo, observer) },
+            // The demo mount starts its clock from `now`: pinned, so that the sky (and with it the home error the
+            // step-by-step alignment measures) is the same at every hour of the day.
+            demoFactory = { demo -> MountDemoLinkFactory(demo, observer, now = { DEMO_START }) },
             pollMillis = 5,
             nudgePollMillis = 5,
         )
+    }
+
+    private companion object {
+        /** 2026-11-19 20:00 UTC: early afternoon in Boulder, Vega high in the east, where the alignment test is known to pass. */
+        val DEMO_START: Instant = Instant.parse("2026-11-19T20:00:00Z")
     }
 
     private fun <T : Any> await(what: String, block: () -> T?): T {

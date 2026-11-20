@@ -27,6 +27,7 @@ class OnlineTextTest {
         val providers = mapOf(
             OnlineFeed.SATELLITE_PASSES to "CelesTrak", OnlineFeed.STARLINK to "CelesTrak",
             OnlineFeed.COMETS to "Minor Planet Center", OnlineFeed.CLOUDS to "MET Norway",
+            OnlineFeed.TERRAIN to "AWS Open Data",
         )
         for (feed in OnlineFeed.entries) {
             val leaves = OnlineText.leavesPhone(feed)
@@ -38,6 +39,12 @@ class OnlineTextTest {
         assertTrue(OnlineText.leavesPhone(OnlineFeed.CLOUDS).contains("rounded to 0.1° (about 10 km)"))
         assertTrue(OnlineText.leavesPhone(OnlineFeed.STARLINK).contains("unmetered"))
         assertFalse(OnlineText.leavesPhone(OnlineFeed.SATELLITE_PASSES).contains("location"))
+        // The tile server learns where the site is from the tiles asked for, and the text says so.
+        val terrain = OnlineText.leavesPhone(OnlineFeed.TERRAIN)
+        assertTrue(terrain.contains("sees your IP address and which 1° tiles you request"), terrain)
+        assertTrue(terrain.contains("deletes them"), terrain)
+        assertTrue(OnlineText.FIRST_TIME_BODY.contains("which 1° tiles"))
+        assertTrue(OnlineText.INTRO.contains("terrain horizons"))
     }
 
     @Test

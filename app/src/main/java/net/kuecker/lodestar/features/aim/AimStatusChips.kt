@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material.icons.outlined.VideocamOff
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +28,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import net.kuecker.lodestar.features.satellites.SatelliteStreakChip
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
+import net.kuecker.lodestar.kit.foundation.timeIntervalSince
+import net.kuecker.lodestar.kit.pointing.AlignmentHygiene
 import net.kuecker.lodestar.kit.pointing.AlignmentModel
 import net.kuecker.lodestar.model.HeadingSource
 import net.kuecker.lodestar.model.LocationSource
@@ -37,28 +40,39 @@ import net.kuecker.lodestar.services.MotionStatus
 import net.kuecker.lodestar.shared.ChipTone
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.StatusChip
+import java.time.Instant
 
 /** Fractional deviation of the measured magnetic field from the expected one above which the compass is suspect. */
 private const val INTERFERENCE_THRESHOLD = 0.25
 
-/** One chip. Chips that explain a problem with an Android permission open the app's settings when tapped. */
+/**
+ * One chip. Chips that explain a problem with an Android permission open the app's settings when tapped; the chip of
+ * an alignment that is too old opens the alignment sheet.
+ */
 private data class ChipItem(
     val id: String,
     val icon: ImageVector,
     val text: String,
     val tone: ChipTone = ChipTone.NEUTRAL,
     val opensSettings: Boolean = false,
+    val opensAlignment: Boolean = false,
 )
 
-/** The row of status chips at the top: sensors, compass, alignment, location and camera. */
+/** The row of status chips at the top: the time preview, sensors, compass, alignment, location and camera. */
 @Composable
-internal fun AimStatusChips(model: AimViewModel, modifier: Modifier = Modifier) {
+internal fun AimStatusChips(model: AimViewModel, onSheet: (AimSheet) -> Unit, modifier: Modifier = Modifier) {
     val app = LocalAppModel.current
     val context = LocalContext.current
-    val items = sensorItems(app.motion.status) + headingItems(app.motion) + alignmentItems(app.alignment) +
+    // The age of the alignment counts on with the clock.
+    val now by rememberWallClock()
+    val gyroLock = app.motion.headingSource == HeadingSource.GYRO_LOCK
+    val items = sensorItems(app.motion.status) + headingItems(app.motion) +
+        alignmentItems(app.alignment, app.alignedAt, now, gyroLock) +
         locationItems(app.location.isReducedAccuracy && app.observerContext?.source == LocationSource.Device) +
         skylineItems(app.observerContext?.horizon != null) +
         cameraItems(model.configuration.wantsCameraPreview, app.camera.authorization, app.camera.errorDescription != null)
+    // The preview comes first: it is what the rest of the screen is showing.
+    AimPreviewChip(model)
     // Close together, and reaching a little into the margin: the usual three chips (compass, alignment, camera) then
     // fit one row on a 360 dp phone, where a wrapped chip would land on the marker and the horizon under it.
     AimFlowLayout(modifier.fillMaxWidth(), spacing = 4.dp, lineSpacing = 4.dp, bleed = 6.dp) {
@@ -73,6 +87,17 @@ internal fun AimStatusChips(model: AimViewModel, modifier: Modifier = Modifier) 
                                 onClickLabel = "Open the app settings to allow camera access. The virtual sky still works.",
                                 role = Role.Button,
                                 onClick = { openAppSettings(context) },
+                            )
+                            .padding(vertical = 9.dp),
+                    )
+                } else if (item.opensAlignment) {
+                    StatusChip(
+                        item.icon, item.text, tone = item.tone,
+                        modifier = Modifier
+                            .clickable(
+                                onClickLabel = "Open star alignment to align again",
+                                role = Role.Button,
+                                onClick = { onSheet(AimSheet.ALIGNMENT) },
                             )
                             .padding(vertical = 9.dp),
                     )
@@ -123,8 +148,17 @@ private fun compassItem(quality: CompassQuality): ChipItem = when (quality) {
 
 // Alignment, location and camera
 
-private fun alignmentItems(alignment: AlignmentModel): List<ChipItem> {
+private fun alignmentItems(alignment: AlignmentModel, alignedAt: Instant?, now: Instant, gyroLock: Boolean): List<ChipItem> {
     if (!alignment.isAligned) return listOf(ChipItem("alignment", Icons.Outlined.GpsFixed, "Not aligned"))
+    // An old alignment is worth less than its numbers say: the chip then asks for a new one instead of quoting them.
+    if (alignedAt != null && AlignmentHygiene.isStale(alignedAt, now, gyroLock)) {
+        return listOf(
+            ChipItem(
+                "alignment", Icons.Filled.Warning, AimAlignmentAge.chipText(now.timeIntervalSince(alignedAt)),
+                ChipTone.WARNING, opensAlignment = true,
+            ),
+        )
+    }
     val error = alignment.pointingUncertainty ?: alignment.rmsResidual
     val count = alignment.points.size
     val accuracy = AngleFormatter.formatDegrees(error, if (error < 10) 1 else 0)

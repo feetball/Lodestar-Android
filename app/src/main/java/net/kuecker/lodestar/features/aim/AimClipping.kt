@@ -246,6 +246,20 @@ internal class AimWorldPath {
         }
     }
 
+    /** [addPolyline] for the first [count] directions of [points], packed as x, y, z triples. */
+    fun addPackedPolyline(points: DoubleArray, count: Int, closed: Boolean, frustum: AimFrustum) {
+        if (count < 2) return
+        var isContinuing = false
+        val segmentCount = if (closed) count else count - 1
+        for (index in 0 until segmentCount) {
+            val a = 3 * index
+            val b = 3 * ((index + 1) % count)
+            isContinuing = addSegment(
+                points[a], points[a + 1], points[a + 2], points[b], points[b + 1], points[b + 2], frustum, isContinuing,
+            )
+        }
+    }
+
     /** Adds the visible part of the single segment from `a` to `b` as its own subpath. */
     fun addSegment(ax: Double, ay: Double, az: Double, bx: Double, by: Double, bz: Double, frustum: AimFrustum) {
         addSegment(ax, ay, az, bx, by, bz, frustum, false)

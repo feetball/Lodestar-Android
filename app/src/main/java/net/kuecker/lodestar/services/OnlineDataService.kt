@@ -9,6 +9,8 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -16,6 +18,7 @@ import kotlinx.coroutines.withContext
 import net.kuecker.lodestar.BuildConfig
 import net.kuecker.lodestar.kit.comets.SmallBody
 import net.kuecker.lodestar.kit.foundation.GeographicLocation
+import net.kuecker.lodestar.kit.horizon.TerrainHorizon
 import java.io.File
 import java.io.IOException
 import java.time.Instant
@@ -59,6 +62,15 @@ class OnlineDataService(
     private val cache: OnlineCache by lazy { OnlineCache(File(appContext.noBackupFilesDir, "online")) }
     private val refresher: OnlineRefresher by lazy {
         OnlineRefresher(cache, OnlineDownloader(OnlineUserAgent.make(BuildConfig.VERSION_NAME)), store, clock)
+    }
+    private val terrainLoader: TerrainHorizonLoader by lazy {
+        val downloader = OnlineDownloader(
+            OnlineUserAgent.make(BuildConfig.VERSION_NAME), totalTimeoutMillis = TERRAIN_TILE_TIMEOUT_MILLIS,
+        )
+        TerrainHorizonLoader(
+            File(appContext.cacheDir, "terrain-tiles"),
+            { url, isCancelled -> downloader.fetch(OnlineRequest(url, TerrainHorizonLoader.MAXIMUM_TILE_BYTES), isCancelled) },
+        )
     }
     private val work = Mutex()
     private val loaded = HashSet<OnlineFeed>()
@@ -116,7 +128,11 @@ class OnlineDataService(
             clearMemory(feed)
             scope.launch {
                 work.withLock {
-                    withContext(Dispatchers.IO) { feed.resources.forEach { cache.delete(it.key) } }
+                    withContext(Dispatchers.IO) {
+                        feed.resources.forEach { cache.delete(it.key) }
+                        // A computation that is still running stops at its next check; what it downloaded goes at once.
+                        if (feed == OnlineFeed.TERRAIN) terrainLoader.deleteLeftovers()
+                    }
                     loaded.remove(feed)
                 }
             }
@@ -147,6 +163,35 @@ class OnlineDataService(
     fun refreshForecast() {
         if (!isEnabled(OnlineFeed.CLOUDS)) return
         scope.launch { work.withLock { loadLocked(OnlineFeed.CLOUDS); refreshLocked(OnlineFeed.CLOUDS, manual = false) } }
+    }
+
+    /**
+     * Downloads the elevation tiles around [location], one after the other (the nearest first, at most
+     * [TerrainHorizonLoader.MAXIMUM_TILES]), and works out the terrain horizon from them. The feed must be on: nothing is
+     * requested otherwise. The tiles are deleted when it is over. Cancel by cancelling the caller; switching the feed off
+     * stops it too. [onProgress] is called from a background thread.
+     */
+    internal suspend fun computeTerrainHorizon(
+        location: GeographicLocation,
+        onProgress: (TerrainHorizonLoader.Progress) -> Unit,
+    ): TerrainComputation {
+        if (!isEnabled(OnlineFeed.TERRAIN)) return TerrainComputation.Failed("Terrain horizons are switched off.")
+        if (!isOnline()) return TerrainComputation.Failed("No network connection.")
+        val job = currentCoroutineContext()[Job]
+        val isCancelled = { !isEnabled(OnlineFeed.TERRAIN) || job?.isActive == false }
+        val fetched = withContext(Dispatchers.IO) { terrainLoader.fetchTiles(location, onProgress, isCancelled) }
+        return when (fetched) {
+            is TerrainHorizonLoader.Outcome.Failed -> TerrainComputation.Failed(fetched.message)
+            TerrainHorizonLoader.Outcome.Cancelled -> TerrainComputation.Cancelled
+            is TerrainHorizonLoader.Outcome.Tiles -> {
+                val result = withContext(Dispatchers.Default) { TerrainHorizon.profile(location, fetched.tiles) }
+                if (isCancelled()) {
+                    TerrainComputation.Cancelled
+                } else {
+                    TerrainComputation.Done(result, fetched.tiles.size, fetched.unavailable)
+                }
+            }
+        }
     }
 
     /**
@@ -280,9 +325,10 @@ class OnlineDataService(
     private suspend fun publishStatus(feed: OnlineFeed) {
         val states = withContext(Dispatchers.IO) { feed.resources.map { it to refresher.state(it) } }
         val updates = states.mapNotNull { it.second.meta?.savedAtMillis }
-        val next = states.maxOf { (resource, state) ->
+        // The terrain feed has no files to refresh.
+        val next = states.maxOfOrNull { (resource, state) ->
             OnlineSchedule.earliestRequestMillis(resource, state, forecastKey(resource), expiresJitterMillis)
-        }
+        } ?: 0L
         update(feed) {
             it.copy(lastUpdateMillis = updates.minOrNull(), nextRequestMillis = next.takeIf { millis -> millis > clock() })
         }
@@ -305,6 +351,8 @@ class OnlineDataService(
             OnlineFeed.SATELLITE_PASSES, OnlineFeed.STARLINK -> satellites = satellites.without(feed)
             OnlineFeed.COMETS -> catalog.setDownloadedSmallBodies(emptyList())
             OnlineFeed.CLOUDS -> forecast = null
+            // The tiles are deleted after every computation; there is nothing in memory.
+            OnlineFeed.TERRAIN -> Unit
         }
     }
 
@@ -322,5 +370,8 @@ class OnlineDataService(
     private companion object {
         const val PREFERENCES = "lodestar.online"
         const val MAXIMUM_JITTER_MILLIS = 5 * 60_000L
+
+        /** One tile of about 11 MB must arrive within this long: 5 minutes, which is 0.3 Mbit/s. */
+        const val TERRAIN_TILE_TIMEOUT_MILLIS = 5 * 60_000L
     }
 }

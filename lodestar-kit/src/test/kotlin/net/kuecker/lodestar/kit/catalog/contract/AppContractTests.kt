@@ -71,7 +71,7 @@ class AppContractTests {
             val horizontal: HorizontalCoordinate = frame.horizontal(body, true)
             obj to horizontal
         }
-        assertEquals(9, bodies.size)
+        assertEquals(10, bodies.size)
 
         val figures = catalog.constellations.map { c ->
             val label: EquatorialCoordinate = c.labelPosition

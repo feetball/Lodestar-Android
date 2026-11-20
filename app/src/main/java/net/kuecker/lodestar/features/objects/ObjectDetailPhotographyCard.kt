@@ -34,6 +34,7 @@ import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.catalog.ObjectCategory
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.formatting.formatExposure
+import net.kuecker.lodestar.kit.phototools.ExposureCalculator
 import net.kuecker.lodestar.kit.phototools.LensSetup
 import net.kuecker.lodestar.kit.planning.ImagingFilter
 import net.kuecker.lodestar.kit.planning.MoonImpact
@@ -48,6 +49,7 @@ import java.text.NumberFormat
 import java.time.ZoneId
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * How the object fits the user's lens, how long to expose, and what the Moon will do to the shot. [snapshot] is
@@ -75,6 +77,7 @@ internal fun ObjectDetailPhotographyCard(
         CardTitle("Photography", icon = Icons.Outlined.CameraAlt)
         LensRows(photography, lens)
         photography.framing?.let { FramingRow(it, photography.frame.longSide / photography.frame.shortSide) }
+        photography.bodySize?.let { BodySizeRow(it, lens) }
         ExposureRows(photography)
         snapshot?.moon?.let { MoonRows(it, MoonImpact.assessmentKind(obj), zone) }
     }
@@ -126,6 +129,28 @@ private fun framingDescription(framing: ObjectDetailFraming): String {
     }
     val panels = "${framing.longSidePanels} × ${framing.shortSidePanels}"
     return "Larger than the frame: needs a mosaic of about $panels panels"
+}
+
+/** "46″ across · about 11 px at 200 mm" for a disc of the Sun, the Moon or a planet. */
+@Composable
+private fun BodySizeRow(size: ObjectDetailBodySize, lens: LensSetup) {
+    val palette = LocalPalette.current
+    val pixels = if (size.pixels < 1) "under 1 px" else "about ${size.pixels.roundToInt()} px"
+    val angle = AppFormat.separation(size.diameterDegrees)
+    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            "$angle across \u00B7 $pixels at ${trimmed(lens.focalLengthMillimeters)} mm",
+            color = palette.secondaryText,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (size.assumedPixelPitch) {
+            Text(
+                "Assumes ${trimmed(ExposureCalculator.defaultPixelPitchMicrometers)} \u00B5m pixels: yours are not set.",
+                color = palette.tertiaryText,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
 }
 
 // Exposure

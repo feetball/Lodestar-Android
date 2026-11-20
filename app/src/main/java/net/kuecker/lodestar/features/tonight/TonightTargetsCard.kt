@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import net.kuecker.lodestar.features.objects.ObjectMoonAssessment
 import net.kuecker.lodestar.features.objects.ObjectMoonText
+import net.kuecker.lodestar.features.objects.ObjectsFormat
 import net.kuecker.lodestar.features.smallbodies.SmallBodyText
 import net.kuecker.lodestar.kit.catalog.CelestialObject
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
@@ -86,7 +87,7 @@ internal fun TonightTargetsCard(
                     if (isSkylineApplied) {
                         TonightSkylineNote(
                             "Targets hidden behind your recorded skyline are left out. The hours and the best time " +
-                                "count only the time above it.",
+                                "count only the time above it, and targets that stay clear of it longer rank higher.",
                         )
                     }
                 }
@@ -193,12 +194,13 @@ private fun title(obj: CelestialObject): String {
     return TonightFormat.designation(obj)?.let { "$name${AppFormat.NO_BREAK_SPACE}· ${AppFormat.unbreakable(it)}" } ?: name
 }
 
-/** "Best 23:40 facing SE · 7h 12m above 20°". */
+/** "Best 23:40 facing SE · 7h 12m above 20°"; with a skyline "Best 23:40 facing SE · 3.5 h clear of your skyline". */
 private fun timing(target: TonightTarget, zone: ZoneId): String {
     val minimum = TonightCalculator.minimumTargetAltitude.toInt()
-    return "Best ${AppFormat.time(target.peakTime, zone)} " +
-        TonightFormat.facing(target.peakAzimuth, target.peakAltitude) +
-        " · ${TonightFormat.duration(target.hoursAboveMinimum)} above $minimum°"
+    val best = "Best ${AppFormat.time(target.peakTime, zone)} " + TonightFormat.facing(target.peakAzimuth, target.peakAltitude)
+    val clear = target.unobstructedHours
+    if (clear != null) return "$best · ${ObjectsFormat.hours(clear)} clear of your skyline"
+    return "$best · ${TonightFormat.duration(target.hoursAboveMinimum)} above $minimum°"
 }
 
 private fun spokenSummary(target: TonightTarget, zone: ZoneId): String {
@@ -209,8 +211,13 @@ private fun spokenSummary(target: TonightTarget, zone: ZoneId): String {
         "highest ${AngleFormatter.formatDegrees(target.peakAltitude, 0)} at ${AppFormat.time(target.peakTime, zone)}" +
             ", " + TonightFormat.spokenFacing(target.peakAzimuth, target.peakAltitude),
     )
+    val clear = target.unobstructedHours
     parts.add(
-        "${TonightFormat.duration(target.hoursAboveMinimum)} above ${TonightCalculator.minimumTargetAltitude.toInt()} degrees",
+        if (clear != null) {
+            "${ObjectsFormat.hours(clear, spoken = true)} clear of your skyline"
+        } else {
+            "${TonightFormat.duration(target.hoursAboveMinimum)} above ${TonightCalculator.minimumTargetAltitude.toInt()} degrees"
+        },
     )
     target.moon?.let { parts.add(ObjectMoonText.chip(it)) }
     return parts.joinToString(", ")

@@ -264,8 +264,13 @@ class MountController(
     fun abort() {
         requireConnected()
         val direction = nudgeDirection
-        val failure = repeatUntilDone { driver.abort() }
-            ?: direction?.let { toStop -> repeatUntilDone { driver.stopNudge(toStop) } }
+        var failure = repeatUntilDone { driver.abort() }
+        // The abort of some protocols (NexStar, Alpaca) cancels only a GoTo, so a running nudge is stopped on its own,
+        // whatever became of the abort. The first failure is the one reported.
+        if (direction != null) {
+            val stopFailure = repeatUntilDone { driver.stopNudge(direction) }
+            if (failure == null) failure = stopFailure
+        }
         if (failure != null) {
             lastError = failure
             throw failure
@@ -295,16 +300,32 @@ class MountController(
         if (previous != null && previous != direction) {
             driver.stopNudge(previous)
             nudgeDirection = null
+            nudgeEnds = null
         }
         val now = clock.now()
         try {
             driver.startNudge(direction, rate, durationSeconds)
         } catch (error: MountError) {
             lastError = error
+            var stopped = true
             try {
                 driver.stopNudge(direction)
             } catch (_: MountError) {
                 // Already failing; the error above is what the caller needs to see.
+                stopped = false
+            }
+            if (stopped) {
+                // What ran before is stopped (the previous direction above, this one just now): the controller is idle and
+                // not left in a nudge that has no direction.
+                if (phase == MountPhase.NUDGING) phase = MountPhase.IDLE
+                nudgeDirection = null
+                nudgeEnds = null
+            } else {
+                // The move may be running although the stop could not be confirmed: it stays on the books, so that
+                // [stopNudge], [abort] and the end of its duration still send the stop.
+                phase = MountPhase.NUDGING
+                nudgeDirection = direction
+                nudgeEnds = now.addingTimeInterval(durationSeconds)
             }
             throw error
         }

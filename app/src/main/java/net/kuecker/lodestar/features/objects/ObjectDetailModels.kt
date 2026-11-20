@@ -9,6 +9,7 @@ import net.kuecker.lodestar.kit.ephemeris.RiseTransitSet
 import net.kuecker.lodestar.kit.foundation.DateInterval
 import net.kuecker.lodestar.kit.foundation.EquatorialCoordinate
 import net.kuecker.lodestar.kit.foundation.HorizontalCoordinate
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.kit.phototools.ExposureEstimate
 import net.kuecker.lodestar.kit.phototools.FrameSize
 import net.kuecker.lodestar.model.ObserverContext
@@ -71,6 +72,8 @@ internal data class ObjectDetailCurrent(
     val isSmallBody: Boolean = false,
     /** A comet's or asteroid's distances, elongation, phase, magnitude estimate, warnings and tail; `null` when its orbit cannot be evaluated. */
     val smallBody: SmallBodyDetail? = null,
+    /** The hour angle and the transits around now; `null` for a celestial pole and for a body whose orbit cannot be evaluated. */
+    val meridian: ObjectDetailMeridian? = null,
 ) {
     /** `true` when the object is above the horizon but behind the recorded skyline. */
     val isBehindSkyline: Boolean get() = skylineAltitude != null && horizontal.altitude > 0 && !isUp
@@ -134,6 +137,11 @@ internal data class ObjectDetailNight(
     val bestInDarkness: ObjectDetailPeak?,
     /** `true` when the events, the curve and the best point respect the site's recorded skyline. */
     val usesSkyline: Boolean = false,
+    /**
+     * With a recorded skyline, the stretches of the dark in which the object is above it and at least
+     * [ObjectsTonight.MINIMUM_ALTITUDE] high; `null` without a skyline or without darkness.
+     */
+    val unobstructed: UnobstructedVisibility? = null,
 ) {
     /** When this night is over and "tonight" means the next one. */
     val expiry: Instant get() = twilight.sunrise ?: interval.end
@@ -210,6 +218,16 @@ internal data class ObjectDetailFraming(
     }
 }
 
+/** How large the disc of the Sun, the Moon or a planet is in the user's frame. */
+internal data class ObjectDetailBodySize(
+    /** The apparent diameter in degrees. */
+    val diameterDegrees: Double,
+    /** The diameter in pixels of the image. */
+    val pixels: Double,
+    /** Whether the pixel pitch was assumed because the lens setup has none. */
+    val assumedPixelPitch: Boolean,
+)
+
 /** How an object fits the user's lens and how long an exposure can be before stars trail. */
 internal data class ObjectDetailPhotography(
     /** The frame of the user's camera and lens, in landscape orientation. */
@@ -219,4 +237,6 @@ internal data class ObjectDetailPhotography(
     /** `null` for the Sun and the Moon, for which star trails do not matter. */
     val npf: ExposureEstimate?,
     val rule500: ExposureEstimate?,
+    /** `null` unless the object is a solar-system body with a known apparent diameter. */
+    val bodySize: ObjectDetailBodySize?,
 )

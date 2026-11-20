@@ -68,6 +68,10 @@ private class ExposureInputs(camera: LensSetup) {
     var declination by mutableDoubleStateOf(0.0)
     var testSeconds by mutableDoubleStateOf(20.0)
 
+    /** The place of the alt-azimuth mount's target that is set by hand when there is no target: altitude and azimuth. */
+    var altAzAltitude by mutableDoubleStateOf(45.0)
+    var altAzAzimuth by mutableDoubleStateOf(180.0)
+
     /** The camera and lens the inputs describe. */
     val setup: LensSetup get() = LensSetup(sensor, focalLength, aperture, pixelPitch)
 
@@ -98,6 +102,8 @@ fun ExposureCalculatorScreen(onBack: () -> Unit) {
     val targetDeclination = remember(target?.id) {
         target?.let { Snapshot.withoutReadObservation { apparentDeclination(app, it) } }
     }
+    val sky = rememberExposureSky(app, target)
+    val latitude = app.observerContext?.observer?.location?.latitude
     val dismissKeyboard = rememberKeyboardDismissal()
     ToolsScreenFrame(title = "Exposure Calculator", onBack = onBack) {
         Column(Modifier.weight(1f).imePadding().nestedScroll(dismissKeyboard).verticalScroll(scroll)) {
@@ -107,6 +113,18 @@ fun ExposureCalculatorScreen(onBack: () -> Unit) {
             ResultSection(inputs, setup)
             ComparisonSection(inputs, setup)
             TrailSection(inputs, setup)
+            TrackedSection(setup)
+            AltAzSection(
+                setup = setup,
+                target = target,
+                sky = sky,
+                latitude = latitude,
+                altitude = inputs.altAzAltitude,
+                azimuth = inputs.altAzAzimuth,
+                onAltitudeChange = { inputs.altAzAltitude = it },
+                onAzimuthChange = { inputs.altAzAzimuth = it },
+            )
+            MoonSection(setup, sky)
             Spacer(Modifier.height(24.dp))
         }
     }

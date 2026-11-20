@@ -40,6 +40,12 @@ internal object TonightCalculator {
     /** The most targets the list shows. */
     const val targetLimit: Int = 12
 
+    /** The ranking bonus per hour a target is clear of the site's skyline (only with a skyline). */
+    const val clearHoursWeight: Double = 0.1
+
+    /** The hours of clearance beyond which the bonus stops growing. */
+    const val clearHoursCap: Double = 6.0
+
     /** Plans the night that [input] asks for: twilight, Moon, Milky Way, planets and the best targets. */
     fun report(input: TonightInput): TonightReport {
         val context = input.key.context
@@ -102,7 +108,9 @@ internal object TonightCalculator {
     ): TonightTargetsOutcome {
         if (!summary.hasAstronomicalDarkness) return TonightTargetsOutcome.NoDarkness
         if (catalog == null) return TonightTargetsOutcome.CatalogPending
-        return TonightTargetsOutcome.Ranked(movingTargets + rankedTargets(catalog, summary, skyline, filter))
+        // With a skyline the hours of the comets and asteroids are the hours above it too.
+        val moving = if (skyline != null) movingTargets.map { it.copy(unobstructedHours = it.hoursAboveMinimum) } else movingTargets
+        return TonightTargetsOutcome.Ranked(moving + rankedTargets(catalog, summary, skyline, filter))
     }
 
     private class Candidate(
@@ -151,7 +159,9 @@ internal object TonightCalculator {
             val bestTime = visibility.bestTime
             if (peak.isNaN() || peak < minimumTargetAltitude || bestTime == null) continue
             val moon = ObjectMoonGeometry.of(obj, summary.observer, bestTime).assess(filter, MoonImpact.assessmentKind(obj))
-            val weighted = score(obj, peak) * MoonImpact.moonFreeWeight(moon.level)
+            // The hours clear of the skyline count only when there is a skyline; an open horizon ranks as it always did.
+            val clearHours = if (skyline != null) visibility.unobstructedHours else null
+            val weighted = score(obj, peak, clearHours) * MoonImpact.moonFreeWeight(moon.level)
             candidates.add(Candidate(obj, visibility, peak, weighted, moon))
         }
         candidates.sortWith(compareByDescending<Candidate> { it.score }.thenBy { it.obj.id })
@@ -165,6 +175,7 @@ internal object TonightCalculator {
                 peakAzimuth = frame.horizontal(candidate.obj, false).azimuth,
                 hoursAboveMinimum = candidate.visibility.hoursAboveMinimum,
                 moon = candidate.moon,
+                unobstructedHours = if (skyline != null) candidate.visibility.unobstructedHours else null,
             )
         }
     }
@@ -177,9 +188,11 @@ internal object TonightCalculator {
     /**
      * Rates an object for a wide-field camera: higher in the dark is better, and so are brighter and larger. Each
      * part runs from 0 to 1; brightness counts most. A little extra goes to the more prominent objects, so that a
-     * showpiece without a magnitude (a dark nebula) is not ranked below a faint galaxy.
+     * showpiece without a magnitude (a dark nebula) is not ranked below a faint galaxy. With a skyline, [clearHours]
+     * (the hours above it in the dark) adds [clearHoursWeight] per hour up to [clearHoursCap] hours, at most 0.6,
+     * so that a target that stays clear of the trees and ridges for hours outranks one that only peeks over them.
      */
-    private fun score(obj: CelestialObject, peakAltitude: Double): Double {
+    internal fun score(obj: CelestialObject, peakAltitude: Double, clearHours: Double? = null): Double {
         val altitude = AstroMath.clamp((peakAltitude - minimumTargetAltitude) / (90 - minimumTargetAltitude), 0.0, 1.0)
         // Magnitude 3 and brighter is full marks, magnitude 11 and fainter none.
         val magnitude = obj.magnitude
@@ -187,6 +200,7 @@ internal object TonightCalculator {
         // 5′ is a speck, 2° or more a big target for a wide lens.
         val size = obj.angularSize?.let { AstroMath.clamp(log10(it.majorArcminutes / 5) / 1.4, 0.0, 1.0) } ?: 0.0
         val prominence = (Prominence.OBSCURE.rawValue - obj.prominence.rawValue) / 3.0
-        return altitude + 1.5 * brightness + 0.8 * size + 0.6 * prominence
+        val clearance = if (clearHours != null && clearHours.isFinite()) clearHoursWeight * minOf(clearHours, clearHoursCap) else 0.0
+        return altitude + 1.5 * brightness + 0.8 * size + 0.6 * prominence + clearance
     }
 }

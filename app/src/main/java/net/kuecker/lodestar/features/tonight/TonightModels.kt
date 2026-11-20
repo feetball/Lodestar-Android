@@ -49,6 +49,12 @@ internal data class TonightTarget(
     val note: String? = null,
     /** What the Moon does to the target at [peakTime], with the user's filter; `null` for comets and asteroids. */
     val moon: ObjectMoonAssessment? = null,
+    /**
+     * With a recorded skyline, the hours of darkness the object is above it and at least
+     * [TonightCalculator.minimumTargetAltitude] high (the same number as [hoursAboveMinimum], named for the skyline);
+     * `null` for an open horizon.
+     */
+    val unobstructedHours: Double? = null,
 ) {
     val id: String get() = obj.id
 }

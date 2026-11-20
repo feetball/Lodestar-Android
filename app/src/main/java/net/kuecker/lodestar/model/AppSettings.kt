@@ -141,6 +141,13 @@ enum class HeadingSource(val title: String) {
     @SerialName("gyroLock") GYRO_LOCK("Gyro Lock"),
 }
 
+/** How fast spoken guidance talks. */
+@Serializable
+enum class SpokenGuidanceRate(val title: String) {
+    @SerialName("slow") SLOW("Slow"),
+    @SerialName("normal") NORMAL("Normal"),
+}
+
 @Serializable
 enum class CoordinateStyle(val title: String) {
     @SerialName("sexagesimal") SEXAGESIMAL("h m s / ° ′ ″"),
@@ -186,6 +193,11 @@ data class AppSettings(
     val hapticsEnabled: Boolean = true,
     val audioCuesEnabled: Boolean = false,
     val keepScreenAwake: Boolean = true,
+    /** Speaks the pan and tilt to make while aiming ("Pan right 12, tilt up 3"). */
+    val spokenGuidance: Boolean = false,
+    val spokenGuidanceRate: SpokenGuidanceRate = SpokenGuidanceRate.NORMAL,
+    /** Shows the aiming on a paired Wear OS watch while Aim is open (nothing is sent without a watch). */
+    val aimOnWatch: Boolean = true,
 
     // Sky display
     val showConstellationLines: Boolean = true,
@@ -268,6 +280,9 @@ data class AppSettings(
                 put("hapticsEnabled", JsonPrimitive(s.hapticsEnabled))
                 put("audioCuesEnabled", JsonPrimitive(s.audioCuesEnabled))
                 put("keepScreenAwake", JsonPrimitive(s.keepScreenAwake))
+                put("spokenGuidance", JsonPrimitive(s.spokenGuidance))
+                put("spokenGuidanceRate", json.encodeToJsonElement(SpokenGuidanceRate.serializer(), s.spokenGuidanceRate))
+                put("aimOnWatch", JsonPrimitive(s.aimOnWatch))
                 put("showConstellationLines", JsonPrimitive(s.showConstellationLines))
                 put("showConstellationNames", JsonPrimitive(s.showConstellationNames))
                 put("showDeepSkyObjects", JsonPrimitive(s.showDeepSkyObjects))
@@ -314,6 +329,9 @@ data class AppSettings(
                 hapticsEnabled = value("hapticsEnabled", Boolean.serializer(), d.hapticsEnabled),
                 audioCuesEnabled = value("audioCuesEnabled", Boolean.serializer(), d.audioCuesEnabled),
                 keepScreenAwake = value("keepScreenAwake", Boolean.serializer(), d.keepScreenAwake),
+                spokenGuidance = value("spokenGuidance", Boolean.serializer(), d.spokenGuidance),
+                spokenGuidanceRate = value("spokenGuidanceRate", SpokenGuidanceRate.serializer(), d.spokenGuidanceRate),
+                aimOnWatch = value("aimOnWatch", Boolean.serializer(), d.aimOnWatch),
                 showConstellationLines = value("showConstellationLines", Boolean.serializer(), d.showConstellationLines),
                 showConstellationNames = value("showConstellationNames", Boolean.serializer(), d.showConstellationNames),
                 showDeepSkyObjects = value("showDeepSkyObjects", Boolean.serializer(), d.showDeepSkyObjects),

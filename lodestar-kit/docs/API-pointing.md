@@ -141,6 +141,29 @@ internal object AlignmentSolver {
 }
 ```
 
+## GuidanceSpeech.kt  (`GuidanceSpeech.swift`)
+
+The words of spoken aiming guidance, a pure function (no clock, no speech engine): the timing state travels in the value it returns.
+
+```kotlin
+enum class SpokenKind(val rawValue: String) { GUIDANCE, ALMOST_THERE, ON_TARGET, BELOW_HORIZON }   // fromRawValue(raw)
+data class SpokenState internal constructor(kind: SpokenKind, pan: Double, tilt: Double, time: Instant, hasSaidDegrees: Boolean)
+data class SpokenPhrase(text: String, state: SpokenState)
+
+object GuidanceSpeech {
+    const val almostThereSeparation: Double   // 2.0 degrees
+    const val changeThreshold: Double         // 1.0 degree of pan or tilt
+    const val repeatInterval: Double          // 5.0 seconds
+    fun phrase(current: Guidance, previous: SpokenState?, now: Instant): SpokenPhrase?   // null: say nothing
+}
+```
+- Off target: "Pan right 12, tilt up 3", whole degrees (half away from zero), "degrees" ("degree" for 1) only in the first phrase with numbers
+  of a session. A component that rounds to 0 is left out; near the zenith the pan is left out while there is a tilt to make.
+- Within 2° but not on target: "Almost there", left again only beyond 3° (`GuidanceTracker.hysteresisFactor`). On target: "On target" once.
+  Below the horizon: "Target is below the horizon" once, and nothing else while it is.
+- Guidance repeats when pan or tilt changed by 1° (pan the short way round) since the last phrase spoken, or after 5 s (a clock that went backwards
+  counts as 5 s). A change of kind is spoken at once. Keep the state of the phrase actually spoken as `previous`; use null at the start of a session.
+
 ## PointingSolution.kt  (`PointingSolution.swift`)
 
 ```kotlin

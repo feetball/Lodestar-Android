@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Lodestar"
-include(":app", ":lodestar-kit")
+include(":app", ":lodestar-kit", ":wear")

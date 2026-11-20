@@ -11,7 +11,8 @@ same astronomy engine ported line for line from Swift to Kotlin.
 
 - **Guided aiming** — a live finder (camera view or virtual sky) with the target marker, an arrow pointing the
   shortest way, "Pan right 23.4° / Tilt up 12.1°" read-outs for pan-tilt heads, an on-target state with haptics,
-  optional audio ticks, a level gauge, and the outline of *your* camera's frame.
+  optional audio ticks, optional spoken guidance ("Pan right 12, tilt up 3 … Almost there … On target") for when
+  the phone is above eye level, a level gauge, and the outline of *your* camera's frame.
 - **Star alignment** and **Gyro Lock** — centre a bright star once to correct the compass and the bracket; keep
   the heading on the gyroscope, safe from the camera body's magnetism.
 - **Any mount** — back camera along the lens (portrait, landscape, upside down) or the phone flat on top.
@@ -38,6 +39,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
   Norway, location rounded to about 10 km).
 - **Home-screen widgets** — Tonight at a glance (dark hours, the Moon, the Milky Way core, the next event) in
   two resizable sizes, worked out on the device; a tap opens Tonight.
+- **Wear OS** — an Aim page for a paired watch: while the phone's Aim screen leads to a target, the watch shows the
+  arrow, the pan and tilt in degrees, the distance and the target, taps your wrist on target, and goes red when the
+  phone is in night mode. It needs the phone app, has no network access and stores nothing.
 - **Offline and private** — catalogs and ephemerides are on the device; nothing is collected. The optional online
   data downloads from CelesTrak, the Minor Planet Center and MET Norway only when you turn it on, and a GoTo mount
   is reached over the local network only.
@@ -51,6 +55,7 @@ android/
                     phases, catalog + search, aiming math, alignment solver, WMM2025, exposure tools, planning,
                     events, skyline, mosaics, satellites (SGP4), comets and asteroids, GoTo mount protocols.
                     1,752 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
+  wear/             Wear OS app (Compose; one Aim page fed by the phone over the Wear data layer), same applicationId.
   app/              Android app (Jetpack Compose, Material 3, CameraX, MapLibre, Glance widgets).
     app/            AppModel (state + service orchestration), activity, root screen
     model/ services/ theme/ shared/   settings, sensors/location/camera, night palette, shared views

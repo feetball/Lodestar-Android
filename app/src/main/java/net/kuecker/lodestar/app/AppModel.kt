@@ -34,6 +34,8 @@ import net.kuecker.lodestar.model.SkyClock
 import net.kuecker.lodestar.services.CameraService
 import net.kuecker.lodestar.services.CatalogService
 import net.kuecker.lodestar.services.FeedbackService
+import net.kuecker.lodestar.services.SpokenGuidanceService
+import net.kuecker.lodestar.services.WearAimLink
 import net.kuecker.lodestar.services.LocationService
 import net.kuecker.lodestar.services.MagneticReference
 import net.kuecker.lodestar.services.MotionService
@@ -69,6 +71,12 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         OnlineDataService(context, scope, catalog, locationProvider = { observerContext?.location })
     }
     val feedback = FeedbackService(context)
+
+    /** Speaks the aiming guidance (Settings ▸ Feedback); silent unless switched on. */
+    val spokenGuidance = SpokenGuidanceService(context)
+
+    /** Sends the aiming guidance to the Wear OS app (Settings ▸ Feedback); the Play services calls start with the first send. */
+    val wearAim = WearAimLink(context)
     val screen = ScreenController()
 
     /** UI state that must survive tab switches and configuration changes (navigation stacks, scroll positions). */
@@ -339,6 +347,7 @@ class AppModel(context: Context, private val scope: CoroutineScope) {
         }
 
         feedback.configure(settings.hapticsEnabled, settings.audioCuesEnabled)
+        spokenGuidance.configure(settings.spokenGuidance, settings.spokenGuidanceRate)
         invalidateAlignmentIfNeeded()
     }
 

@@ -11,6 +11,9 @@ planner and the sky views respect it.
 | Visibility / rise / set / windows | `HorizonVisibility.swift` | `HorizonVisibility.kt` |
 | Tonight planner with a skyline | `NightPlanner+Horizon.swift` | `NightPlannerHorizon.kt` |
 | Fast "is this direction below the skyline" | `HorizonMask.swift` | `HorizonMask.kt` |
+| Terrain skyline from elevation tiles, merging with a recorded one | `TerrainHorizon.swift` (`TerrainHorizon`, `TerrainHorizonResult`, `HorizonProfile.merged`, `HorizonProfile.unsweptRanges`) | `TerrainHorizon.kt` |
+| One 1° × 1° elevation tile (SRTM `.hgt` layout) | `TerrainTile.swift` (`TerrainTile`, `TerrainTileKey`, `TerrainTileError`) | `TerrainTile.kt` |
+| Header of a gzip file, to find the DEFLATE data | `GzipHeader.swift` | `GzipHeader.kt` |
 | Internal (not API) | `HorizonSkyTracks.swift` | `HorizonSkyTracks.kt` |
 
 Imports: Swift `import LodestarKit`. Kotlin `import net.kuecker.lodestar.kit.horizon.*` — **that also brings in the
@@ -596,3 +599,138 @@ Verification
 - Performance: windows for 700 objects through a 11.4 h night (rough skyline, minimum altitude): Kotlin 60–240 ms warm
   (asserted < 1 s); Swift release ≈ 50 ms, Swift debug ≈ 0.4 s (asserted < 1 s release / < 20 s debug). The mask tests a
   million directions in 0.1 s (Swift release).
+
+---------------------------------------------------------------------------------------------------------
+
+## GzipHeader, TerrainTile, TerrainHorizon — the skyline of the terrain
+
+For a site without a recorded skyline (or with a partial one) the apps compute the skyline of the hills and mountains
+from a digital elevation model. **The engine never touches the network or a decompressor**: the apps download the tiles of
+the AWS Open Data *Terrain Tiles* in the Skadi layout
+(`https://s3.amazonaws.com/elevation-tiles-prod/skadi/N47/N47E008.hgt.gz`), inflate them (iOS `Compression`,
+Android `java.util.zip.Inflater`) and hand the bytes to `TerrainTile.parse`. Data: NASA SRTM, USGS GMTED2010 and 3DEP (NED),
+EU-DEM and national surveys; the attribution that Tilezen requires is in `ATTRIBUTION.md` and the apps' data credits.
+SRTM and its relatives are *surface* models: tree tops and roofs count as ground where the radar saw them.
+
+```swift
+public enum GzipHeader {
+    public static let trailerLength = 8
+    public static let maximumTextLength = 4096                  // longest file name or comment accepted
+    public static func payloadRange(of data: Data) -> Range<Int>?           // raw DEFLATE data, offsets from the first byte
+    public static func uncompressedLength(of data: Data) -> Int?            // ISIZE, nil when it does not fit an Int32
+}
+public struct TerrainTileKey: Sendable, Hashable, Comparable, CustomStringConvertible {
+    public let latitude: Int                                   // south-west corner, −90…89
+    public let longitude: Int                                  // −180…179
+    public init?(latitude: Int, longitude: Int)
+    public static func containing(latitude: Double, longitude: Double) -> TerrainTileKey?
+    public var name: String { get }                            // "N47E008", "S34W071"
+    public var path: String { get }                            // "N47/N47E008.hgt.gz"
+}
+public enum TerrainTileError: Error, Hashable, Sendable, LocalizedError {
+    case invalidOrigin(latitude: Int, longitude: Int)
+    case unsupportedSize(byteCount: Int)
+}
+public struct TerrainTile: Sendable {
+    public static let highResolutionSamples = 3601, lowResolutionSamples = 1201
+    public static let voidSample = -32768, lowestElevation = -500, highestElevation = 9000
+    public let key: TerrainTileKey
+    public let samplesPerSide: Int
+    public let voidCount: Int
+    public var latitude: Int { get }
+    public var longitude: Int { get }
+    public static func parse(latitude: Int, longitude: Int, bytes: Data) throws -> TerrainTile
+    public func elevation(at latitude: Double, longitude: Double) -> Double?     // bilinear; nil outside, not finite, or void
+}
+public struct TerrainHorizonResult: Sendable, Hashable {
+    public let profile: HorizonProfile                         // clamped to −10…+60°, rounded to 0.1°
+    public let altitudes: [Double]                             // the 360 altitudes before clamping and rounding
+    public let groundElevationMeters: Double?                  // from the tiles; nil without a usable sample at the site
+    public let coveredRangeMeters: [Double]                    // per azimuth, contiguous from the site
+    public let missingTiles: [TerrainTileKey]                  // needed within the range, not supplied
+    public let voidSampleShare: Double                         // 0…1, samples on voids (counted as 0 m)
+    public var minimumCoveredRangeMeters: Double { get }
+    public var isComplete: Bool { get }
+}
+public enum TerrainHorizon {
+    public static let earthRadiusMeters = 6_371_008.8, refractionCoefficient = 0.13
+    public static let defaultEyeHeightMeters = 2.0, defaultMaximumDistanceMeters = 50_000.0
+    public static let maximumEyeHeightMeters = 100.0, minimumRangeMeters = 1_000.0, maximumRangeMeters = 100_000.0
+    public static let nearStepMeters = 30.0, midStepMeters = 100.0, farStepMeters = 250.0
+    public static let nearLimitMeters = 2_000.0, midLimitMeters = 10_000.0, maximumTileCount = 16
+    public static func apparentAltitude(heightDifferenceMeters: Double, distanceMeters: Double) -> Double
+    public static func sampleDistances(maximumDistanceMeters: Double) -> [Double]
+    public static func requiredTiles(at location: GeographicLocation,
+                                     maxDistanceMeters: Double = defaultMaximumDistanceMeters) -> [TerrainTileKey]
+    public static func profile(at location: GeographicLocation, tiles: [TerrainTile], eyeHeightMeters: Double = 2,
+                               maxDistanceMeters: Double = 50_000) -> TerrainHorizonResult
+}
+extension HorizonProfile {
+    public static func merged(recorded: HorizonProfile?, terrain: HorizonProfile?, gaps: [AzimuthRange] = []) -> HorizonProfile?
+    public static func unsweptRanges(swept: [Bool], maximumInterpolatedGap: Int = 6) -> [AzimuthRange]
+}
+```
+```kotlin
+object GzipHeader {
+    const val trailerLength: Int; const val maximumTextLength: Int
+    fun payloadRange(data: ByteArray): IntRange?               // start until end
+    fun uncompressedLength(data: ByteArray): Int?
+}
+data class TerrainTileKey private constructor(val latitude: Int, val longitude: Int) : Comparable<TerrainTileKey> {
+    val name: String; val path: String
+    companion object { fun create(latitude: Int, longitude: Int): TerrainTileKey?
+                       fun containing(latitude: Double, longitude: Double): TerrainTileKey? }
+}
+sealed class TerrainTileError(message: String) : Exception(message) {
+    data class InvalidOrigin(val latitude: Int, val longitude: Int) : TerrainTileError
+    data class UnsupportedSize(val byteCount: Int) : TerrainTileError
+}
+class TerrainTile private constructor(...) {                    // no value equality: compare key and elevations
+    val key: TerrainTileKey; val samplesPerSide: Int; val voidCount: Int; val latitude: Int; val longitude: Int
+    fun elevation(latitude: Double, longitude: Double): Double?
+    companion object {
+        const val highResolutionSamples: Int; const val lowResolutionSamples: Int
+        const val voidSample: Int; const val lowestElevation: Int; const val highestElevation: Int
+        @Throws(TerrainTileError::class) fun parse(latitude: Int, longitude: Int, bytes: ByteArray): TerrainTile
+    }
+}
+data class TerrainHorizonResult(val profile: HorizonProfile, val altitudes: List<Double>, val groundElevationMeters: Double?,
+                                val coveredRangeMeters: List<Double>, val missingTiles: List<TerrainTileKey>,
+                                val voidSampleShare: Double) { val minimumCoveredRangeMeters: Double; val isComplete: Boolean }
+object TerrainHorizon {
+    const val earthRadiusMeters: Double; const val refractionCoefficient: Double  // … the same constants as Swift
+    fun apparentAltitude(heightDifferenceMeters: Double, distanceMeters: Double): Double
+    fun sampleDistances(maximumDistanceMeters: Double): List<Double>
+    fun requiredTiles(location: GeographicLocation, maxDistanceMeters: Double = 50_000.0): List<TerrainTileKey>
+    fun profile(location: GeographicLocation, tiles: List<TerrainTile>, eyeHeightMeters: Double = 2.0,
+                maxDistanceMeters: Double = 50_000.0): TerrainHorizonResult
+}
+fun HorizonProfile.Companion.merged(recorded: HorizonProfile?, terrain: HorizonProfile?, gaps: List<AzimuthRange> = emptyList()): HorizonProfile?
+fun HorizonProfile.Companion.unsweptRanges(swept: List<Boolean>, maximumInterpolatedGap: Int = 6): List<AzimuthRange>
+```
+
+**Tiles.** A file is 3601 × 3601 (1 arc-second, 25 934 402 bytes) or 1201 × 1201 (2 884 802 bytes) big-endian `Int16`
+metres, rows from the north edge to the south edge; edge samples are shared with the neighbour tile. `−32768`, and anything
+outside −500…9000 m, is a void: `elevation` returns `nil` when a sample with positive weight is a void (a point exactly on a
+sample ignores its neighbours' voids), outside the tile or not finite. `GzipHeader.payloadRange` gives the DEFLATE data of
+a `.hgt.gz` (the trailer's 8 bytes excluded) and `uncompressedLength` the expected size, which the apps check against the
+two tile sizes before they inflate (a download is thereby limited to a tile's size).
+
+**Skyline.** For each whole-degree azimuth a ray is marched over the sphere (R = 6 371 008.8 m) every 30 m to 2 km, 100 m
+to 10 km, 250 m beyond, to the range (default 50 km; 306 steps): the apparent altitude of the terrain at distance `d` and
+height `h`, from the eye `h0` (ground at the site from the tiles + eye height, 2 m), is
+`atan((h − h0)/d) − d / (2R′)`, `R′ = R/(1 − k)`, `k` = 0.13 (Gauss's coefficient of terrestrial refraction); the skyline is
+the maximum over the steps. Over flat ground that is the dip `−√(2h/R′)`: **−0.042° for 2 m** (−0.045° geometric), which
+the 0.1° resolution of a `HorizonProfile` rounds to 0°; `altitudes` has the unrounded values. A step outside the supplied
+tiles is skipped (`coveredRangeMeters` says how far the data reaches without a break), a void counts as 0 m
+(`voidSampleShare`). `requiredTiles` lists the tiles within the range, nearest first: a 50 km circle needs up to 4 tiles near the equator
+and up to 6 at mid latitudes. Out-of-range arguments are limited (eye 0…100 m, range 1…100 km), not rejected.
+
+**Merging.** `unsweptRanges(swept:)` turns the flags of a sweep (`HorizonRecorder.recordedMask`) into the stretches it
+left open (runs longer than the recorder's interpolation limit, 6°, like `HorizonRecorder.gaps`), and
+`merged(recorded:terrain:gaps:)` takes the recorded skyline outside those stretches and the terrain inside; without gaps the
+recorded skyline wins everywhere, without a recorded one the terrain does.
+
+**Cost.** `TerrainTile.parse` is one pass over the bytes (13 million samples for a 1 arc-second tile) and allocates the
+sample array (26 MB; 2.9 MB for 1201 × 1201). `TerrainHorizon.profile` takes about 110 000 bilinear samples; the tests, which also build a
+tile of 1.4 million samples, run in 0.2 to 0.5 s on the JVM and 0.3 to 0.7 s in a Swift Debug build. Call both off the main thread. The apps keep at most 4 tiles in memory (104 MB).

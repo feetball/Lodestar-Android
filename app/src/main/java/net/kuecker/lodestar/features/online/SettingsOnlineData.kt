@@ -107,7 +107,8 @@ private fun OnlineFeedRows(
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
         )
     }
-    if (!status.isEnabled) return
+    // Terrain horizons have no files to keep fresh: nothing to update, no time of the last update.
+    if (!status.isEnabled || feed.resources.isEmpty()) return
     SettingsDivider()
     SettingsRow {
         InfoRow("Updated", if (status.isUpdating) OnlineText.UPDATING else OnlineText.since(status.lastUpdateMillis, now.toEpochMilli()))

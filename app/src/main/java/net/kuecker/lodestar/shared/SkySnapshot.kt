@@ -1,5 +1,6 @@
 package net.kuecker.lodestar.shared
 
+import net.kuecker.lodestar.features.horizon.HorizonFormat
 import net.kuecker.lodestar.features.smallbodies.SmallBodySkyMarkers
 import net.kuecker.lodestar.kit.catalog.Catalog
 import net.kuecker.lodestar.kit.catalog.CelestialObject
@@ -20,6 +21,7 @@ import net.kuecker.lodestar.kit.foundation.Vector3
 import net.kuecker.lodestar.kit.formatting.AngleFormatter
 import net.kuecker.lodestar.kit.horizon.HorizonMask
 import net.kuecker.lodestar.kit.horizon.HorizonProfile
+import net.kuecker.lodestar.model.HorizonSource
 import java.time.Instant
 import kotlin.math.roundToInt
 
@@ -257,16 +259,20 @@ object SkySnapshotBuilder {
 
 /** Words for a recorded skyline, for the canvas summaries that accessibility services read in the sky views. */
 object SkylineSummary {
-    /** For example "The recorded skyline hides the sky up to 32 degrees, highest towards the east." */
-    fun describe(profile: HorizonProfile): String {
+    /**
+     * For example "The recorded skyline hides the sky up to 32 degrees, highest towards the east." [source] names
+     * the skyline the way a screen reader should say it (see `HorizonFormat.spokenName`); null is a recorded one.
+     */
+    fun describe(profile: HorizonProfile, source: HorizonSource? = null): String {
+        val name = HorizonFormat.spokenName(source)
         val altitudes = profile.altitudes
         var highest = 0
         for (index in altitudes.indices) {
             if (altitudes[index] > altitudes[highest]) highest = index
         }
         val top = altitudes[highest]
-        if (top < 1.0) return "The recorded skyline stays below one degree."
+        if (top < 1.0) return "The $name stays below one degree."
         val direction = AngleFormatter.compassPoint(highest.toDouble()).fullName.lowercase()
-        return "The recorded skyline hides the sky up to ${top.roundToInt()} degrees, highest towards the $direction."
+        return "The $name hides the sky up to ${top.roundToInt()} degrees, highest towards the $direction."
     }
 }

@@ -262,9 +262,9 @@ private fun SettingsSavedSiteRow(site: SavedSite, isSelected: Boolean, now: Inst
                 Text(site.name, color = palette.primaryText, style = MaterialTheme.typography.bodyLarge)
                 Text(subtitle(site, now), color = palette.secondaryText, style = MaterialTheme.typography.bodySmall)
                 SkyQualityLine(site.location)
-                if (site.horizon != null) {
+                if (site.horizon != null || site.terrainHorizon != null) {
                     Text(
-                        "Horizon: ${rememberSiteHorizonStatus(site)}",
+                        "Horizon: ${rememberSiteSummary(site)}",
                         color = palette.secondaryText,
                         style = MaterialTheme.typography.bodySmall,
                     )

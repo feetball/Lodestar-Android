@@ -50,6 +50,12 @@ data class SavedSite private constructor(
     val timeZoneIdentifier: String?,
     /** The recorded skyline (trees, mountains), or null for an open horizon. */
     val horizon: HorizonProfile? = null,
+    /**
+     * The skyline of the terrain computed from elevation data (hills, mountains), or null when none was computed. Unlike
+     * [horizon] a flat one is kept: it says that the terrain was looked at and is flat. It is used where no skyline was
+     * recorded, and for the stretches a partial sweep left open.
+     */
+    val terrainHorizon: HorizonProfile? = null,
 ) {
     val location: GeographicLocation get() = GeographicLocation(latitude, longitude, elevation)
 
@@ -63,7 +69,8 @@ data class SavedSite private constructor(
         elevation: Double = this.elevation,
         timeZoneIdentifier: String? = this.timeZoneIdentifier,
         horizon: HorizonProfile? = this.horizon,
-    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id, horizon)
+        terrainHorizon: HorizonProfile? = this.terrainHorizon,
+    ): SavedSite? = create(name, latitude, longitude, elevation, timeZoneIdentifier, id, horizon, terrainHorizon)
 
     companion object {
         const val MAXIMUM_NAME_LENGTH = 60
@@ -77,6 +84,7 @@ data class SavedSite private constructor(
             timeZoneIdentifier: String? = null,
             id: String = UUID.randomUUID().toString(),
             horizon: HorizonProfile? = null,
+            terrainHorizon: HorizonProfile? = null,
         ): SavedSite? {
             val location = GeographicLocation.validated(latitude, longitude, elevation) ?: return null
             if (runCatching { UUID.fromString(id) }.isFailure) return null
@@ -89,6 +97,7 @@ data class SavedSite private constructor(
                 elevation = location.elevation,
                 timeZoneIdentifier = timeZoneIdentifier?.takeIf { zoneOrNull(it) != null },
                 horizon = horizon?.takeUnless { it.isFlat },
+                terrainHorizon = terrainHorizon,
             )
         }
 
@@ -107,6 +116,7 @@ data class SavedSite private constructor(
             put("elevation", JsonPrimitive(site.elevation))
             site.timeZoneIdentifier?.let { put("timeZoneIdentifier", JsonPrimitive(it)) }
             site.horizon?.let { put("horizon", Json.encodeToJsonElement(HorizonProfile.serializer(), it)) }
+            site.terrainHorizon?.let { put("terrainHorizon", Json.encodeToJsonElement(HorizonProfile.serializer(), it)) }
         }
 
         /** Decodes and re-validates a stored site; `null` for invalid entries (dropped by the caller). */
@@ -121,6 +131,9 @@ data class SavedSite private constructor(
                 timeZoneIdentifier = o["timeZoneIdentifier"]?.jsonPrimitive?.content,
                 // A damaged skyline is dropped rather than losing the site.
                 horizon = o["horizon"]?.let { runCatching { Json.decodeFromJsonElement(HorizonProfile.serializer(), it) }.getOrNull() },
+                terrainHorizon = o["terrainHorizon"]?.let {
+                    runCatching { Json.decodeFromJsonElement(HorizonProfile.serializer(), it) }.getOrNull()
+                },
             )
         }.getOrNull()
     }

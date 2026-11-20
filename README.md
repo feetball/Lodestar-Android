@@ -39,7 +39,9 @@ same astronomy engine ported line for line from Swift to Kotlin.
   Moon by the Looney 11 rule, adjusted for phase and height, with the Moon's size in pixels. The pages of the Sun,
   Moon and planets show their size in pixels too.
 - **Real skyline** — sweep the phone along the horizon to record trees, buildings and mountains; rise and set
-  times, Tonight and the charts then use the site's own skyline.
+  times, Tonight and the charts then use the site's own skyline. Optionally, a **terrain horizon** worked out from
+  elevation data (AWS Open Data, downloaded for a saved site only when you ask) stands in where you have not
+  recorded a skyline and fills the stretches a partial sweep left open.
 - **Comets and asteroids** — 216 bright asteroids built in and, optionally, the daily comet file: brightness
   estimates, elongation warnings, a Bright Comets list, and the direction of a comet's ion tail with the camera
   tilt that lays it along the frame.
@@ -48,13 +50,14 @@ same astronomy engine ported line for line from Swift to Kotlin.
   an always-available Stop, with altitude limits, a meridian countdown that warns before the mount has to flip,
   and a built-in simulated mount to try it without hardware.
 - **Optional online data** — all off until switched on in Settings: ISS and bright-satellite passes (follow one in
-  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, and tonight's cloud forecast with dew,
-  wind, fog and temperature (MET Norway, location rounded to about 10 km).
+  Aim), Starlink streak warnings for the planned exposure, fresh comet orbits, tonight's cloud forecast with dew,
+  wind, fog and temperature (MET Norway, location rounded to about 10 km) and terrain horizons (elevation tiles from
+  AWS Open Data, only when you ask a site for one).
 - **Home-screen widgets** — Tonight at a glance (dark hours, the Moon, the Milky Way core, the next event) in
   two resizable sizes, worked out on the device; a tap opens Tonight.
 - **Offline and private** — catalogs and ephemerides are on the device; nothing is collected. The optional online
-  data downloads from CelesTrak, the Minor Planet Center and MET Norway only when you turn it on, and a GoTo mount
-  is reached over the local network only.
+  data downloads from CelesTrak, the Minor Planet Center, MET Norway and AWS Open Data only when you turn it on, and
+  a GoTo mount is reached over the local network only.
 
 ## Project layout
 
@@ -104,9 +107,14 @@ alignment corrects.
 
 No accounts, analytics, ads or tracking. Location, camera and sensors are used on the device only. Network use:
 map tiles from OpenFreeMap when the site map is open, and the phone's geocoding service to find a saved site's
-time zone. Policy: <https://feetball.github.io/Lodestar-Android/privacy.html>.
+time zone. The optional downloads in Settings > Online Data are off until switched on: CelesTrak, the Minor Planet
+Center, MET Norway and the AWS Open Data tile server see the IP address; MET Norway also sees the location rounded to
+about 10 km, and the tile server which 1° elevation tiles you ask for (where a site is to within about 100 km), only when
+you ask a site for its terrain horizon. Policy: <https://feetball.github.io/Lodestar-Android/privacy.html>.
 
 ## Credits
 
 Star, deep-sky, constellation and Milky Way data, the night-lights grid (NASA Worldview / GIBS, Black Marble (VIIRS,
-Suomi NPP)), the magnetic model and the software libraries are credited in [ATTRIBUTION.md](ATTRIBUTION.md).
+Suomi NPP)), the magnetic model, the optional terrain elevation data (AWS Open Data Terrain Tiles: SRTM and GMTED2010
+courtesy of the U.S. Geological Survey, and national surveys) and the software libraries are credited in
+[ATTRIBUTION.md](ATTRIBUTION.md).

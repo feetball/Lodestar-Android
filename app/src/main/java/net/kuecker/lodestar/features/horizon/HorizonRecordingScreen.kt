@@ -132,13 +132,27 @@ internal fun HorizonRecordingScreen(site: SavedSite, onClose: () -> Unit) {
         }
     }
 
-    fun save(recording: HorizonRecorder.Recording) {
+    // [keepsOldSkyline] is set when the stretches this sweep did not reach keep the site's old skyline.
+    fun save(recording: HorizonRecorder.Recording, keepsOldSkyline: Boolean = false) {
         // The stored site may have changed while recording (the editor only keeps a draft), so build on that one.
         val current = app.settings.savedSites.firstOrNull { it.id == site.id } ?: site
+        // The coverage shown is that of the whole skyline: where the old one stays, what it covered counts too (and when
+        // that is not known, neither is the total). It is read before the skyline is replaced.
+        val swept = sweep.recordedMask
+        val old = if (keepsOldSkyline && current.horizon != null) HorizonCoverageMemory.entry(context, current) else null
         val updated = current.edited(horizon = recording.profile)
         if (updated != null) {
             app.settingsStore.updateSite(updated)
-            HorizonCoverageMemory.store(context, site.id, updated.horizon, recording.coverage)
+            val remembered = if (keepsOldSkyline && current.horizon != null) {
+                HorizonCoverageMemory.merged(swept, old)
+            } else {
+                HorizonCoverageMemory.Entry(recording.coverage, swept)
+            }
+            if (remembered != null) {
+                HorizonCoverageMemory.store(context, site.id, updated.horizon, remembered.coverage, remembered.mask)
+            } else {
+                HorizonCoverageMemory.forget(context, site.id)
+            }
         }
         onClose()
     }
@@ -179,7 +193,7 @@ internal fun HorizonRecordingScreen(site: SavedSite, onClose: () -> Unit) {
                         onDone = ::requestDone,
                         modifier = Modifier.align(Alignment.TopCenter),
                     )
-                    HorizonBottomPanel(sweep, Modifier.align(Alignment.BottomCenter))
+                    HorizonBottomPanel(sweep, site.terrainHorizon != null, Modifier.align(Alignment.BottomCenter))
                 }
                 when (val current = step) {
                     HorizonStep.Sweeping -> Unit
@@ -187,7 +201,12 @@ internal fun HorizonRecordingScreen(site: SavedSite, onClose: () -> Unit) {
                         step = current,
                         hasStoredSkyline = sweep.storedSkyline != null,
                         onKeepSweeping = { step = HorizonStep.Sweeping },
-                        onSave = { fill -> save(sweep.finish(fill)) },
+                        onSave = { fill ->
+                            save(
+                                sweep.finish(fill),
+                                keepsOldSkyline = fill == HorizonRecorder.UnrecordedFill.KEEP_BASE && sweep.storedSkyline != null,
+                            )
+                        },
                     )
                     HorizonStep.ConfirmDiscard -> HorizonDecision(
                         title = "Discard This Recording?",
@@ -334,7 +353,7 @@ private fun HorizonTopPanel(
 
 /** The live direction, the strip, how much is recorded, and Start Over. */
 @Composable
-private fun HorizonBottomPanel(sweep: HorizonSweep, modifier: Modifier = Modifier) {
+private fun HorizonBottomPanel(sweep: HorizonSweep, hasTerrain: Boolean, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     val state = sweep.state
     Column(
@@ -347,6 +366,9 @@ private fun HorizonBottomPanel(sweep: HorizonSweep, modifier: Modifier = Modifie
     ) {
         HorizonReadout(state)
         HorizonStrip(state, sweep.storedSkyline)
+        if (hasTerrain) {
+            Text(TerrainText.STRIP_NOTE, color = palette.secondaryText, style = MaterialTheme.typography.bodySmall)
+        }
         HorizonCoverageRow(state, onStartOver = sweep::restart)
     }
 }

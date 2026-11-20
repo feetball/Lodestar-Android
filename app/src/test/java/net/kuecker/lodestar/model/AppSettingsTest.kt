@@ -106,4 +106,25 @@ class AppSettingsTest {
         assertNull(damaged.savedSites.single().horizon)
         assertNull(assertNotNull(SavedSite.create("Open", 0.0, 0.0, horizon = HorizonProfile.flat)).horizon)
     }
+
+    @Test
+    fun aTerrainHorizonIsStoredWithTheSiteAFlatOneIsKeptAndADamagedOneIsDropped() {
+        val terrain = assertNotNull(HorizonProfile.create(List(360) { if (it in 150..210) 9.0 else 1.0 }))
+        val site = assertNotNull(SavedSite.create("Valley", 47.0, 8.0, terrainHorizon = terrain))
+        assertNull(site.horizon)
+        val decoded = AppSettings.decode(AppSettings.encode(AppSettings(savedSites = listOf(site)))).savedSites.single()
+        assertEquals(terrain, decoded.terrainHorizon)
+        assertNull(decoded.horizon)
+        // Editing a site keeps its terrain horizon, and a flat one is a computed result, not an absence.
+        assertEquals(terrain, assertNotNull(site.edited(name = "Valley 2")).terrainHorizon)
+        assertEquals(HorizonProfile.flat, assertNotNull(SavedSite.create("Sea", 0.0, 0.0, terrainHorizon = HorizonProfile.flat)).terrainHorizon)
+        val damaged = AppSettings.decode(
+            """{"savedSites":[{"id":"${site.id}","name":"Valley","latitude":47,"longitude":8,"terrainHorizon":{"version":1,"altitudeTenths":[1]}}]}""",
+        )
+        assertEquals("Valley", damaged.savedSites.single().name)
+        assertNull(damaged.savedSites.single().terrainHorizon)
+        // A site stored before terrain horizons existed has none.
+        val old = AppSettings.decode("""{"savedSites":[{"id":"${site.id}","name":"Old","latitude":47,"longitude":8}]}""")
+        assertNull(old.savedSites.single().terrainHorizon)
+    }
 }

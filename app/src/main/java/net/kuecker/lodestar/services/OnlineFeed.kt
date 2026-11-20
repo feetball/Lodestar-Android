@@ -19,6 +19,12 @@ enum class OnlineFeed(val key: String, val title: String) {
 
     /** MET Norway Locationforecast 2.0 `complete`: hourly cloud cover. */
     CLOUDS("clouds", "Cloud forecast"),
+
+    /**
+     * AWS Open Data Terrain Tiles: the elevation tiles around a saved site, for its terrain horizon. It has no
+     * [resources]: nothing is refreshed, the tiles are downloaded when a site's editor asks and are deleted after use.
+     */
+    TERRAIN("terrain", "Terrain horizons"),
     ;
 
     /** The files this feed downloads. */

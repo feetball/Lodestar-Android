@@ -115,8 +115,9 @@ internal fun SkyChartSurface(
 
     val mosaicStatus = mosaic.takeIf { content.scene.mosaic?.plan === it.plan }?.spokenStatus
     val skylineSource = LocalAppModel.current.observerContext?.horizonSource
-    val summary = remember(content, timeZone, mosaicStatus, skylineSource) {
-        accessibilitySummary(content.scene, timeZone, mosaicStatus, skylineSource)
+    val glowSummary = layers.horizonGlow?.spokenSummary
+    val summary = remember(content, timeZone, mosaicStatus, skylineSource, glowSummary) {
+        accessibilitySummary(content.scene, timeZone, mosaicStatus, skylineSource, glowSummary)
     }
     val visibleBodies = remember(content) { content.scene.bodies.filter { it.isAboveHorizon } }
 
@@ -251,6 +252,7 @@ private fun accessibilitySummary(
     timeZone: ZoneId,
     mosaicStatus: String?,
     skylineSource: HorizonSource?,
+    glowSummary: String?,
 ): String {
     val time = AppFormat.dateTime(scene.date, timeZone)
     val parts = arrayListOf("Sky chart for $time, looking up with north at the top.")
@@ -261,6 +263,7 @@ private fun accessibilitySummary(
     scene.skyline?.let {
         parts.add("${SkylineSummary.describe(it.profile, skylineSource)} It is drawn as a darker band around the edge of the chart.")
     }
+    glowSummary?.let(parts::add)
     if (mosaicStatus != null) parts.add("$mosaicStatus The panels are outlined on the chart, the current one highlighted.")
     return parts.joinToString(" ")
 }

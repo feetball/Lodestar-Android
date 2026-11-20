@@ -38,7 +38,7 @@ internal object OnlineText {
         OnlineFeed.STARLINK ->
             "Warns in Aim when Starlink satellites are likely to cross your frame during an exposure."
         OnlineFeed.COMETS -> "Adds the current comets to the object list, the sky chart and Aim."
-        OnlineFeed.CLOUDS -> "Shows tonight's hourly cloud cover on the Tonight screen."
+        OnlineFeed.CLOUDS -> "Shows tonight's hourly cloud cover, dew, wind, fog and temperature on the Tonight screen."
         OnlineFeed.TERRAIN ->
             "Works out the skyline of the hills and mountains around a saved site from elevation data, for sites " +
                 "where you have not recorded one. Nothing downloads until you ask in a site's editor."

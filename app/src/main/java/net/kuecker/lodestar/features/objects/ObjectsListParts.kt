@@ -74,6 +74,7 @@ import kotlinx.coroutines.launch
 import net.kuecker.lodestar.app.AppTab
 import net.kuecker.lodestar.features.horizon.HorizonFormat
 import net.kuecker.lodestar.kit.catalog.CelestialObject
+import net.kuecker.lodestar.kit.planning.UnobstructedVisibility
 import net.kuecker.lodestar.shared.LocalAppModel
 import net.kuecker.lodestar.shared.monospacedDigits
 import net.kuecker.lodestar.theme.LocalPalette
@@ -282,6 +283,7 @@ internal fun ObjectsSwipeRow(
     position: ObjectSkyPosition?,
     isFavorite: Boolean,
     showsProminence: Boolean,
+    tonight: UnobstructedVisibility?,
     zone: ZoneId,
     shape: Shape,
     showsDivider: Boolean,
@@ -380,7 +382,7 @@ internal fun ObjectsSwipeRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                ObjectRow(obj, Modifier.weight(1f), position, isFavorite, zone, showsProminence)
+                ObjectRow(obj, Modifier.weight(1f), position, isFavorite, zone, showsProminence, tonight)
                 // The disclosure chevron is drawn in a palette colour; the system's would be grey.
                 Icon(
                     Icons.AutoMirrored.Outlined.KeyboardArrowRight,

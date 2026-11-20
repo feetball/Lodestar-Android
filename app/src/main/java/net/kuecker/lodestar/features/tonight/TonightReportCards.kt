@@ -42,6 +42,7 @@ import java.time.Instant
 internal fun TonightReportCards(report: TonightReport, onOpenObject: (CelestialObject) -> Unit, onOpenSmallBodies: () -> Unit) {
     TonightTimelineCard(report)
     TonightCloudCard(report.summary.observer.location, report.timeline.range, report.timeZone)
+    TonightSkyQualityCard(report.summary, report.timeline.range)
     TonightSunCard(report.summary, report.timeZone)
     val isSkylineApplied = report.skyline != null
     TonightMoonCard(report.summary, report.timeZone, isSkylineApplied)

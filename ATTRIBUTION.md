@@ -128,14 +128,34 @@ reference positions come from **NASA/JPL** (SBDB and Horizons, public domain; cr
 extracts of both. The bundled `asteroids.txt` (bright asteroids, osculating epoch 2026-06-09) is an extract of the
 MPC orbit file and keeps the MPC header verbatim.
 
+### Night lights — `lightpollution.bin`
+
+The sky-quality estimate (`lodestar-kit/src/main/resources/net/kuecker/lodestar/kit/catalog/lightpollution.bin`, 137 kB) is built by
+`Tools/build_light_pollution.py` (iOS repository) from **NASA GIBS** (Global Imagery Browse Services), layer `VIIRS_Black_Marble`:
+**Black Marble**, the Suomi NPP VIIRS day/night band night-lights composite of **2016-01-01**, TileMatrixSet `500m`,
+zoom level 4 (200 PNG tiles, each pinned by sha256 in `Tools/lightpollution.lock.json` (iOS repository)).
+
+- **Credit:** NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP). The app shows this line in *Settings > Data credits*.
+- **Sources:** GIBS API, <https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api>;
+  Black Marble product suite, <https://blackmarble.gsfc.nasa.gov/>; Román et al., *NASA's Black Marble nighttime lights
+  product suite*, Remote Sensing of Environment 210 (2018).
+- **License:** NASA data and imagery are open (NASA's media usage guidelines; GIBS imagery is free to use with credit, no
+  login). The World Atlas of Artificial Night Sky Brightness (2015) is **not** used: it is CC BY-NC.
+- **Changes made for Lodestar:** the 8-bit display tiles' faint land base texture was removed, the light converted to
+  linear luminance, averaged into 0.1 degree cells, quantized to 16 levels on a log scale and run-length encoded; the
+  app turns the grid into a sky-glow index and an estimated Bortle class. The result is an estimate from 2016
+  satellite imagery, not a sky measurement. NASA does not endorse Lodestar.
+
 ### Weather forecast
 
 The cloud forecast is downloaded at run time from **MET Norway** (the Norwegian Meteorological Institute), Locationforecast 2.0
 `complete` (<https://api.met.no/weatherapi/locationforecast/2.0/documentation>), only when the user switches on *Cloud forecast*
 in Settings ▸ Online Data. MET Norway licenses its data under the **Creative Commons Attribution 4.0 International** licence
 (<https://creativecommons.org/licenses/by/4.0/>) and the Norwegian Licence for Open Government Data 2.0. Credit:
-*"Weather forecast from MET Norway"* (the card also shows *"Forecast: MET Norway"*). Lodestar shows the forecast's cloud-cover
-values unchanged; the clear-spell sentence is its own summary and does not imply endorsement by MET Norway. The request carries
+*"Weather forecast from MET Norway"* (the card also shows *"Forecast: MET Norway"*). Lodestar shows the forecast's cloud-cover,
+temperature, dew-point and wind values as forecast (rounded for display, and converted to °F and mph where the region uses
+them); the clear-spell sentence and the dew, wind and fog warnings are its own summaries of them and do not imply endorsement
+by MET Norway. The unit tests contain a small extract of one real answer (`app/src/test/resources`). The request carries
 the location rounded to 0.1° (at most four decimals are allowed), an identifying User-Agent, honours `Expires` and
 `If-Modified-Since`, and is made only while the app is in use.
 
@@ -254,23 +274,37 @@ files are shipped for them.
 
 ### Solar-system theories — `ephemeris/`
 
-- **VSOP87B** planetary theory, P. Bretagnon & G. Francou, *Astronomy & Astrophysics* 202, 309
-  (1988), files from IMCCE (`ftp.imcce.fr/pub/ephem/planets/vsop87/`, also CDS VizieR VI/81),
-  truncated to 1,002 terms (`Tools/ephemeris/gen_planetary_theory.py`).
+- **VSOP87B** planetary theory (the Earth and Mercury to Neptune), P. Bretagnon & G. Francou,
+  *Astronomy & Astrophysics* 202, 309 (1988), files from IMCCE
+  (`ftp.imcce.fr/pub/ephem/planets/vsop87/`, also CDS VizieR VI/81), truncated to 1,002 terms
+  (`Tools/ephemeris/gen_planetary_theory.py`).
 - **Lunar theory:** ELP-2000/82 as truncated by Jean Meeus, *Astronomical Algorithms*, 2nd ed.
   (Willmann-Bell, 1998), chapter 47, with coefficients cross-checked against the MIT-licensed
   implementations `soniakeys/meeus` and `commenthol/astronomia`.
+- **Pluto theory:** the series of Jean Meeus, *Astronomical Algorithms*, 2nd ed. (Willmann-Bell,
+  1998), chapter 37 (Table 37.A, 43 periodic terms), valid 1885–2099; outside that span the error
+  grows quickly. The table was read from the open-source implementations `soniakeys/meeus`,
+  `commenthol/astronomia` and `saurvs/astro-rust` (MIT) and `architest/pymeeus` (LGPL-3), which agree
+  in every digit, and checked against JPL DE440s (`Tools/ephemeris/gen_pluto_theory.py`,
+  `pluto_tables.py`, `check_pluto_theory.py`). libnova's `pluto.c` (LGPL-2+) differs from them in
+  three digits and was not used. No code of these projects is included.
 - **Nutation, precession, sidereal time, aberration, refraction:** IAU 1980 nutation (Meeus
   Table 22.A), IAU 1976 precession (Lieske et al. 1977), IAU 1982 sidereal time, Sæmundsson
   and Bennett refraction formulas, all as given by Meeus.
 - **Planetary magnitudes:** A. Mallama & J. L. Hilton, "Computing apparent planetary magnitudes for
-  The Astronomical Almanac", *Astronomy and Computing* 25, 10 (2018), arXiv:1808.01973.
+  The Astronomical Almanac", *Astronomy and Computing* 25, 10 (2018), arXiv:1808.01973 (Mercury to
+  Neptune; they do not cover Pluto).
+- **Pluto's magnitude:** V = 5 log₁₀(r d) − 1.00 + 0.041 α for Pluto and Charon together. The phase
+  coefficient 0.041 mag/° is from R. P. Binzel & J. D. Mulholland, *Astronomical Journal* 89, 1759
+  (1984); the absolute magnitude −1.00 is the long-standing value (NASA NSSDCA Pluto fact sheet). Both
+  together reproduce the apparent magnitude of JPL Horizons within 0.001 mag (60 dates, 1900–2099).
 
 ### Test reference data — `lodestar-kit/src/test/resources/fixtures/`
 
 Generated by `Tools/make_fixtures.py` with Skyfield (Brandon Rhodes, MIT License) and the JPL
-planetary ephemeris DE440s (NASA/JPL, public domain). Used only by the unit tests; not shipped in
-the app.
+planetary ephemeris DE440s (NASA/JPL, public domain). Skyfield has no magnitude model for Pluto, so
+the test of Pluto's magnitude quotes a few values from JPL Horizons (NASA/JPL, public domain; credit
+requested). Used only by the unit tests; not shipped in the app.
 
 ## Credit line for the app's About screen
 
@@ -279,7 +313,8 @@ the app.
 > notes. Constellation figures and Milky Way outlines: d3-celestial by Olaf Frohn (BSD-3-Clause),
 > the latter after Jose R. Vieira's Milky Way Outline Catalog.
 > Geomagnetic model: WMM2025 by NOAA NCEI and the British Geological Survey (public domain).
-> Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); lunar theory after J. Meeus.
+> Planetary theory: VSOP87 (Bretagnon & Francou, IMCCE); Pluto and lunar theory after J. Meeus.
+> Night lights: NASA Worldview / GIBS, Black Marble (VIIRS, Suomi NPP).
 >
 > Optional downloads: orbital data: CelesTrak, T. S. Kelso; orbital elements: IAU Minor Planet Center; weather forecast from
 > MET Norway (CC BY 4.0); terrain elevation data from the AWS Open Data Terrain Tiles (SRTM and GMTED2010 courtesy of the U.S. Geological Survey, and the national sources credited in ATTRIBUTION.md).

@@ -133,7 +133,7 @@ internal object SessionLogFile {
 
     fun encode(entries: List<SessionLogEntry>): String = buildJsonObject {
         put("version", 1)
-        put("entries", JsonArray(entries.map(::jsonOf)))
+        put("entries", JsonArray(entries.map { jsonOf(it) }))
     }.toString()
 
     /** Writes the entries to a temporary file and moves it over [file]; a failure leaves the old file in place. */

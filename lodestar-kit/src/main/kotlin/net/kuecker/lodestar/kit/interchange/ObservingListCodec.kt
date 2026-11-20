@@ -174,8 +174,8 @@ object ObservingListCodec {
                 listOf(
                     InterchangeCSV.guarded(InterchangeText.singleLine(entry.name, maximumNameScalars)),
                     InterchangeCSV.guarded(InterchangeText.singleLine(entry.designation ?: "", maximumNameScalars)),
-                    if (hasPosition) InterchangeText.fixed(rightAscension ?: 0.0, 5) else "",
-                    if (hasPosition) InterchangeText.fixed(declination ?: 0.0, 5) else "",
+                    if (hasPosition) InterchangeText.fixed(rightAscension, 5) else "",
+                    if (hasPosition) InterchangeText.fixed(declination, 5) else "",
                     InterchangeCSV.guarded(InterchangeText.singleLine(entry.typeName ?: "", maximumNameScalars)),
                 ),
             )

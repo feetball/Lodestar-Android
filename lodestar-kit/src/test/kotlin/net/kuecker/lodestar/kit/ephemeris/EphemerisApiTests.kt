@@ -10,6 +10,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.log10
 import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.test.Test
@@ -29,17 +30,19 @@ class EphemerisApiTests {
     @Test
     fun testPlanetaryTheoryHasAllTermsOfTheSwiftTables() {
         assertEquals(1002, PlanetaryTheory.termCount)
+        assertEquals(43, PlutoTheory.termCount)
     }
 
     /**
-     * The digests were computed from the numbers in `PlanetaryTheory.swift` and `LunarTheory.swift` (parsed with
-     * Python, packed big endian in the order described at `tableDigest`); they change if any digit of any
+     * The digests were computed from the numbers in `PlanetaryTheory.swift`, `LunarTheory.swift` and `PlutoTheory.swift`
+     * (parsed with Python, packed big endian in the order described at `tableDigest`); they change if any digit of any
      * coefficient, multiplier or row order differs.
      */
     @Test
     fun testSeriesTablesAreDigitForDigitTheSwiftTables() {
         assertEquals("0d591e17b9ef6c65d556a7e2161518acaca483a9e92d10f1895fd007fffd39a3", PlanetaryTheory.tableDigest)
         assertEquals("14885d8b8de0109710bf79c4d79667696e07bbff89cb689f22cc1351f35129f1", LunarTheory.tableDigest)
+        assertEquals("1ffd2cce8e1d2a04bfed7d7b3443d3ad2ab9e8e87714344755d938c8f80adebb", PlutoTheory.tableDigest)
     }
 
     @Test
@@ -114,7 +117,8 @@ class EphemerisApiTests {
         for (circumstance in RiseTransitSet.Circumstance.entries) {
             assertEquals(circumstance, RiseTransitSet.Circumstance.fromRawValue(circumstance.rawValue))
         }
-        assertNull(SolarSystemBody.fromRawValue("pluto"))
+        assertEquals(SolarSystemBody.PLUTO, SolarSystemBody.fromRawValue("pluto"))
+        assertNull(SolarSystemBody.fromRawValue("earth"))
         assertNull(SolarSystemBody.fromRawValue("Sun"))
         assertNull(MoonPhaseName.fromRawValue("full"))
         assertNull(PrincipalMoonPhase.fromRawValue(""))
@@ -133,6 +137,18 @@ class EphemerisApiTests {
         for (body in SolarSystemBody.entries.filter { it.isPlanet }) {
             assertNotNull(Photometry.planet(body, vector * 5.0, vector * 4.0, 5.0, jd), "$body")
         }
+    }
+
+    /** `V = 5 log10(r d) - 1.00 + 0.041 α` for Pluto and Charon together, and the entry point that uses it. */
+    @Test
+    fun testPlutoMagnitudeFormulaAndEntryPoint() {
+        assertEquals(5 * log10(30.0 * 29.0) - 1.00 + 0.041 * 1.0, Photometry.pluto(30.0, 29.0, 1.0), 1e-12)
+        assertEquals(5 * log10(48.0 * 49.0) - 1.00, Photometry.pluto(48.0, 49.0, 0.0), 1e-12)
+        val jd = JulianDate(2_460_000.5)
+        assertEquals(
+            Photometry.pluto(35.0, 34.0, 0.8),
+            Photometry.planet(SolarSystemBody.PLUTO, Vector3(35.0, 0.0, 0.0), Vector3(0.0, 34.0, 0.0), 0.8, jd),
+        )
     }
 
     // MARK: Sampler

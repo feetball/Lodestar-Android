@@ -47,10 +47,10 @@ same astronomy engine ported line for line from Swift to Kotlin.
 ```
 android/
   lodestar-kit/     Pure Kotlin/JVM astronomy engine (port of the Swift LodestarKit): coordinates, precession,
-                    nutation, aberration, refraction, VSOP87B planets, ELP/Meeus Moon, rise/set, twilight, Moon
-                    phases, catalog + search, aiming math, alignment solver, WMM2025, exposure tools, planning,
-                    events, skyline, mosaics, satellites (SGP4), comets and asteroids, GoTo mount protocols.
-                    1,752 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
+                    nutation, aberration, refraction, VSOP87B planets, Meeus Pluto, ELP/Meeus Moon, rise/set,
+                    twilight, Moon phases, catalog + search, aiming math, alignment solver, WMM2025, exposure
+                    tools, planning, events, skyline, mosaics, satellites (SGP4), comets and asteroids, GoTo mount
+                    protocols. 1,779 unit tests (every LodestarKit test ported, plus Kotlin-only checks); docs/API-*.md.
   app/              Android app (Jetpack Compose, Material 3, CameraX, MapLibre, Glance widgets).
     app/            AppModel (state + service orchestration), activity, root screen
     model/ services/ theme/ shared/   settings, sensors/location/camera, night palette, shared views
@@ -82,8 +82,9 @@ pointing; the *Emulator* workflow runs it on GitHub Actions and uploads the imag
 Attitude comes from Android's rotation vector (magnetic north, corrected to true north with the bundled NOAA
 WMM2025 model) or, with Gyro Lock, from the game rotation vector, whose heading is transferred from the compass
 while the phone stands still. Positions are apparent, topocentric and refracted; against JPL ephemerides the Sun
-is good to about 0.3″, the planets to a few arcseconds and the Moon to under 10″ — far below the accuracy of any
-phone compass, which star alignment corrects.
+is good to about 0.3″, the planets to a few arcseconds (Pluto to 1.4″ in 1950–2049; its series is valid only
+for 1885–2099) and the Moon to under 10″ — far below the accuracy of any phone compass, which star
+alignment corrects.
 
 ## Privacy
 

@@ -14,7 +14,7 @@ internal object BuiltInObjects {
     /** Declination of Sagittarius A* (J2000): −29° 00′ 28.1″. */
     private const val sagittariusADeclination: Double = -(29.0 + 28.1 / 3600)
 
-    /** The Sun, the Moon and the seven other planets, in `SolarSystemBody.entries` order. */
+    /** The Sun, the Moon, the seven other planets and Pluto, in `SolarSystemBody.entries` order. */
     fun solarSystem(): List<CelestialObject> = SolarSystemBody.entries.map { body ->
         val id: String
         val category: ObjectCategory
@@ -28,7 +28,7 @@ internal object BuiltInObjects {
                 category = ObjectCategory.MOON
             }
             SolarSystemBody.MERCURY, SolarSystemBody.VENUS, SolarSystemBody.MARS, SolarSystemBody.JUPITER,
-            SolarSystemBody.SATURN, SolarSystemBody.URANUS, SolarSystemBody.NEPTUNE,
+            SolarSystemBody.SATURN, SolarSystemBody.URANUS, SolarSystemBody.NEPTUNE, SolarSystemBody.PLUTO,
             -> {
                 id = "planet.${body.rawValue}"
                 category = ObjectCategory.PLANET
@@ -36,10 +36,16 @@ internal object BuiltInObjects {
         }
         CelestialObject(
             id = id, name = body.displayName, alternateNames = alternateNames(body), category = category,
-            position = ObjectPosition.SolarSystem(body), isListed = true, prominence = Prominence.SHOWPIECE,
+            position = ObjectPosition.SolarSystem(body), isListed = true,
+            // Pluto is listed with the planets, but at magnitude 14 it is no showpiece.
+            prominence = if (body == SolarSystemBody.PLUTO) Prominence.NOTABLE else Prominence.SHOWPIECE,
             notes = if (body == SolarSystemBody.SUN) {
                 "Look at the Sun only through a certified solar filter. Pointing a camera or telescope at it " +
                     "without one can damage eyes and equipment."
+            } else if (body == SolarSystemBody.PLUTO) {
+                "A dwarf planet beyond Neptune, about magnitude 14 at its best: far too faint for the eye or a " +
+                    "short exposure. It takes a telescope or a long lens on a tracker and stacked frames, and gives " +
+                    "itself away by moving against the stars from night to night."
             } else {
                 null
             },
@@ -50,6 +56,7 @@ internal object BuiltInObjects {
     private fun alternateNames(body: SolarSystemBody): List<String> = when (body) {
         SolarSystemBody.SUN -> listOf("Sol")
         SolarSystemBody.MOON -> listOf("Luna")
+        SolarSystemBody.PLUTO -> listOf("134340 Pluto")
         else -> emptyList()
     }
 

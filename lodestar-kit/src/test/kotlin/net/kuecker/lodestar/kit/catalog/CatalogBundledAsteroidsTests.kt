@@ -161,7 +161,7 @@ class CatalogBundledAsteroidsTests {
         val listed = catalog.smallBodies.filter { it.isListed }
         assertTrue(listed.size in 80..140, "${listed.size}")
         assertTrue(listed.all { assertNotNull(it.estimatedPeakMagnitude) <= Prominence.notableSmallBodyMagnitude })
-        assertEquals(9 + listed.size, catalog.objects(ObjectGroup.SOLAR_SYSTEM).size)
+        assertEquals(10 + listed.size, catalog.objects(ObjectGroup.SOLAR_SYSTEM).size)
         assertEquals(setOf(Prominence.SHOWPIECE, Prominence.PROMINENT, Prominence.NOTABLE, Prominence.OBSCURE), catalog.smallBodies.map { it.prominence }.toSet())
         // Downloaded elements replace the bundled ones: the last body with an identifier wins.
         val fresher = loaded.bodies.first { it.id == "asteroid.4" }

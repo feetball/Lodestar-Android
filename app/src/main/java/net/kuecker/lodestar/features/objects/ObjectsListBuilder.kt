@@ -226,8 +226,8 @@ internal object ObjectsListBuilder {
         if (options.catalogue.isCatalogue && options.catalogue.numberKey(obj) == null) return false
         if (options.showsOnlyPopular && obj.prominence > Prominence.PROMINENT) return false
         if (options.showsOnlyAboveHorizon && positions[obj.id]?.isUp != true) return false
-        // A comet or an asteroid has no catalog magnitude: its current one decides.
-        val magnitude = obj.magnitude ?: if (obj.smallBody != null) positions[obj.id]?.magnitude else null
+        // A planet, a comet or an asteroid has no catalog magnitude: its current one decides.
+        val magnitude = obj.magnitude ?: if (obj.isSolarSystem) positions[obj.id]?.magnitude else null
         if (options.hidesFaintObjects && magnitude != null && magnitude > ObjectsListOptions.FAINT_MAGNITUDE_LIMIT) return false
         return true
     }

@@ -158,7 +158,7 @@ class PlanningApiTests {
         val summary = PlanningTestSupport.summary(boulder, 2026, 6, 21)
         assertEquals(summary.astronomicalDarknessIntervals, summary.darkness(DarknessKind.ASTRONOMICAL))
         assertEquals(summary.darknessIntervals, summary.darkness(DarknessKind.MOON_FREE))
-        assertEquals(7, summary.planets.size)
+        assertEquals(8, summary.planets.size)
         assertEquals(
             IntervalSet.totalDuration(summary.darknessIntervals) / 3_600, summary.moonFreeDarkHours,
         )

@@ -30,7 +30,7 @@ Conventions used below
 
 class Catalog private constructor(contents: CatalogContents) {
     constructor(starsData: ByteArray, dsosData: ByteArray, constellationsData: ByteArray, milkyWayData: ByteArray)  // throws CatalogError
-    val objects: List<CelestialObject>            // Sun, Moon, planets, Milky Way core + poles, deep-sky objects, stars bright to faint
+    val objects: List<CelestialObject>            // Sun, Moon, planets and Pluto, Milky Way core + poles, deep-sky objects, stars bright to faint
     val listedObjects: List<CelestialObject>      // objects with isListed, in the order of `objects`
     val constellations: List<Constellation>       // 88, in file order (alphabetical by name)
     val milkyWay: MilkyWayOutline
